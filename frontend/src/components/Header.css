@@ -1,0 +1,93 @@
+header{
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.75rem 1.5rem;
+}
+
+.header-content{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.left{
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.right{
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.logo{
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-decoration: none;
+    color: black;
+}
+
+.button-theme-toogle{
+    background: none;
+    border: none;
+}
+
+.search-bar input{
+    font-size: 15px;
+    border: none;
+    background: transparent;
+    margin-left: 0.5rem;
+    outline: none;
+}
+
+.search-bar{
+    display: flex;
+    align-items: center;
+    background-color: #f9fafb;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgb(233, 227, 227);
+    border-radius: 9999px;
+    font-size: 0.9rem;
+    color: rgb(151, 146, 146);
+}
+
+.account{
+    text-decoration: none;
+    color: #111;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.account:hover{
+    background-color: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+@media (max-width: 700px) {
+
+    .button-theme-toogle{
+        display: none;
+    }
+
+    .favourites{
+        display: none;
+    }
+
+    .messages{
+        display: none;
+    }
+
+    
+}

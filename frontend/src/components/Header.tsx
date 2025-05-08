@@ -1,10 +1,11 @@
 import React, {useState} from 'react';
+import './Header.css'
 
 const Header: React.FC = () => {
     return(
         <>
         <header>
-            <div className="container header-content">
+            <div className="header-content">
                 <div className="left">
                     <a href="/" className="logo">Give&Get</a>
                 </div>
@@ -28,7 +29,7 @@ const Header: React.FC = () => {
                         <input type="text" placeholder="Szukaj..." />
                     </div>
                     <div className="my-account">
-                        <a href="/account">Moje konto</a>
+                        <a href="/account" className="account">Moje konto</a>
                     </div>
                 </div>
             </div>
