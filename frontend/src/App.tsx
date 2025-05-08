@@ -6,7 +6,6 @@ function App() {
   return (
     <div>
       <Header />
-      <h1>Give&Get</h1>
 
       <Footer />
     </div>
