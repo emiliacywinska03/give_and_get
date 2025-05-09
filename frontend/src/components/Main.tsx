@@ -1,4 +1,5 @@
 import React from "react";
+import './Main.css'
 
 const Main: React.FC = () => {
     return(
@@ -13,7 +14,7 @@ const Main: React.FC = () => {
                     </p>
                     <div className="about-buttons">
                         <a href="/listings/create" className="button-add-listing">Dodaj ogłoszenie</a>
-                        <a href="/listings" className="button-search-listing">Przeglądaj ogłoszenia</a>
+                        <a href="/listings" className="button-search-listings">Przeglądaj ogłoszenia</a>
                     </div>
                 </div>
             </section>
@@ -23,7 +24,7 @@ const Main: React.FC = () => {
                 <p className="categories-description">
                     Przeglądaj ogłoszenia według kategorii, aby znaleźć dokładnie to czego szukasz.
                 </p>
-                <div className="categories">
+                <div className="category-grid">
                     <CategoryCard
                         svg={
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" width={130} height={130}>
