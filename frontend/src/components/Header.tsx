@@ -1,12 +1,17 @@
-import React from 'react';
+import React , {useState} from 'react';
 import './Header.css'
+import MobileSidebar from './MobileSidebar'
+import './MobileSidebar.css'
 
 const Header: React.FC = () => {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
     return(
         <>
         <header>
             <div className="header-content">
                 <div className="left">
+                    <button className="menu-button" onClick={()=>setSidebarOpen(true)}>☰</button>
                     <a href="/" className="logo">Give&Get</a>
                 </div>
                 <div className="right">
@@ -34,6 +39,7 @@ const Header: React.FC = () => {
                 </div>
             </div>
         </header>
+        <MobileSidebar open={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
         </>
     );
 }
