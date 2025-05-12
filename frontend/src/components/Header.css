@@ -51,7 +51,7 @@ header{
     display: flex;
     align-items: center;
     background-color: #f9fafb;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.5rem;
     border: 1px solid rgb(233, 227, 227);
     border-radius: 9999px;
     font-size: 0.9rem;
