@@ -1,7 +1,8 @@
 import React , {useState} from 'react';
-import './Header.css'
-import MobileSidebar from './MobileSidebar'
-import './MobileSidebar.css'
+import './Header.css';
+import MobileSidebar from './MobileSidebar';
+import './MobileSidebar.css';
+import { Link } from "react-router-dom";
 
 const Header: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -34,7 +35,7 @@ const Header: React.FC = () => {
                         <input type="text" placeholder="Szukaj..." />
                     </div>
                     <div className="my-account">
-                        <a href="/account" className="account">Moje konto</a>
+                        <Link to="/auth" className="account">Moje konto</Link>
                     </div>
                 </div>
             </div>
