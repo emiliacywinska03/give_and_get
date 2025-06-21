@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import './ListingPage.css'
 
 interface Listing{
     id: number;
@@ -28,15 +29,15 @@ const ListingPage: React.FC =() =>{
             {listings.length===0?(
                 <p>Brak ogłoszeń.</p>
             ):(
-                <ul>
+                <div className='listing-grid'>
                     {listings.map((listings)=>(
-                        <li key={listings.id}>
-                            <h3>{listings.title}</h3>
-                            <p>{listings.description}</p>
-                            <p>Lokalizacja: {listings.location}</p>
-                        </li>
+                        <div key={listings.id} className='listing-card'>
+                            <h3 className='listing-title'>{listings.title}</h3>
+                            <p className='listing-description'>{listings.description}</p>
+                            <p className='listing-location'>Lokalizacja: {listings.location}</p>
+                        </div>
                     ))}
-                </ul>
+                </div>
             )}
         </div>
     );

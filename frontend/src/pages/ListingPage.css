@@ -1,0 +1,48 @@
+.listing-grid{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding: 1rem;
+}
+
+.listing-card{
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.2);
+    padding: 1.5rem;
+    max-width: 300px;
+    width: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.listing-card:hover{
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(59,130,246,0.3);
+}
+
+.listing-title{
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.listing-description{
+    font-size: 0.95rem;
+    color: #444;
+    margin-bottom: 0.8rem;
+}
+
+.listing-location{
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.listing-page h2{
+    font-size: 1.675rem;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 2rem;
+}
