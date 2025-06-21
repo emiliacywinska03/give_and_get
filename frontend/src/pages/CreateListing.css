@@ -1,0 +1,64 @@
+.create-listing-container{
+    max-width: 600px;
+    margin: 3rem auto;
+    padding: 2rem;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 1rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    font-family: 'Segoue UI', sans-serif;
+}
+
+.create-listing-container h2{
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.create-listing-container form{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.create-listing-container input,
+.create-listing-container select,
+.create-listing-container textarea{
+    padding: 0.6rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.create-listing-container input:focus,
+.create-listing-container select:focus,
+.create-listing-container textarea:focus{
+    border-color: #1b2332;
+    outline: none;
+}
+
+.create-listing-container button{
+    padding: 0.9rem 1.5rem;
+    background-color: #3b82f6;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+}
+
+.create-listing-container button:hover{
+    background-color: #2563eb;
+    transform: translateY(-3px);
+}
+
+.create-listing-container select{
+    appearance: none;
+    background-color: #f9fafb;
+    
+}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './CreateListing.css'
 
 const CreateListing: React.FC = () => {
     const [title, setTitle] = useState('');
@@ -44,7 +45,7 @@ const CreateListing: React.FC = () => {
     };
 
     return(
-        <div>
+        <div className='create-listing-container'>
             <h2>Dodaj ogłoszenie</h2>
             <form onSubmit={handleSubmit}>
                 <input
@@ -57,7 +58,7 @@ const CreateListing: React.FC = () => {
                 <br />
                 <input
                     type="text"
-                    placeholder="lokalizacja"
+                    placeholder="Lokalizacja"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                 />
