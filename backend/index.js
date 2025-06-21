@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors= require('cors');
 const{Pool}=require('pg');
-
+const listingRoutes = require('./routes/listing');
 const app=express();
 const PORT = 5050;
 
@@ -33,3 +33,8 @@ app.get('/', async(req, res) => {
 app.listen(PORT, '0.0.0.0' , ()=>{
     console.log(`Backend dziala na porcie: ${PORT}`);
 });
+
+
+app.use(express.json());
+app.use('/api/listings', listingRoutes);
+
