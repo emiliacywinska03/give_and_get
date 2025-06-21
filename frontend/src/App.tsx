@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import Header from "./components/Header";
 import Main from "./components/Main"
 import LoginRegiter from './pages/LoginRegister';
+import CreateListing from './pages/CreateListing';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <Routes>
           <Route path="/" element={<Main />}/>
           <Route path="/auth" element={<LoginRegiter />}/>
+          <Route path="/listings/create" element={<CreateListing/>} />
       </Routes>
       <Footer />
     </div>
