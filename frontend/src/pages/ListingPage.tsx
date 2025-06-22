@@ -40,10 +40,10 @@ const ListingPage: React.FC =() =>{
                     title: editedTitle,
                     description: editedDescription,
                     location: editedLocation,
-                    status_id: 1,
-                    type_id: 1,
-                    category_id: 1,
-                    user_id: 1,
+                    status_id:1,
+                    type_id:1,
+                    category_id:1,
+                    user_id:1
                 }),
             });
 
@@ -56,7 +56,7 @@ const ListingPage: React.FC =() =>{
                 setEditingId(null);
             } else {
                 const error = await res.json();
-                alert (`Błąd: ${error.error}`);
+                alert(`Błąd: ${error.error}`);
             }
         } catch (err) {
             console.error ('Błąd podczas edycji:', err);
@@ -96,11 +96,50 @@ const ListingPage: React.FC =() =>{
                 <div className='listing-grid'>
                     {listings.map((listings)=>(
                         <div key={listings.id} className='listing-card'>
-                            <h3 className='listing-title'>{listings.title}</h3>
-                            <p className='listing-description'>{listings.description}</p>
-                            <p className='listing-location'>Lokalizacja: {listings.location}</p>
-                            <button className="delete-button" onClick={() => handleDelete(listings.id)}> Usuń</button>
-                        </div>
+                            {editingId === listings.id ? (
+                                <>
+                                    <input
+                                        type='text'
+                                        value={editedTitle}
+                                        onChange={(e)=> setEditedTitle(e.target.value)}
+                                        placeholder='Tytuł'
+                                    />
+                                    <textarea
+                                        value={editedDescription}
+                                        onChange={(e) => setEditedDescription(e.target.value)}
+                                        placeholder='Opis'
+                                    />
+                                    <input
+                                        type='text'
+                                        value={editedLocation}
+                                        onChange={(e)=> setEditedLocation(e.target.value)}
+                                        placeholder='Lokalizacja'
+                                    />
+                                    <button onClick={()=> handleEdit(listings.id)}>Zapisz</button>
+                                    <button onClick={()=> setEditingId(null)}>Anuluj</button>
+                                    </>
+                                    ):(
+                                        <>
+                                        <h3 className='listing-title'>{listings.title}</h3>
+                                        <p className='listing-description'>{listings.description}</p>
+                                        <p className='listing-location'>Lokalizacja: {listings.location}</p>
+                                        <button className="delete-button" onClick={() => handleDelete(listings.id)}> Usuń</button>
+                                        <button
+                                        className='edit-button'
+                                        onClick={()=>{
+                                            setEditingId(listings.id);
+                                            setEditedTitle(listings.title);
+                                            setEditedDescription(listings.description);
+                                            setEditedLocation(listings.location);
+                                        }}
+                                        >
+                                            Edytuj
+                                        </button>
+                                        </>
+                            
+                            )}
+                        </div>  
+                           
                     ))}
                 </div>
             )}

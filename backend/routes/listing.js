@@ -65,33 +65,21 @@ router.delete('/:id', async (req, res) => {
 //EDYCJA OGLOSZENIA
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const {
-        title,
-        description,
-        location,
-        status_id,
-        type_id,
-        category_id,
-        user_id
-    } = req.body;
-    
+    const { title, description, location } = req.body;
+
     try {
         const result = await pool.query(
             `UPDATE listing 
-                SET title = $1,
-                description = $2,
-                location = $3,
-                status_id = $4,
-                type_id = $5,
-                category_id = $6,
-                user_id = $7
-            WHERE id = $8
-            RETURNING *`,
-        [title, description, location, status_id, type_id, category_id, user_id, id]
+             SET title = $1,
+                 description = $2,
+                 location = $3
+             WHERE id = $4
+             RETURNING *`,
+            [title, description, location, id]
         );
-    
+
         if (result.rowCount === 0) {
-            return res.status
+            return res.status(404).json({ error: 'Ogłoszenie nie istnieje' });
         }
 
         res.json({ message: 'Ogłoszenie zaktualizowane', updated: result.rows[0] });
@@ -100,6 +88,7 @@ router.put('/:id', async (req, res) => {
         res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
     }
 });
+
     
 
 
