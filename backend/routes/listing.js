@@ -43,3 +43,22 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
+
+//USUWANIE OGLOSZENIA
+router.delete('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query('DELETE FROM listing WHERE id = $1 RETURNING *', [id]);
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Ogloszenie nie istnieje'});
+        }
+
+        res.json({ message: 'Ogloszenie usuniete', deletes: result.rows[0] });
+    } catch (err) {
+        console.error('Blad podczas usuwania ogloszenia:', err.message);
+        res.status(500).json({ error: 'Blad wewnetrzny', details: err.message });
+    }
+})
+
