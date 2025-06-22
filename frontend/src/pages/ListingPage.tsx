@@ -97,7 +97,7 @@ const ListingPage: React.FC =() =>{
                     {listings.map((listings)=>(
                         <div key={listings.id} className='listing-card'>
                             {editingId === listings.id ? (
-                                <>
+                                <div className='edit-form'>
                                     <input
                                         type='text'
                                         value={editedTitle}
@@ -115,9 +115,12 @@ const ListingPage: React.FC =() =>{
                                         onChange={(e)=> setEditedLocation(e.target.value)}
                                         placeholder='Lokalizacja'
                                     />
-                                    <button onClick={()=> handleEdit(listings.id)}>Zapisz</button>
-                                    <button onClick={()=> setEditingId(null)}>Anuluj</button>
-                                    </>
+                                    <div className='edit-form-buttons'>
+                                    <button className='action-button save-button' onClick={()=> handleEdit(listings.id)}>Zapisz</button>
+                                    <button className='action-button cancel-button' onClick={()=> setEditingId(null)}>Anuluj</button>
+                                    </div>
+                                    </div>
+                                    
                                     ):(
                                         <>
                                         <h3 className='listing-title'>{listings.title}</h3>
