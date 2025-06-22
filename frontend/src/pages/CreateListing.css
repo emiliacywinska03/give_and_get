@@ -30,6 +30,14 @@
     border-radius: 0.5rem;
     font-size: 1rem;
     transition: border-color 0.2s;
+    line-height: 1.5;
+    margin: 0;
+    box-sizing: border-box;
+    resize: none;
+}
+
+.create-listing-container textarea{
+    height: 120px;
 }
 
 .create-listing-container input:focus,
@@ -62,3 +70,18 @@
     background-color: #f9fafb;
     
 }
+
+.create-listing-container label{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    padding: 0.4rem 0;
+}
+
+.create-listing-container input[type="checkbox"]{
+    width: 18px;
+    height: 18px;
+    accent-color: #3b82f6;
+}
+
