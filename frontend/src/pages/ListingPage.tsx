@@ -13,6 +13,10 @@ interface Listing{
 
 const ListingPage: React.FC =() =>{
     const [listings, setListings] = useState<Listing[]>([]);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editedTitle, setEditedTitle] = useState('');
+    const [editedDescription, setEditedDescription] = useState('');
+    const [editedLocation, setEditedLocation] = useState('');
 
     useEffect(() =>{
         fetch('http://localhost:5050/api/listings')
@@ -23,6 +27,42 @@ const ListingPage: React.FC =() =>{
         })
         .catch((err)=> console.error("Błąd przy pobieraniu ogłoszeń: ", err))
     }, []);
+
+
+    const handleEdit = async (id: number) => {
+        try {
+            const res = await fetch(`http://localhost:5050/api/listings/${id}`,{
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: editedTitle,
+                    description: editedDescription,
+                    location: editedLocation,
+                    status_id: 1,
+                    type_id: 1,
+                    category_id: 1,
+                    user_id: 1,
+                }),
+            });
+
+            if (res.ok) {
+                alert('Ogłoszenie zaktualizowane!');
+                const updated = await res.json();
+                setListings(prev => 
+                    prev.map(listing => (listing.id === id ? updated.updated : listing))
+                );
+                setEditingId(null);
+            } else {
+                const error = await res.json();
+                alert (`Błąd: ${error.error}`);
+            }
+        } catch (err) {
+            console.error ('Błąd podczas edycji:', err);
+            alert('Wystąpił błąd podczas edytowania.');
+        }
+    };
 
 
     const handleDelete = async (id: number) => {

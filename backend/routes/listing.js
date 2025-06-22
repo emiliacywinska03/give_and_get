@@ -61,4 +61,46 @@ router.delete('/:id', async (req, res) => {
     }
 })
 
+
+//EDYCJA OGLOSZENIA
+router.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const {
+        title,
+        description,
+        location,
+        status_id,
+        type_id,
+        category_id,
+        user_id
+    } = req.body;
+    
+    try {
+        const result = await pool.query(
+            `UPDATE listing 
+                SET title = $1,
+                description = $2,
+                location = $3,
+                status_id = $4,
+                type_id = $5,
+                category_id = $6,
+                user_id = $7
+            WHERE id = $8
+            RETURNING *`,
+        [title, description, location, status_id, type_id, category_id, user_id, id]
+        );
+    
+        if (result.rowCount === 0) {
+            return res.status
+        }
+
+        res.json({ message: 'Ogłoszenie zaktualizowane', updated: result.rows[0] });
+    } catch (err) {
+        console.error('Błąd podczas edycji ogłoszenia', err.message);
+        res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
+    }
+});
+    
+
+
 module.exports = router;
