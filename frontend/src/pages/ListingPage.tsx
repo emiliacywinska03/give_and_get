@@ -59,7 +59,7 @@ const ListingPage: React.FC =() =>{
                             <h3 className='listing-title'>{listings.title}</h3>
                             <p className='listing-description'>{listings.description}</p>
                             <p className='listing-location'>Lokalizacja: {listings.location}</p>
-                            <button onClick={() => handleDelete(listings.id)}> Usuń</button>
+                            <button className="delete-button" onClick={() => handleDelete(listings.id)}> Usuń</button>
                         </div>
                     ))}
                 </div>
