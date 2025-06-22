@@ -10,6 +10,7 @@ interface Listing{
     user_id: number;
 }
 
+
 const ListingPage: React.FC =() =>{
     const [listings, setListings] = useState<Listing[]>([]);
 
@@ -23,6 +24,29 @@ const ListingPage: React.FC =() =>{
         .catch((err)=> console.error("Błąd przy pobieraniu ogłoszeń: ", err))
     }, []);
 
+
+    const handleDelete = async (id: number) => {
+        const confirm = window.confirm('Czy na pewno chcesz usunąc ogłoszenie?');
+        if (!confirm) return;
+    
+        try {
+            const res = await fetch(`http://localhost:5050/api/listings/${id}`, {
+                method: 'DELETE',
+            });
+    
+            if (res.ok) {
+                alert('Ogłoszenie usunięte!');
+                setListings(prev => prev.filter(listing => listing.id !== id ));
+            } else {
+                const error = await res.json();
+                alert(`Błąd: $(error.error)`);
+            }
+        } catch (err) {
+            console.error('Błąd podczas usuwania:', err);
+            alert('Wystąpił błąd podczas usuwania ogłoszenia.');
+        }
+    };
+
     return(
         <div className='listing-page'>
             <h2>Wszystkie ogłoszenia</h2>
@@ -35,6 +59,7 @@ const ListingPage: React.FC =() =>{
                             <h3 className='listing-title'>{listings.title}</h3>
                             <p className='listing-description'>{listings.description}</p>
                             <p className='listing-location'>Lokalizacja: {listings.location}</p>
+                            <button onClick={() => handleDelete(listings.id)}> Usuń</button>
                         </div>
                     ))}
                 </div>

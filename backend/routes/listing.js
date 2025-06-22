@@ -42,7 +42,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-module.exports = router;
 
 //USUWANIE OGLOSZENIA
 router.delete('/:id', async (req, res) => {
@@ -62,3 +61,4 @@ router.delete('/:id', async (req, res) => {
     }
 })
 
+module.exports = router;
