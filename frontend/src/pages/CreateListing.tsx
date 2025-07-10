@@ -47,7 +47,7 @@ const CreateListing: React.FC = () => {
         }
 
         try{
-            const response = await fetch('http://localhost:5050/api/listings',{
+            const response = await fetch('http://172.21.40.162:5050/listings',{
                 method: 'POST',
                 headers: { 'Content-Type' : 'application/json'},
                 body: JSON.stringify(body),
