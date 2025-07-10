@@ -19,7 +19,7 @@ const ListingPage: React.FC =() =>{
     const [editedLocation, setEditedLocation] = useState('');
 
     useEffect(() =>{
-        fetch('http://localhost:5050/api/listings')
+        fetch('http://172.21.40.162:3000/listings')
         .then((res) => res.json())
         .then((data) => {
             console.log("Dane z backendu: ", data)
@@ -31,7 +31,7 @@ const ListingPage: React.FC =() =>{
 
     const handleEdit = async (id: number) => {
         try {
-            const res = await fetch(`http://localhost:5050/api/listings/${id}`,{
+            const res = await fetch(`http://172.21.40.162:3000/listings/${id}`,{
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ const ListingPage: React.FC =() =>{
         if (!confirm) return;
     
         try {
-            const res = await fetch(`http://localhost:5050/api/listings/${id}`, {
+            const res = await fetch(`http://172.21.40.162:3000/listings/${id}`, {
                 method: 'DELETE',
             });
     
