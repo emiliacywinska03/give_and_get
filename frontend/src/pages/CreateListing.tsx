@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import './CreateListing.css'
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_KEY = process.env.REACT_APP_API_KEY;
+
 const CreateListing: React.FC = () => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -47,9 +50,12 @@ const CreateListing: React.FC = () => {
         }
 
         try{
-            const response = await fetch('http://172.21.40.162:5050/api/listings',{
+            const response = await fetch(`${API_BASE}/api/listings`, {
                 method: 'POST',
-                headers: { 'Content-Type' : 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+                },
                 body: JSON.stringify(body),
             });
 
