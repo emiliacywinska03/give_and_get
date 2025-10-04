@@ -1,20 +1,14 @@
 require('dotenv').config();
 const express = require('express');
-const cors= require('cors');
-const{Pool}=require('pg');
+const cors = require('cors');
+const { pool } = require('./db');
 const listingRoutes = require('./routes/listing');
-const app=express();
-const PORT = 5050;
+const authRoutes = require('./routes/auth');
 
-const pool=new Pool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-});
+const app = express();
+const PORT = process.env.PORT || 5050;
 
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 
 app.get('/', async(req, res) => {
@@ -29,12 +23,11 @@ app.get('/', async(req, res) => {
     }
 });
 
+app.use('/api/listings', listingRoutes);
+app.use('/api/auth', authRoutes);
 
 app.listen(PORT, '0.0.0.0' , ()=>{
     console.log(`Backend dziala na porcie: ${PORT}`);
 });
 
-
-app.use(express.json());
-app.use('/api/listings', listingRoutes);
 

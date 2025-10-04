@@ -80,3 +80,10 @@
     background-color: #2563eb;
     transform: translateY(-3px);
 }
+
+.auth-form select,
+.auth-form input {
+  margin-top: 6px;
+  margin-bottom: 10px;
+  padding: 6px;
+}
