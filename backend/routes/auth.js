@@ -6,6 +6,19 @@ const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
+//sprawdzanie sesji na podstawie ciasteczka gg_token
+function authRequired(req, res, next) {
+  try {
+    const token = req.cookies?.gg_token;
+    if (!token) return res.status(401).json({ ok: false, message: 'Brak sesji' });
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = { id: payload.uid };
+    next();
+  } catch (e) {
+    return res.status(401).json({ ok: false, message: 'Sesja wygasła lub nieprawidłowa' });
+  }
+}
+
 // GET /api/auth/questions – lista pytań bezpieczeństwa
 router.get('/questions', async (req, res) => {
   try {
@@ -114,6 +127,22 @@ router.post('/login', validate(loginSchema), async (req, res) => {
   } catch (err) {
     console.error('Błąd logowania:', err);
     return res.status(500).json({ ok: false, message: 'Błąd serwera przy logowaniu' });
+  }
+});
+
+// GET /api/auth/me – dane aktualnie zalogowanego użytkownika (do zakładki „Moje konto”)
+router.get('/me', authRequired, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, username, email, first_name, last_name, created_at
+       FROM "user" WHERE id = $1`,
+      [req.user.id]
+    );
+    if (!rows[0]) return res.status(404).json({ ok: false, message: 'Nie znaleziono użytkownika' });
+    return res.json({ ok: true, user: rows[0] });
+  } catch (err) {
+    console.error('Błąd /me:', err);
+    return res.status(500).json({ ok: false, message: 'Błąd serwera' });
   }
 });
 

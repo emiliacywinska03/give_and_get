@@ -32,7 +32,9 @@ const LoginRegister: React.FC = () => {
     const run = async () => {
       setQuestionsError(null);
       try {
-        const res = await fetch(`${API_BASE}/api/auth/questions`);
+        const res = await fetch(`${API_BASE}/api/auth/questions`, {
+        credentials: 'include',
+        });
         if (!res.ok) {
           const err = new Error(`Nie udało się pobrać pytań (HTTP ${res.status}).`);
           setQuestionsError(err.message);
