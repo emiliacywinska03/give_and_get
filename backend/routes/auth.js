@@ -146,4 +146,15 @@ router.get('/me', authRequired, async (req, res) => {
   }
 });
 
+// POST /api/auth/logout – wylogowanie 
+router.post('/logout', (req, res) => {
+  res.clearCookie('gg_token', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
+  return res.json({ ok: true });
+});
+
 module.exports = router;

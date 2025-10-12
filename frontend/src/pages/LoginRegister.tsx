@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './LoginRegister.css';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 
@@ -18,9 +20,18 @@ interface Question { id: number; text: string }
 
 const LoginRegister: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('login');
+  const navigate = useNavigate();
+  const { refresh, user } = useAuth();
 
 
   useEffect(() => { console.log('[Give&Get] API_BASE =', API_BASE); }, []);
+
+  // Jeśli użytkownik jest już zalogowany – przekieruj na profil
+  useEffect(() => {
+    if (user) {
+      navigate('/profile', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Rejestracja: pytania weryfikacyjne
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -109,6 +120,8 @@ const LoginRegister: React.FC = () => {
       }
 
       alert('Zalogowano.');
+      await refresh();
+      navigate('/profile');
     } catch (err) {
       console.error(err);
       setErrorsLogin({ general: 'Problem z połączeniem z serwerem.' });

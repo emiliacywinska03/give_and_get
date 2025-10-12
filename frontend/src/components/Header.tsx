@@ -2,10 +2,18 @@ import React , {useState} from 'react';
 import './Header.css';
 import MobileSidebar from './MobileSidebar';
 import './MobileSidebar.css';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 const Header: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
 
     return(
         <>
@@ -35,7 +43,16 @@ const Header: React.FC = () => {
                         <input type="text" placeholder="Szukaj..." />
                     </div>
                     <div className="my-account">
-                        <Link to="/auth" className="account">Moje konto</Link>
+                        {user ? (
+                            <>
+                                <Link to="/profile" className="account">Mój profil</Link>
+                                <button onClick={handleLogout} className="account logout-button" style={{ marginLeft: '10px' }}>
+                                    Wyloguj
+                                </button>
+                            </>
+                        ) : (
+                            <Link to="/auth" className="account">Zaloguj</Link>
+                        )}
                     </div>
                 </div>
             </div>

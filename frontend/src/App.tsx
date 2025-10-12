@@ -1,3 +1,5 @@
+import Profile from './pages/Profile';
+import ProtectedRoute from './auth/ProtectedRoute';
 import React from "react";
 import {Routes, Route} from 'react-router-dom'
 import Footer from "./components/Footer";
@@ -14,6 +16,14 @@ function App() {
       <Routes>
           <Route path="/" element={<Main />}/>
           <Route path="/auth" element={<LoginRegiter />}/>
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/listings/create" element={<CreateListing/>} />
           <Route path="/listings" element={<ListingPage/>} />
       </Routes>
