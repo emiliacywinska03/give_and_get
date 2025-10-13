@@ -4,7 +4,6 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');         
 const { pool } = require('./db');
 const listingRoutes = require('./routes/listing');
-const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -14,7 +13,7 @@ app.use(cors({
   credentials: true,    
 }));
 app.use(express.json());
-app.use(cookieParser()); 
+app.use('/api/listings', listingRoutes);
 
 app.get('/', async (req, res) => {
   console.log('Dostalem zapytanie');
@@ -28,8 +27,12 @@ app.get('/', async (req, res) => {
   }
 });
 
-app.use('/api/listings', listingRoutes);
-app.use('/api/auth', authRoutes);
+
+app.listen(PORT, '0.0.0.0' , ()=>{
+    console.log(`Backend dziala na porcie: ${PORT}`);
+});
+
+
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend dziala na porcie: ${PORT}`);

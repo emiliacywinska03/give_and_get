@@ -1,3 +1,4 @@
+
 .listing-grid{
     display: flex;
     flex-wrap: wrap;
@@ -68,15 +69,23 @@
   gap: 10px;
 }
 
+
+/* PRZYCISKI*/
 .edit-button,
 .save-button,
-.cancel-button {
+.cancel-button,
+.delete-button {
   padding: 8px 16px;
+  min-width: 100px;
+  text-align: center;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  margin-top: 10px;
+  margin-right: 8px;
+  height: 35px;
 }
 
 .save-button {
@@ -90,11 +99,122 @@
 
 .cancel-button {
   background-color: #f44336;
-  color: white;
+  color: black;
 }
 
-.cancel-button:hover {
-  background-color: #e53935;
+
+/* EDYTOWANIE OGLOSZENIA */
+.edit-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.edit-form input,
+.edit-form textarea {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.edit-form textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+
+.edit-form-buttons {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.action-button {
+    padding: 8px 16px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+.save-button {
+    background-color: #4caf50;
+    color: white;
+}
+
+.cancel-button {
+    background-color: #ccc;
+    color: black;
+}
+
+.delete-button {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #c0392b;
+}
+
+
+/*  Pasek filtrów (na górze strony) */
+.filters-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  margin: 2rem auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  max-width: 800px;
+}
+
+.filters-bar label {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  margin-right: 0.5rem;
+}
+
+.filters-bar select {
+  font-size: 1rem;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filters-bar select:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.filters-bar select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+@media (max-width: 600px) {
+  .filters-bar {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .filters-bar label {
+    margin-right: 0;
+  }
 }
 
 body.dark-mode .listing-grid {
