@@ -1,10 +1,12 @@
+import React, { useEffect, useState } from 'react';
+import './CreateListing.css'
+
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
 
 type Category = { id: number; name: string };
 type Subcategory = { id: number; name: string };
-import React, { useEffect, useState } from 'react';
-import './CreateListing.css'
+
 
 const CreateListing: React.FC = () => {
     const [title, setTitle] = useState('');
