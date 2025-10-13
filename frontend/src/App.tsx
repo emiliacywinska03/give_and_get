@@ -8,6 +8,7 @@ import Main from "./components/Main"
 import LoginRegiter from './pages/LoginRegister';
 import CreateListing from './pages/CreateListing';
 import ListingPage from "./pages/ListingPage";
+import Favorites from './pages/Favorites';
 
 function App() {
   return (
@@ -23,6 +24,14 @@ function App() {
                 <Profile />
               </ProtectedRoute>
             }
+          />
+          <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <Favorites />
+            </ProtectedRoute>
+          }
           />
           <Route path="/listings/create" element={<CreateListing/>} />
           <Route path="/listings" element={<ListingPage/>} />

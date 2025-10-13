@@ -16,6 +16,8 @@ const Profile: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
+  const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +40,26 @@ const Profile: React.FC = () => {
       }
     };
     fetchListings();
+
+    const fetchFavorites = async () => {
+      if (!user) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/listings/favorites`, {
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data)) {
+          setFavorites(data);
+        } else {
+          console.error('Niepoprawna odpowiedź API (favorites):', data);
+        }
+      } catch (err) {
+        console.error('Błąd pobierania ulubionych ogłoszeń:', err);
+      } finally {
+        setLoadingFavorites(false);
+      }
+    };
+    fetchFavorites();
   }, [user]);
 
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
@@ -76,6 +98,22 @@ const Profile: React.FC = () => {
                 <h4 className="listing-title">{l.title}</h4>
                 <p className="listing-desc">{l.description}</p>
                 <small className="listing-date">Dodano: {new Date(l.created_at).toLocaleDateString()}</small>
+              </div>
+            ))}
+          </div>
+        )}
+        <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
+        {loadingFavorites ? (
+          <p>Ładowanie ulubionych…</p>
+        ) : favorites.length === 0 ? (
+          <p>Nie masz jeszcze ulubionych ogłoszeń.</p>
+        ) : (
+          <div className="listing-grid">
+            {favorites.map((f) => (
+              <div key={f.id} className="listing-card">
+                <h4 className="listing-title">{f.title}</h4>
+                <p className="listing-desc">{f.description}</p>
+                <small className="listing-date">Dodano: {new Date(f.created_at).toLocaleDateString()}</small>
               </div>
             ))}
           </div>
