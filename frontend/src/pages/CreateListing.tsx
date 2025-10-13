@@ -144,7 +144,6 @@ const CreateListing: React.FC = () => {
                 onChange={(e)=> setTitle(e.target.value)}
                 required
                 />
-                <br />
                 <textarea
                     placeholder="Opis (maks. 1000 znaków)"
                     value={description}
@@ -158,7 +157,6 @@ const CreateListing: React.FC = () => {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                 />
-                <br />
                 <select value={type} onChange={(e) => setType(e.target.value)} required>
                     <option value="">Wybierz typ</option>
                     <option value="sales">Sprzedaż</option>
@@ -216,10 +214,9 @@ const CreateListing: React.FC = () => {
                         <option value="hybrydowa">Hybrydowa</option>
                         <option value="jednorazowa">Jednorazowa</option>
                         </select>
-                        <input type="text" placeholder="kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
+                        <input type="text" placeholder="Kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
                     </>
                 )}
-                <br />
                 <button type="submit">Dodaj ogłoszenie</button>
             </form>
         </div>
