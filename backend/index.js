@@ -3,6 +3,7 @@ const express = require('express');
 const cors= require('cors');
 const{Pool}=require('pg');
 const listingRoutes = require('./routes/listing');
+
 const app=express();
 const PORT = 5050;
 
@@ -16,6 +17,7 @@ const pool=new Pool({
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/listings', listingRoutes);
 
 app.get('/', async(req, res) => {
     console.log('Dostalem zapytanie')
@@ -35,6 +37,4 @@ app.listen(PORT, '0.0.0.0' , ()=>{
 });
 
 
-app.use(express.json());
-app.use('/api/listings', listingRoutes);
 

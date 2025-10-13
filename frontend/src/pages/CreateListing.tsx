@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_KEY = process.env.REACT_APP_API_KEY;
+
+type Category = { id: number; name: string };
+type Subcategory = { id: number; name: string };
+import React, { useEffect, useState } from 'react';
 import './CreateListing.css'
 
 const CreateListing: React.FC = () => {
@@ -7,6 +12,11 @@ const CreateListing: React.FC = () => {
     const [location, setLocation] = useState('');
     const [type, setType] = useState('');
     const [userId, setUserId] = useState(1); //do zmiany potem
+
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [categoryId, setCategoryId] = useState<number | ''>('');
+    const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+    const [subcategoryId, setSubcategoryId] = useState<number | ''>('');
 
     const[condition, setCondition] = useState('');
     const[price, setPrice]=useState('');
@@ -19,8 +29,53 @@ const CreateListing: React.FC = () => {
     const[jobMode, setJobMode]=useState('');
     const[jobCategory, setJobCategory]=useState('');
 
+
+    useEffect(() => {
+        const loadCategories = async () => {
+          setCategories([]);
+          setCategoryId('');
+          setSubcategories([]);
+          setSubcategoryId('');
+      
+          if (!type) return;
+          const res = await fetch(`${API_BASE}/api/listings/categories`, {
+            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
+          });
+          const all: Category[] = await res.json();
+      
+          const map: Record<string, string> = { work: 'Praca', help: 'Pomoc', sales: 'Sprzedaż' };
+          const filtered = all.filter(c => c.name === map[type]);
+      
+          setCategories(filtered);
+          if (filtered.length) setCategoryId(filtered[0].id);
+        };
+        loadCategories().catch(console.error);
+    }, [type]);
+      
+
+    useEffect(() => {
+        const loadSubcategories = async () => {
+          setSubcategories([]);
+          setSubcategoryId('');
+          if (!categoryId) return;
+      
+          const res = await fetch(`${API_BASE}/api/listings/subcategories?category_id=${categoryId}`, {
+            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
+          });
+          const data: Subcategory[] = await res.json();
+          setSubcategories(data);
+        };
+        loadSubcategories().catch(console.error);
+    }, [categoryId]);
+      
+
+
     const handleSubmit = async (e: React.FormEvent) =>{
         e.preventDefault();
+
+        if (!type) { alert('Wybierz typ ogłoszenia'); return; }
+        if (!categoryId) { alert('Wystąpił błąd: brak kategorii dla wybranego typu'); return; }
+        if (!subcategoryId) { alert('Wybierz podkategorię'); return; }
 
         const body:any={
             title,
@@ -28,7 +83,8 @@ const CreateListing: React.FC = () => {
             location,
             status_id: 1, //tymczasowo: np aktywne
             type_id: type=== 'sales'? 1: type === 'help' ? 2:3,
-            category_id: 1, //tymczasowe
+            category_id: categoryId || null,
+            subcategory_id: subcategoryId || null,
             user_id: userId,
         };
 
@@ -59,6 +115,10 @@ const CreateListing: React.FC = () => {
                 setDescription('');
                 setLocation('');
                 setType('');
+                setCategoryId('');
+                setSubcategoryId('');
+                setCategories([]);
+                setSubcategories([]);
             }else{
                 const data = await response.json();
                 alert("Błąd: " + data.error);
@@ -68,6 +128,8 @@ const CreateListing: React.FC = () => {
             alert('Coś poszło nie tak.');
         }
     };
+
+
 
     return(
         <div className='create-listing-container'>
@@ -101,6 +163,21 @@ const CreateListing: React.FC = () => {
                     <option value="help">Pomoc</option>
                     <option value="work">Praca</option>
                 </select>
+
+                {type && (
+                    <>
+                        <select
+                        value={subcategoryId}
+                        onChange={(e) => setSubcategoryId(Number(e.target.value))}
+                        required
+                        >
+                        <option value="">Wybierz podkategorię</option>
+                        {subcategories.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                        </select>
+                    </>
+                )}
                 
                 {type === 'sales' && (
                     <>
@@ -110,12 +187,15 @@ const CreateListing: React.FC = () => {
                             <input type="checkbox" checked={negotiable} onChange={()=> setNegotiable(!negotiable)} disabled={isFree}/>
                             Do negocjacji
                         </label>
+                        <label>
+                            <input type="checkbox" checked={isFree} onChange={()=> setIsFree(!isFree)} />
+                            Oddam za darmo
+                        </label>
                     </>
                 )}
 
                 {type === 'help' &&(
                     <>
-                        <input type="text" placeholder="Typ pomocy" value={helpType} onChange={(e) => setHelpType(e.target.value)} required/>
                         <label>
                             <input type="checkbox" checked={exchangeForHelp} onChange={() => setExchangeForHelp(!exchangeForHelp)}/>
                             Pomoc za pomoc

@@ -1,6 +1,12 @@
 import React, {useEffect, useState} from 'react';
 import './ListingPage.css'
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_KEY = process.env.REACT_APP_API_KEY;
+
+type Category = { id: number; name: string };
+type Subcategory = { id: number; name: string };
+
 interface Listing{
     id: number;
     title: string;
@@ -27,6 +33,69 @@ const ListingPage: React.FC =() =>{
         })
         .catch((err)=> console.error("Błąd przy pobieraniu ogłoszeń: ", err))
     }, []);
+    const [typeFilter, setTypeFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
+    const [subcategoryFilter, setSubcategoryFilter] = useState<number | ''>('');
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+      
+    
+    useEffect(() => {
+        const run = async () => {
+        
+          setCategories([]); 
+          setCategoryFilter('');
+          setSubcategories([]); 
+          setSubcategoryFilter('');
+      
+          if (!typeFilter) return;
+      
+          const res = await fetch(`${API_BASE}/api/listings/categories`, {
+            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
+          });
+          const all: Category[] = await res.json();
+      
+          const map: Record<string, string> = { work:'Praca', help:'Pomoc', sales:'Sprzedaż' };
+          const filtered = all.filter(c => c.name === map[typeFilter]);
+      
+          setCategories(filtered);
+          if (filtered.length) setCategoryFilter(filtered[0].id);
+        };
+        run().catch(console.error);
+    }, [typeFilter]);
+      
+
+    useEffect(() => {
+        const run = async () => {
+          setSubcategories([]);
+          setSubcategoryFilter('');
+          if (!categoryFilter) return;
+      
+          const res = await fetch(`${API_BASE}/api/listings/subcategories?category_id=${categoryFilter}`, {
+            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
+          });
+          const data: Subcategory[] = await res.json();
+          setSubcategories(data);
+        };
+        run().catch(console.error);
+    }, [categoryFilter]);
+
+      
+
+    useEffect(() => {
+        const q = new URLSearchParams();
+        if (typeFilter) q.set('type_id', typeFilter === 'sales' ? '1' : typeFilter === 'help' ? '2' : '3');
+        if (categoryFilter) q.set('category_id', String(categoryFilter));
+        if (subcategoryFilter) q.set('subcategory_id', String(subcategoryFilter));
+      
+        fetch(`${API_BASE}/api/listings?${q.toString()}`, {
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
+        })
+          .then((res) => res.json())
+          .then(setListings)
+          .catch((err) => console.error('Błąd przy pobieraniu ogłoszeń: ', err));
+    }, [typeFilter, categoryFilter, subcategoryFilter]);
+      
 
 
     const handleEdit = async (id: number) => {
@@ -89,7 +158,34 @@ const ListingPage: React.FC =() =>{
 
     return(
         <div className='listing-page'>
+
             <h2>Wszystkie ogłoszenia</h2>
+            <div className="filters-bar">
+                <label> Typ </label>
+                <select value={typeFilter} onChange={(e)=> setTypeFilter(e.target.value)}>
+                    <option value="">Typ</option>
+                    <option value="work">Praca</option>
+                    <option value="help">Pomoc</option>
+                    <option value="sales">Sprzedaż</option>
+                </select>
+
+                <div className="filter">
+                    <label>Podkategoria</label>
+                    <select
+                        value={subcategoryFilter}
+                        onChange={(e)=> setSubcategoryFilter(Number(e.target.value) || '')} >
+                            
+                        <option value="">Wszystkie</option>
+
+                        {subcategories.map((s) => (
+                            <option key={s.id} value={s.id}>
+                                {s.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             {listings.length===0?(
                 <p>Brak ogłoszeń.</p>
             ):(
