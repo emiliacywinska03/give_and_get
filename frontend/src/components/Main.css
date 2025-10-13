@@ -164,3 +164,69 @@
     color: white;
 }
 
+
+
+/* --- Dark mode overrides for Main section --- */
+body.dark-mode .about {
+  background: linear-gradient(to bottom, #1a1d22, #111318);
+  color: #e5e7eb;
+}
+
+body.dark-mode .about-title {
+  color: #f9fafb;
+}
+
+body.dark-mode .about-description {
+  color: #d1d5db;
+}
+
+body.dark-mode .button-add-listing,
+body.dark-mode .button-search-listings {
+  background-color: #2563eb;
+  color: #f9fafb;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+body.dark-mode .button-add-listing:hover,
+body.dark-mode .button-search-listings:hover {
+  background-color: #1e40af;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+body.dark-mode .categories {
+  background-color: #111318;
+  color: #e5e7eb;
+}
+
+body.dark-mode .categories-title {
+  color: #f9fafb;
+}
+
+body.dark-mode .categories-description {
+  color: #d1d5db;
+}
+
+body.dark-mode .category-card {
+  background-color: #1e232c;
+  border-color: #2a2f3a;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  color: #f1f5f9;
+}
+
+body.dark-mode .category-card:hover {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+}
+
+body.dark-mode .category-description {
+  color: #d1d5db;
+}
+
+body.dark-mode .button-outline {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+body.dark-mode .button-outline:hover {
+  background-color: #3b82f6;
+  color: #ffffff;
+}

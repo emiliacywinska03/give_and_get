@@ -96,3 +96,40 @@
 .cancel-button:hover {
   background-color: #e53935;
 }
+
+body.dark-mode .listing-grid {
+  background-color: #0f1115;
+}
+
+body.dark-mode .listing-card {
+  background-color: #1a1d24;
+  border-color: #2a2f3a;
+  color: #f1f5f9; 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .listing-title {
+  color: #ffffff;
+}
+
+body.dark-mode .listing-description {
+  color: #d1d5db;
+}
+
+body.dark-mode .listing-location {
+  color: #9ca3af;
+}
+
+body.dark-mode .delete-button {
+  background-color: #b91c1c;
+}
+
+body.dark-mode .delete-button:hover {
+  background-color: #ef4444;
+}
+
+body.dark-mode .edit-button,
+body.dark-mode .save-button,
+body.dark-mode .cancel-button {
+  color: #ffffff;
+}

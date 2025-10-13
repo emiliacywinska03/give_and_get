@@ -122,3 +122,54 @@
   .profile-title { font-size: 1.3rem; }
   .profile-username { font-size: 1.2rem; }
 }
+
+body.dark-mode .profile-page {
+  background: #0f1115;
+  color: #e5e7eb;
+}
+
+body.dark-mode .profile-card {
+  background: #1a1d24;
+  border-color: #2a2f3a;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .profile-title,
+body.dark-mode .profile-subtitle,
+body.dark-mode .profile-username {
+  color: #f9fafb;
+}
+
+body.dark-mode .profile-info {
+  background: #1e232c;
+  border-color: #2a2f3a;
+}
+
+body.dark-mode .btn-logout {
+  background-color: #3a1f1f;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+body.dark-mode .btn-logout:hover {
+  background-color: #4c2323;
+  color: #fecaca;
+}
+
+body.dark-mode .listing-card {
+  background: #1e232c;
+  border-color: #2a2f3a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .listing-title {
+  color: #f3f4f6;
+}
+
+body.dark-mode .listing-desc {
+  color: #d1d5db;
+}
+
+body.dark-mode .listing-date {
+  color: #9ca3af;
+}

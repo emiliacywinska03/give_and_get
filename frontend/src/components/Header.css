@@ -34,9 +34,23 @@ header{
     color: black;
 }
 
-.button-theme-toogle{
-    background: none;
-    border: none;
+.button-theme-toggle {
+  background: transparent;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  padding: 0.4rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.button-theme-toggle:hover {
+  background-color: #f1f5f9;
+}
+
+.button-theme-toggle:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .search-bar input{
@@ -103,9 +117,80 @@ header{
     background-color: #f1f5f9;
 }
 
+body.dark-mode header{
+  background-color: #0f1115;           
+  border-bottom: 1px solid #2a2f3a;     
+}
+
+body.dark-mode .logo{
+  color: #f5f7fb;
+}
+
+body.dark-mode .button-theme-toggle:hover{
+  background-color: #1f2430;           
+}
+
+body.dark-mode .menu-button:hover{
+  background-color: #1f2430;
+}
+
+body.dark-mode .search-bar{
+  background-color: #1a1f29;
+  border-color: #2a2f3a;
+  color: #d1d5db;
+}
+
+body.dark-mode .search-bar input{
+  color: #e5e7eb;
+}
+
+body.dark-mode .search-bar input::placeholder{
+  color: #9ca3af;
+}
+
+body.dark-mode .account{
+  background-color: #1a1f29;
+  color: #e5e7eb;
+  border-color: #2a2f3a;
+}
+
+body.dark-mode .account:hover{
+  background-color: #232938;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+body.dark-mode .logout-button{
+  background-color: #3a1f1f;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+
+body.dark-mode .logout-button:hover{
+  background-color: #4c2323;
+  color: #fecaca;
+}
+
+
+body.dark-mode .favourites,
+body.dark-mode .messages,
+body.dark-mode .button-theme-toggle,
+body.dark-mode .menu-button,
+body.dark-mode .search-bar svg {
+  color: #e5e7eb; 
+}
+
+body.dark-mode .favourites:hover,
+body.dark-mode .messages:hover,
+body.dark-mode .button-theme-toggle:hover,
+body.dark-mode .menu-button:hover {
+  color: #ffffff;
+}
+
 @media (max-width: 700px) {
 
-    .button-theme-toogle{
+    .button-theme-toggle{
         display: none;
     }
 
