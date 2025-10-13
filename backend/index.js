@@ -32,8 +32,3 @@ app.listen(PORT, '0.0.0.0' , ()=>{
     console.log(`Backend dziala na porcie: ${PORT}`);
 });
 
-
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend dziala na porcie: ${PORT}`);
-});
