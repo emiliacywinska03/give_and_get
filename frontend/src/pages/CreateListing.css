@@ -65,10 +65,36 @@
     transform: translateY(-3px);
 }
 
-.create-listing-container select{
-    appearance: none;
-    background-color: #f9fafb;
-    
+
+.auth-form select {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background-color: #fff;
+  font-size: 1rem;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;         
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 7l5 5 5-5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 20px 20px;
+}
+
+.auth-form select:focus {
+  outline: none;
+  border-color: #1b2332;
+  box-shadow: 0 0 0 3px rgba(27, 35, 50, 0.12); 
+}
+
+
+.auth-form select:invalid {
+  color: #9ca3af;
 }
 
 .create-listing-container label{
@@ -84,4 +110,3 @@
     height: 18px;
     accent-color: #3b82f6;
 }
-

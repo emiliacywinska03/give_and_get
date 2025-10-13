@@ -25,7 +25,11 @@ const ListingPage: React.FC =() =>{
     const [editedLocation, setEditedLocation] = useState('');
 
     useEffect(() =>{
-        fetch('http://localhost:5050/api/listings')
+        fetch(`${API_BASE}/api/listings`, {
+          headers: {
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+          }
+        })
         .then((res) => res.json())
         .then((data) => {
             console.log("Dane z backendu: ", data)
@@ -100,10 +104,11 @@ const ListingPage: React.FC =() =>{
 
     const handleEdit = async (id: number) => {
         try {
-            const res = await fetch(`http://localhost:5050/api/listings/${id}`,{
+            const res = await fetch(`${API_BASE}/api/listings/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(API_KEY ? { 'x-api-key': API_KEY } : {})
                 },
                 body: JSON.stringify({
                     title: editedTitle,
@@ -135,12 +140,15 @@ const ListingPage: React.FC =() =>{
 
 
     const handleDelete = async (id: number) => {
-        const confirm = window.confirm('Czy na pewno chcesz usunąc ogłoszenie?');
-        if (!confirm) return;
+        const confirmed = window.confirm('Czy na pewno chcesz usunąć ogłoszenie?');
+        if (!confirmed) return;
     
         try {
-            const res = await fetch(`http://localhost:5050/api/listings/${id}`, {
+            const res = await fetch(`${API_BASE}/api/listings/${id}`, {
                 method: 'DELETE',
+                headers: {
+                    ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+                }
             });
     
             if (res.ok) {
@@ -148,7 +156,7 @@ const ListingPage: React.FC =() =>{
                 setListings(prev => prev.filter(listing => listing.id !== id ));
             } else {
                 const error = await res.json();
-                alert(`Błąd: $(error.error)`);
+                alert(`Błąd: ${error.error}`);
             }
         } catch (err) {
             console.error('Błąd podczas usuwania:', err);

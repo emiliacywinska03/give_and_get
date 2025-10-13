@@ -105,9 +105,12 @@ const CreateListing: React.FC = () => {
         }
 
         try{
-            const response = await fetch('http://localhost:5050/api/listings',{
+            const response = await fetch(`${API_BASE}/api/listings`, {
                 method: 'POST',
-                headers: { 'Content-Type' : 'application/json'},
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+                },
                 body: JSON.stringify(body),
             });
 

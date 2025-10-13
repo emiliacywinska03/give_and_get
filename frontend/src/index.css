@@ -19,3 +19,13 @@ html, body{
 *, *::before, *::after{
   box-sizing: border-box;
 }
+
+
+body.dark-mode {
+  background-color: #0d0f13; 
+  color: #e5e7eb;
+}
+
+html.dark-mode {
+  background-color: #0d0f13;
+}
