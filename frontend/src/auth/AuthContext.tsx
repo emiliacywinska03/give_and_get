@@ -13,6 +13,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  login: (login: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
 };
@@ -24,11 +25,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const login = async (loginValue: string, password: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login: loginValue, password }),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.ok && data?.user) {
+        setUser(data.user);
+        return { ok: true };
+      }
+      const message = data?.errors?.[0]?.message || data?.message || 'Nie udało się zalogować';
+      return { ok: false, message };
+    } catch (e) {
+      console.error('Login request failed:', e);
+      return { ok: false, message: 'Błąd połączenia z serwerem' };
+    }
+  };
+
   const refresh = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' });
-      const data = await res.json();
-      if (res.ok && data.ok) setUser(data.user);
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      const data = isJson ? await res.json() : null;
+      if (res.ok && data?.ok) setUser(data.user);
       else setUser(null);
     } catch (e) {
       console.error('Auth refresh failed:', e);
@@ -47,14 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
+      setLoading(true);
       await refresh();
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     })();
+    return () => { cancelled = true; };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, refresh, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, refresh, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );
