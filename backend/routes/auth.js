@@ -120,7 +120,8 @@ router.post('/login', validate(loginSchema), async (req, res) => {
     res.cookie('gg_token', token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,             
+      path: '/',
     });
 
     return res.json({ ok: true, user: { id: user.id, username: user.username, email: user.email } });
