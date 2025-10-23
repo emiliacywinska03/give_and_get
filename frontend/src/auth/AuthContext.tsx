@@ -18,7 +18,7 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -30,7 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (res.ok && data.ok) setUser(data.user);
       else setUser(null);
-    } catch {
+    } catch (e) {
+      console.error('Auth refresh failed:', e);
       setUser(null);
     }
   };
@@ -38,6 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.error('Logout request failed:', e);
     } finally {
       setUser(null);
     }
