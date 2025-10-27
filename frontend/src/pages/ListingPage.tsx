@@ -3,6 +3,7 @@ import './ListingPage.css'
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
+console.log('REACT_APP_API_URL =', API_BASE);
 
 type Category = { id: number; name: string };
 type Subcategory = { id: number; name: string };
@@ -24,19 +25,26 @@ const ListingPage: React.FC =() =>{
     const [editedDescription, setEditedDescription] = useState('');
     const [editedLocation, setEditedLocation] = useState('');
 
-    useEffect(() =>{
-        fetch(`${API_BASE}/api/listings`, {
-          headers: {
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {})
-          }
-        })
-        .then((res) => res.json())
-        .then((data) => {
-            console.log("Dane z backendu: ", data)
+    useEffect(() => {
+        (async () => {
+          try {
+            const res = await fetch(`${API_BASE}/api/listings`, {
+              headers: {
+                ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+              }
+            });
+            if (!res.ok) {
+              const txt = await res.text();
+              throw new Error(`HTTP ${res.status}: ${txt}`);
+            }
+            const data = await res.json();
+            console.log('Dane z backendu (start): ', data);
             setListings(data);
-        })
-        .catch((err)=> console.error("Błąd przy pobieraniu ogłoszeń: ", err))
-    }, []);
+          } catch (err) {
+            console.error('Błąd przy pobieraniu ogłoszeń (start): ', err);
+          }
+        })();
+      }, []);
     const [typeFilter, setTypeFilter] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
     const [subcategoryFilter, setSubcategoryFilter] = useState<number | ''>('');
@@ -92,10 +100,15 @@ const ListingPage: React.FC =() =>{
         if (categoryFilter) q.set('category_id', String(categoryFilter));
         if (subcategoryFilter) q.set('subcategory_id', String(subcategoryFilter));
       
-        fetch(`${API_BASE}/api/listings?${q.toString()}`, {
+        const qs = q.toString();
+        const url = qs ? `${API_BASE}/api/listings?${qs}` : `${API_BASE}/api/listings`;
+        fetch(url, {
           headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
         })
-          .then((res) => res.json())
+          .then((res) => {
+            if (!res.ok) return res.text().then(t => { throw new Error(`HTTP ${res.status}: ${t}`); });
+            return res.json();
+          })
           .then(setListings)
           .catch((err) => console.error('Błąd przy pobieraniu ogłoszeń: ', err));
     }, [typeFilter, categoryFilter, subcategoryFilter]);
@@ -198,9 +211,9 @@ const ListingPage: React.FC =() =>{
                 <p>Brak ogłoszeń.</p>
             ):(
                 <div className='listing-grid'>
-                    {listings.map((listings)=>(
-                        <div key={listings.id} className='listing-card'>
-                            {editingId === listings.id ? (
+                    {listings.map((listing)=>(
+                        <div key={listing.id} className='listing-card'>
+                            {editingId === listing.id ? (
                                 <div className='edit-form'>
                                     <input
                                         type='text'
@@ -220,24 +233,24 @@ const ListingPage: React.FC =() =>{
                                         placeholder='Lokalizacja'
                                     />
                                     <div className='edit-form-buttons'>
-                                    <button className='action-button save-button' onClick={()=> handleEdit(listings.id)}>Zapisz</button>
+                                    <button className='action-button save-button' onClick={()=> handleEdit(listing.id)}>Zapisz</button>
                                     <button className='action-button cancel-button' onClick={()=> setEditingId(null)}>Anuluj</button>
                                     </div>
                                     </div>
                                     
                                     ):(
                                         <>
-                                        <h3 className='listing-title'>{listings.title}</h3>
-                                        <p className='listing-description'>{listings.description}</p>
-                                        <p className='listing-location'>Lokalizacja: {listings.location}</p>
-                                        <button className="delete-button" onClick={() => handleDelete(listings.id)}> Usuń</button>
+                                        <h3 className='listing-title'>{listing.title}</h3>
+                                        <p className='listing-description'>{listing.description}</p>
+                                        <p className='listing-location'>Lokalizacja: {listing.location}</p>
+                                        <button className="delete-button" onClick={() => handleDelete(listing.id)}> Usuń</button>
                                         <button
                                         className='edit-button'
                                         onClick={()=>{
-                                            setEditingId(listings.id);
-                                            setEditedTitle(listings.title);
-                                            setEditedDescription(listings.description);
-                                            setEditedLocation(listings.location);
+                                            setEditingId(listing.id);
+                                            setEditedTitle(listing.title);
+                                            setEditedDescription(listing.description);
+                                            setEditedLocation(listing.location);
                                         }}
                                         >
                                             Edytuj

@@ -10,10 +10,18 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 5050;
 
+const allowedOrigins = [
+  process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
+  'http://localhost:5173',
+  'http://172.21.40.162:3000',
+];
 
 app.use(cors({
-  origin: 'http://172.21.40.162:3000',
-  credentials: true,                 
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); 
+    return allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'));
+  },
+  credentials: true,
 }));
 
 
