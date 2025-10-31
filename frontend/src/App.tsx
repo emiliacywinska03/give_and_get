@@ -9,6 +9,7 @@ import LoginRegiter from './pages/LoginRegister';
 import CreateListing from './pages/CreateListing';
 import ListingPage from "./pages/ListingPage";
 import Favorites from './pages/Favorites';
+import ListingDetails from './pages/ListingDetails';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           />
           <Route path="/listings/create" element={<CreateListing/>} />
           <Route path="/listings" element={<ListingPage/>} />
+          <Route path="/listing/:id" element={<ListingDetails />} />
       </Routes>
       <Footer />
     </div>
