@@ -1,5 +1,7 @@
 import React from "react";
 import './Main.css'
+import { Link } from "react-router-dom";
+
 
 const Main: React.FC = () => {
     return(
@@ -13,8 +15,8 @@ const Main: React.FC = () => {
                         Przeglądaj tysiące ogłoszeń w kategoriach: praca, sprzedaż i usługi.
                     </p>
                     <div className="about-buttons">
-                        <a href="/listings/create" className="button-add-listing">Dodaj ogłoszenie</a>
-                        <a href="/listings" className="button-search-listings">Przeglądaj ogłoszenia</a>
+                         <Link to="/listings/create" className="button-add-listing">Dodaj ogłoszenie</Link>
+                         <Link to="/listings" className="button-search-listings">Przeglądaj ogłoszenia</Link>
                     </div>
                 </div>
             </section>
@@ -33,7 +35,7 @@ const Main: React.FC = () => {
                         }
                         title="Praca"
                         description="Znajdź pracę lub zatrudnij talenty"
-                        link="/listings/category/work"
+                        to="/listings?type=work"
                     />
                     <CategoryCard
                         svg={
@@ -43,7 +45,7 @@ const Main: React.FC = () => {
                           }
                           title="Sprzedaż"
                           description="Kupuj i sprzedawaj przedmioty"
-                          link="/listings/category/sales"
+                          to="/listings?type=sales"
                     />
                     <CategoryCard
                         svg={
@@ -53,7 +55,7 @@ const Main: React.FC = () => {
                         }
                         title="Pomoc"
                         description="Oferuj lub poszukuj pomocy"
-                        link="/listings/category/help"
+                        to="/listings?type=help"
                     />
                 </div>
             </section>
@@ -65,16 +67,16 @@ interface CategoryCardProps {
     svg: React.ReactNode;
     title: string;
     description: string;
-    link: string;
+    to: string;
 }
 
-const CategoryCard: React.FC<CategoryCardProps> = ({svg, title, description, link}) => (
+const CategoryCard: React.FC<CategoryCardProps> = ({ svg, title, description, to }) => (
     <div className="category-card">
-        <div className="category-icon">{svg}</div>
-        <h3 className="category-title">{title}</h3>
-        <p className="category-description">{description}</p>
-        <a href={link} className="button button-outline">Przeglądaj {title}</a>
+      <div className="category-icon">{svg}</div>
+      <h3 className="category-title">{title}</h3>
+      <p className="category-description">{description}</p>
+      <Link to={to} className="button button-outline">Przeglądaj {title}</Link>
     </div>
-)
+  );
 
 export default Main;
