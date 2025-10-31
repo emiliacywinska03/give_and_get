@@ -1,40 +1,49 @@
 require('dotenv').config();
 const express = require('express');
-const cors= require('cors');
-const{Pool}=require('pg');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const { pool } = require('./db');
+
 const listingRoutes = require('./routes/listing');
-const app=express();
-const PORT = 5050;
+const authRoutes = require('./routes/auth');
 
-const pool=new Pool({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-});
+const app = express();
+const PORT = process.env.PORT || 5050;
 
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = [
+  process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
+  'http://localhost:5173',
+  'http://172.21.40.162:3000',
+];
 
-app.get('/', async(req, res) => {
-    console.log('Dostalem zapytanie')
-    try{
-        const result=await pool.query('SELECT NOW()');
-        console.log(result);
-        res.json({message: 'Udalo sie', czas: result.rows[0].now});
-    }catch(err){
-        console.error(err);
-        res.status(500).json({error: 'Blad', szczegoly: err.message});
-    }
-});
-
-
-app.listen(PORT, '0.0.0.0' , ()=>{
-    console.log(`Backend dziala na porcie: ${PORT}`);
-});
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true); 
+    return allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'));
+  },
+  credentials: true,
+}));
 
 
 app.use(express.json());
+app.use(cookieParser());
+
+
+app.get('/healthz', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({ ok: true, time: result.rows[0].now });
+  } catch (err) {
+    console.error('Błąd połączenia z bazą:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
 app.use('/api/listings', listingRoutes);
+app.use('/api/auth', authRoutes);
 
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend działa na porcie: ${PORT}`);
+});

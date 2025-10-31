@@ -41,3 +41,27 @@ footer{
         text-align: center;
     }
 }
+
+
+body.dark-mode footer {
+  background-color: #0f1115;
+  border-top: 1px solid #2a2f3a;
+}
+
+body.dark-mode .footer-text {
+  color: #9ca3af;
+}
+
+body.dark-mode .footer-links {
+  color: #e5e7eb;
+}
+
+body.dark-mode .footer-links a {
+  color: #e5e7eb;
+  text-decoration-color: #4b5563;
+}
+
+body.dark-mode .footer-links a:hover {
+  color: #ffffff;
+  text-decoration-color: #9ca3af;
+}
