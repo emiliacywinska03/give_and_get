@@ -1,6 +1,8 @@
 import React from "react";
 import './Main.css'
 import { Link } from "react-router-dom";
+import zdjecie from '../assets/zdj.png';
+
 
 
 const Main: React.FC = () => {
@@ -59,6 +61,11 @@ const Main: React.FC = () => {
                     />
                 </div>
             </section>
+
+            <div className="full-bleed">
+                <img src={zdjecie} alt="Give&Get" className="hero-img" />
+            </div>
+
         </main>
     )
 }
@@ -77,6 +84,8 @@ const CategoryCard: React.FC<CategoryCardProps> = ({ svg, title, description, to
       <p className="category-description">{description}</p>
       <Link to={to} className="button button-outline">Przeglądaj {title}</Link>
     </div>
-  );
+);
+
+
 
 export default Main;
