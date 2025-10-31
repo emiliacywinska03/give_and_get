@@ -13,7 +13,6 @@ const CreateListing: React.FC = () => {
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
     const [type, setType] = useState('');
-    const [userId, setUserId] = useState(1); //do zmiany potem
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [categoryId, setCategoryId] = useState<number | ''>('');
@@ -87,7 +86,6 @@ const CreateListing: React.FC = () => {
             type_id: type=== 'sales'? 1: type === 'help' ? 2:3,
             category_id: categoryId || null,
             subcategory_id: subcategoryId || null,
-            user_id: userId,
         };
 
         if(type === 'sales'){
@@ -111,6 +109,7 @@ const CreateListing: React.FC = () => {
                     'Content-Type': 'application/json',
                     ...(API_KEY ? { 'x-api-key': API_KEY } : {})
                 },
+                credentials: 'include',
                 body: JSON.stringify(body),
             });
 

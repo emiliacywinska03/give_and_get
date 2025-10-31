@@ -24,7 +24,7 @@ const Profile: React.FC = () => {
     const fetchListings = async () => {
       if (!user) return;
       try {
-        const res = await fetch(`${API_BASE}/api/listings/user/${user.id}`, {
+        const res = await fetch(`${API_BASE}/api/listings/my`, {
           credentials: 'include',
         });
         const data = await res.json();
@@ -97,6 +97,7 @@ const Profile: React.FC = () => {
               >
                 <h4 className="listing-title">{l.title}</h4>
                 <p className="listing-desc">{l.description}</p>
+                <p><strong>Autor:</strong> {user.username}</p>
                 <small className="listing-date">Dodano: {new Date(l.created_at).toLocaleDateString()}</small>
               </div>
             ))}

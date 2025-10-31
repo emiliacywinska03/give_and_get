@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import './ListingPage.css'
+import { useAuth } from '../auth/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -15,6 +16,7 @@ interface Listing{
     location: string;
     type_id: number;
     user_id: number;
+    author_username?: string;
 }
 
 
@@ -24,14 +26,17 @@ const ListingPage: React.FC =() =>{
     const [editedTitle, setEditedTitle] = useState('');
     const [editedDescription, setEditedDescription] = useState('');
     const [editedLocation, setEditedLocation] = useState('');
+        const { user } = useAuth();
 
     useEffect(() => {
         (async () => {
           try {
             const res = await fetch(`${API_BASE}/api/listings`, {
               headers: {
+                'Content-Type': 'application/json',
                 ...(API_KEY ? { 'x-api-key': API_KEY } : {})
-              }
+              },
+              credentials: 'include',
             });
             if (!res.ok) {
               const txt = await res.text();
@@ -103,7 +108,8 @@ const ListingPage: React.FC =() =>{
         const qs = q.toString();
         const url = qs ? `${API_BASE}/api/listings?${qs}` : `${API_BASE}/api/listings`;
         fetch(url, {
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) }
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+          credentials: 'include',
         })
           .then((res) => {
             if (!res.ok) return res.text().then(t => { throw new Error(`HTTP ${res.status}: ${t}`); });
@@ -123,14 +129,11 @@ const ListingPage: React.FC =() =>{
                     'Content-Type': 'application/json',
                     ...(API_KEY ? { 'x-api-key': API_KEY } : {})
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     title: editedTitle,
                     description: editedDescription,
                     location: editedLocation,
-                    status_id:1,
-                    type_id:1,
-                    category_id:1,
-                    user_id:1
                 }),
             });
 
@@ -161,7 +164,8 @@ const ListingPage: React.FC =() =>{
                 method: 'DELETE',
                 headers: {
                     ...(API_KEY ? { 'x-api-key': API_KEY } : {})
-                }
+                },
+                credentials: 'include',
             });
     
             if (res.ok) {
@@ -241,20 +245,25 @@ const ListingPage: React.FC =() =>{
                                     ):(
                                         <>
                                         <h3 className='listing-title'>{listing.title}</h3>
+                                        <p className='listing-author'>Autor: {listing.author_username ?? 'nieznany'}</p>
                                         <p className='listing-description'>{listing.description}</p>
                                         <p className='listing-location'>Lokalizacja: {listing.location}</p>
-                                        <button className="delete-button" onClick={() => handleDelete(listing.id)}> Usuń</button>
-                                        <button
-                                        className='edit-button'
-                                        onClick={()=>{
-                                            setEditingId(listing.id);
-                                            setEditedTitle(listing.title);
-                                            setEditedDescription(listing.description);
-                                            setEditedLocation(listing.location);
-                                        }}
-                                        >
-                                            Edytuj
-                                        </button>
+                                        {user && listing.user_id === user.id && (
+                                          <>
+                                            <button className="delete-button" onClick={() => handleDelete(listing.id)}>Usuń</button>
+                                            <button
+                                              className='edit-button'
+                                              onClick={()=>{
+                                                  setEditingId(listing.id);
+                                                  setEditedTitle(listing.title);
+                                                  setEditedDescription(listing.description);
+                                                  setEditedLocation(listing.location);
+                                              }}
+                                            >
+                                              Edytuj
+                                            </button>
+                                          </>
+                                        )}
                                         </>
                             
                             )}
