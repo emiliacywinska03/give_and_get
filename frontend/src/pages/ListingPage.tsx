@@ -248,22 +248,24 @@ const ListingPage: React.FC =() =>{
                                         <p className='listing-author'>Autor: {listing.author_username ?? 'nieznany'}</p>
                                         <p className='listing-description'>{listing.description}</p>
                                         <p className='listing-location'>Lokalizacja: {listing.location}</p>
-                                        {user && listing.user_id === user.id && (
-                                          <>
-                                            <button className="delete-button" onClick={() => handleDelete(listing.id)}>Usuń</button>
+                                        {user?.id === listing.user_id ? (
+                                          <div className="listing-actions">
+                                            <button className="delete-button" onClick={() => handleDelete(listing.id)}>
+                                              Usuń
+                                            </button>
                                             <button
-                                              className='edit-button'
-                                              onClick={()=>{
-                                                  setEditingId(listing.id);
-                                                  setEditedTitle(listing.title);
-                                                  setEditedDescription(listing.description);
-                                                  setEditedLocation(listing.location);
+                                              className="edit-button"
+                                              onClick={() => {
+                                                setEditingId(listing.id);
+                                                setEditedTitle(listing.title);
+                                                setEditedDescription(listing.description);
+                                                setEditedLocation(listing.location);
                                               }}
                                             >
                                               Edytuj
                                             </button>
-                                          </>
-                                        )}
+                                          </div>
+                                        ) : null}
                                         </>
                             
                             )}
