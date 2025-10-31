@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import './ListingPage.css'
 import { useAuth } from '../auth/AuthContext';
+import { Link } from 'react-router-dom';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -244,7 +245,9 @@ const ListingPage: React.FC =() =>{
                                     
                                     ):(
                                         <>
-                                        <h3 className='listing-title'>{listing.title}</h3>
+                                        <h3 className='listing-title'>
+                                        <Link to={`/listing/${listing.id}`}>{listing.title}</Link>
+                                        </h3>
                                         <p className='listing-author'>Autor: {listing.author_username ?? 'nieznany'}</p>
                                         <p className='listing-description'>{listing.description}</p>
                                         <p className='listing-location'>Lokalizacja: {listing.location}</p>

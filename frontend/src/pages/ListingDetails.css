@@ -1,0 +1,80 @@
+.listing-details-container {
+  max-width: 900px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  font-family: 'Inter', sans-serif;
+}
+
+.listing-details-back {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.listing-details-back:hover {
+  color: #0056b3;
+}
+
+.listing-details-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.listing-details-meta {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.listing-details-card {
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.listing-details-description {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.listing-details-info {
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.listing-details-info strong {
+  color: #333;
+}
+
+.listing-details-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.listing-details-actions button,
+.listing-details-actions a {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.listing-details-actions button:hover,
+.listing-details-actions a:hover {
+  background-color: #0056b3;
+}

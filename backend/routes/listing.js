@@ -214,4 +214,34 @@ router.put('/:id', authRequired, async (req, res) => {
   }
 });
 
+// --- DETAILS: publicznie dane 1 ogłoszenia po id ---
+router.get('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
+
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT
+        l.*,
+        u.username AS author_username,
+        c.name     AS category_name,
+        s.name     AS subcategory_name
+      FROM listing l
+      JOIN "user" u       ON u.id = l.user_id
+      LEFT JOIN category c     ON c.id = l.category_id
+      LEFT JOIN subcategory s  ON s.id = l.subcategory_id
+      WHERE l.id = $1
+      `,
+      [id]
+    );
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Nie znaleziono ogłoszenia' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Błąd podczas pobierania szczegółów ogłoszenia:', err.message);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 module.exports = router;
