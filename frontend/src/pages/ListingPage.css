@@ -253,3 +253,65 @@ body.dark-mode .save-button,
 body.dark-mode .cancel-button {
   color: #ffffff;
 }
+
+
+.listing-thumb{
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;          
+  object-fit: cover;             
+  border-radius: 12px;
+  background-color: #f3f4f6;     
+  border: 1px solid #e5e7eb;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+
+.listing-thumb[src$="placeholder.jpg"]{
+  object-fit: contain;
+  padding: 16px;
+  background-color: #f7fafc;
+  border: 1px dashed #d1d5db;
+}
+
+
+.listing-card{
+  padding: 1rem 1rem 1.25rem; 
+  max-width: 320px;
+}
+
+
+.listing-title{
+  margin-top: 0.25rem;
+  margin-bottom: 0.35rem;
+  line-height: 1.2;
+}
+
+.listing-author,
+.listing-location{
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+
+body.dark-mode .listing-thumb{
+  background-color: #111827;
+  border-color: #374151;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
+
+body.dark-mode .listing-thumb[src$="placeholder.jpg"]{
+  background-color: #0f172a;
+  border-color: #334155;
+}
+
+
+@media (max-width: 480px){
+  .listing-grid{
+    gap: 1rem;
+  }
+  .listing-card{
+    max-width: 100%;
+  }
+}

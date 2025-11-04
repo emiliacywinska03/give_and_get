@@ -15,9 +15,9 @@ const CreateListing: React.FC = () => {
     const [type, setType] = useState('');
 
     const [categories, setCategories] = useState<Category[]>([]);
-    const [categoryId, setCategoryId] = useState<number | ''>('');
+    const [categoryId, setCategoryId] = useState<number | null>(null);
     const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-    const [subcategoryId, setSubcategoryId] = useState<number | ''>('');
+    const [subcategoryId, setSubcategoryId] = useState<number | null>(null);
 
     const[condition, setCondition] = useState('');
     const[price, setPrice]=useState('');
@@ -30,13 +30,21 @@ const CreateListing: React.FC = () => {
     const[jobMode, setJobMode]=useState('');
     const[jobCategory, setJobCategory]=useState('');
 
+    const [images, setImages] = useState<File[]>([]);
+    const [imageErrors, setImageErrors] = useState<string[]>([]);
+    const [previews, setPreviews] = useState<string[]>([]);
+
+    const MAX_FILES = 6;
+    const MAX_FILE_SIZE_MB = 10;
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 
     useEffect(() => {
         const loadCategories = async () => {
           setCategories([]);
-          setCategoryId('');
+          setCategoryId(null);
           setSubcategories([]);
-          setSubcategoryId('');
+          setSubcategoryId(null);
       
           if (!type) return;
           const res = await fetch(`${API_BASE}/api/listings/categories`, {
@@ -57,7 +65,7 @@ const CreateListing: React.FC = () => {
     useEffect(() => {
         const loadSubcategories = async () => {
           setSubcategories([]);
-          setSubcategoryId('');
+          setSubcategoryId(null);
           if (!categoryId) return;
       
           const res = await fetch(`${API_BASE}/api/listings/subcategories?category_id=${categoryId}`, {
@@ -69,6 +77,51 @@ const CreateListing: React.FC = () => {
         loadSubcategories().catch(console.error);
     }, [categoryId]);
       
+    const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selected = Array.from(e.target.files || []);
+        const newErrors: string[] = [];
+        const current = [...images];
+
+        for (const file of selected) {
+            if (current.length >= MAX_FILES) {
+                newErrors.push(`Możesz dodać maksymalnie ${MAX_FILES} zdjęć.`);
+                break;
+            }
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                newErrors.push(`Niedozwolony typ pliku: ${file.name}. Dozwolone: JPG/PNG/WebP.`);
+                continue;
+            }
+            const sizeMB = file.size / (1024 * 1024);
+            if (sizeMB > MAX_FILE_SIZE_MB) {
+                newErrors.push(`Plik ${file.name} jest za duży (${sizeMB.toFixed(1)} MB). Maksymalnie ${MAX_FILE_SIZE_MB} MB.`);
+                continue;
+            }
+            current.push(file);
+        }
+
+        setImages(current);
+        setImageErrors(newErrors);
+
+        const newPreviews = current.map(f => URL.createObjectURL(f));
+        previews.forEach(url => URL.revokeObjectURL(url));
+        setPreviews(newPreviews);
+
+        if (e.target) e.target.value = '';
+    };
+
+    const removeImageAt = (idx: number) => {
+        const next = images.filter((_, i) => i !== idx);
+        setImages(next);
+        previews.forEach(url => URL.revokeObjectURL(url));
+        const nextPreviews = next.map(f => URL.createObjectURL(f));
+        setPreviews(nextPreviews);
+    };
+
+    useEffect(() => {
+        return () => {
+            previews.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [previews]);
 
 
     const handleSubmit = async (e: React.FormEvent) =>{
@@ -78,31 +131,47 @@ const CreateListing: React.FC = () => {
         if (!categoryId) { alert('Wystąpił błąd: brak kategorii dla wybranego typu'); return; }
         if (!subcategoryId) { alert('Wybierz podkategorię'); return; }
 
-        const body:any={
-            title,
-            description,
-            location,
-            status_id: 1, //tymczasowo: np aktywne
-            type_id: type=== 'sales'? 1: type === 'help' ? 2:3,
-            category_id: categoryId || null,
-            subcategory_id: subcategoryId || null,
+        let imagesBase64: string[] = [];
+        if (images.length > 0) {
+          const toBase64 = (file: File): Promise<string> =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = (error) => reject(error);
+            });
+          imagesBase64 = await Promise.all(images.map(toBase64));
+        }
+
+        let body: any = {
+          title,
+          description,
+          location,
+          status_id: 1,
+          type_id: type === 'sales' ? 1 : type === 'help' ? 2 : 3,
+          category_id: categoryId ? Number(categoryId) : null,
+          subcategory_id: subcategoryId ? Number(subcategoryId) : null,
+          images: imagesBase64
         };
 
-        if(type === 'sales'){
-            body.condition=condition;
-            body.price=isFree? 0:price;
-            body.isFree = isFree;
-            body.negotiable= negotiable;
+        if (type === 'sales') {
+          body.condition = condition;
+          body.price = isFree ? 0 : Number(price || 0);
+          body.isFree = isFree;
+          body.negotiable = negotiable;
+        }
+        if (type === 'work') {
+          body.salary = salary;
+          body.requirements = requirements;
+          body.jobMode = jobMode;
+          body.jobCategory = jobCategory;
+        }
+        if (type === 'help') {
+          body.exchangeForHelp = exchangeForHelp;
+          body.helpType = helpType;
         }
 
-        if(type === 'work'){
-            body.salary=salary;
-            body.requirements = requirements;
-            body.jobMode = jobMode;
-            body.jobCategory = jobCategory;
-        }
-
-        try{
+        try {
             const response = await fetch(`${API_BASE}/api/listings`, {
                 method: 'POST',
                 headers: {
@@ -113,22 +182,27 @@ const CreateListing: React.FC = () => {
                 body: JSON.stringify(body),
             });
 
-            if(response.ok){
-                alert('Ogłoszenie dodane!');
-                setTitle('');
-                setDescription('');
-                setLocation('');
-                setType('');
-                setCategoryId('');
-                setSubcategoryId('');
-                setCategories([]);
-                setSubcategories([]);
-            }else{
-                const data = await response.json();
-                alert("Błąd: " + data.error);
+            const data = await response.json();
+            if (!response.ok) {
+                alert('Błąd: ' + (data?.error || 'nie udało się dodać ogłoszenia'));
+                return;
             }
-        }catch(err){
-            console.error("Błąd przy wysyłaniu ogłoszenia: ", err);
+
+            alert('Ogłoszenie dodane!');
+            setTitle('');
+            setDescription('');
+            setLocation('');
+            setType('');
+            setCategoryId(null);
+            setSubcategoryId(null);
+            setCategories([]);
+            setSubcategories([]);
+            setImages([]);
+            setImageErrors([]);
+            previews.forEach(url => URL.revokeObjectURL(url));
+            setPreviews([]);
+        } catch (err) {
+            console.error('Błąd przy wysyłaniu ogłoszenia: ', err);
             alert('Coś poszło nie tak.');
         }
     };
@@ -169,7 +243,7 @@ const CreateListing: React.FC = () => {
                 {type && (
                     <>
                         <select
-                        value={subcategoryId}
+                        value={subcategoryId ?? ''}
                         onChange={(e) => setSubcategoryId(Number(e.target.value))}
                         required
                         >
@@ -219,6 +293,32 @@ const CreateListing: React.FC = () => {
                         <input type="text" placeholder="Kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
                     </>
                 )}
+                <div className="images-section">
+                    <label>Zdjęcia (JPG/PNG/WebP, do {MAX_FILES} plików, max {MAX_FILE_SIZE_MB} MB każdy)</label>
+                    <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        onChange={handleFilesChange}
+                    />
+                    {imageErrors.length > 0 && (
+                        <ul className="image-errors">
+                            {imageErrors.map((er, i) => (
+                                <li key={i} style={{ color: 'red' }}>{er}</li>
+                            ))}
+                        </ul>
+                    )}
+                    {previews.length > 0 && (
+                        <div className="previews-grid">
+                            {previews.map((src, i) => (
+                                <div key={i} className="preview-item">
+                                    <img src={src} alt={`podgląd ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }} />
+                                    <button type="button" onClick={() => removeImageAt(i)}>Usuń</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
                 <button type="submit">Dodaj ogłoszenie</button>
             </form>
         </div>
