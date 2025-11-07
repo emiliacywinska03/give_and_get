@@ -276,39 +276,47 @@ const ListingPage: React.FC = () => {
                                     
                                     ):(
                                         <>
-                                        {/* Miniatura ogłoszenia */}
-                                        <img
-                                          className="listing-thumb"
-                                          src={
-                                            listing.primary_image
-                                              ? (listing.primary_image.startsWith('data:')
-                                                  ? listing.primary_image
-                                                  : `${API_BASE}${listing.primary_image}`)
-                                              : '/placeholder.jpg'
-                                          }
-                                          alt={listing.title}
-                                        />
-                                        <h3 className='listing-title'>{listing.title}</h3>
-                                        <p className='listing-author'>Autor: {listing.author_username ?? 'nieznany'}</p>
-                                        <p className='listing-description'>{listing.description}</p>
-                                        <p className='listing-location'>Lokalizacja: {listing.location}</p>
-                                        {user && listing.user_id === user.id && (
-                                          <>
-                                            <button className="delete-button" onClick={() => handleDelete(listing.id)}>Usuń</button>
-                                            <button
-                                              className='edit-button'
-                                              onClick={()=>{
-                                                  setEditingId(listing.id);
-                                                  setEditedTitle(listing.title);
-                                                  setEditedDescription(listing.description);
-                                                  setEditedLocation(listing.location);
-                                              }}
-                                            >
-                                              Edytuj
-                                            </button>
-                                          </>
-                                        )}
-                                        </>
+                                  <Link
+                                    to={`/listing/${listing.id}`}
+                                    className="listing-link"
+                                    aria-label={`Zobacz ogłoszenie: ${listing.title}`}
+                                  >
+                                    {/* Miniatura ogłoszenia */}
+                                    {listing.primary_image ? (
+                                      <img
+                                        className="listing-thumb"
+                                        src={
+                                          listing.primary_image.startsWith('data:')
+                                            ? listing.primary_image
+                                            : `${API_BASE}${listing.primary_image}`
+                                        }
+                                        alt={listing.title}
+                                      />
+                                    ) : (
+                                      <div className="listing-thumb-space" aria-hidden="true" />
+                                    )}
+                                    <h3 className='listing-title'>{listing.title}</h3>
+                                    <p className='listing-author'>Autor: {listing.author_username ?? 'nieznany'}</p>
+                                    <p className='listing-location'>Lokalizacja: {listing.location}</p>
+                                  </Link>
+
+                                  {user && listing.user_id === user.id && (
+                                    <>
+                                      <button className="delete-button" onClick={() => handleDelete(listing.id)}>Usuń</button>
+                                      <button
+                                        className='edit-button'
+                                        onClick={() => {
+                                          setEditingId(listing.id);
+                                          setEditedTitle(listing.title);
+                                          setEditedDescription(listing.description);
+                                          setEditedLocation(listing.location);
+                                        }}
+                                      >
+                                        Edytuj
+                                      </button>
+                                    </>
+                                  )}
+                                </>
                             
                             )}
                         </div>  
