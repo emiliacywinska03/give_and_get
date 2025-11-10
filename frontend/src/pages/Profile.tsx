@@ -8,9 +8,31 @@ interface Listing {
   title: string;
   description: string;
   created_at: string;
+  images?: any[];        
+  primary_image?: any;  
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_KEY = process.env.REACT_APP_API_KEY;
+
+const toImageSrc = (val: any): string | null => {
+  if (!val) return null;
+
+  if (typeof val === 'string') {
+    if (val.startsWith('http') || val.startsWith('data:')) return val;
+    return `${API_BASE}${val}`;
+  }
+
+  if (typeof val === 'object') {
+    const candidate = val.dataUrl || val.url || val.path;
+    if (!candidate) return null;
+    if (candidate.startsWith('http') || candidate.startsWith('data:')) return candidate;
+    return `${API_BASE}${candidate}`;
+  }
+
+  return null;
+};
+
 
 const Profile: React.FC = () => {
   const { user, loading, logout } = useAuth();
@@ -18,8 +40,9 @@ const Profile: React.FC = () => {
   const [loadingListings, setLoadingListings] = useState(true);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
   const navigate = useNavigate();
-
+  
   useEffect(() => {
     const fetchListings = async () => {
       if (!user) return;
@@ -28,8 +51,51 @@ const Profile: React.FC = () => {
           credentials: 'include',
         });
         const data = await res.json();
+  
         if (res.ok && Array.isArray(data)) {
           setListings(data);
+  
+          const thumbMap: Record<number, string> = {};
+  
+          for (const item of data) {
+            const direct =
+              toImageSrc(item.primary_image) ||
+              (Array.isArray(item.images) ? toImageSrc(item.images[0]) : null);
+  
+            if (direct) {
+              thumbMap[item.id] = direct;
+              continue;
+            }
+  
+            try {
+              const ri = await fetch(`${API_BASE}/api/listings/${item.id}/images`, {
+                headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+                credentials: 'include',
+              });
+  
+              if (ri.ok) {
+                const imgs = await ri.json();
+                if (Array.isArray(imgs)) {
+                  const first = imgs
+                    .map((it: any) =>
+                      toImageSrc(it) ||
+                      toImageSrc(it?.dataUrl) ||
+                      toImageSrc(it?.url) ||
+                      toImageSrc(it?.path)
+                    )
+                    .find((x: string | null): x is string => Boolean(x));
+  
+                  if (first) {
+                    thumbMap[item.id] = first;
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Błąd pobierania miniatury dla ogłoszenia', item.id, e);
+            }
+          }
+  
+          setThumbnails(thumbMap);
         } else {
           console.error('Niepoprawna odpowiedź API:', data);
         }
@@ -39,8 +105,7 @@ const Profile: React.FC = () => {
         setLoadingListings(false);
       }
     };
-    fetchListings();
-
+  
     const fetchFavorites = async () => {
       if (!user) return;
       try {
@@ -59,9 +124,12 @@ const Profile: React.FC = () => {
         setLoadingFavorites(false);
       }
     };
+  
+    fetchListings();
     fetchFavorites();
   }, [user]);
-
+  
+  
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
 
@@ -90,17 +158,32 @@ const Profile: React.FC = () => {
           <p>Nie masz jeszcze żadnych ogłoszeń.</p>
         ) : (
           <div className="listing-grid">
-            {listings.map((l) => (
-              <div
-                key={l.id}
-                className="listing-card"
-              >
-                <h4 className="listing-title">{l.title}</h4>
-                <p className="listing-desc">{l.description}</p>
-                <p><strong>Autor:</strong> {user.username}</p>
-                <small className="listing-date">Dodano: {new Date(l.created_at).toLocaleDateString()}</small>
-              </div>
-            ))}
+            {listings.map((l) => {
+              const imgSrc = thumbnails[l.id];
+              return (
+                <div
+                  key={l.id}
+                  className="listing-card"
+                  onClick={() => navigate(`/listing/${l.id}`)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {imgSrc && (
+                    <div className="listing-thumb">
+                      <img src={imgSrc} alt={l.title} />
+                    </div>
+                  )}
+
+                  <div className="listing-content">
+                    <h4 className="listing-title">{l.title}</h4>
+                    <p className="listing-desc">{l.description}</p>
+                    <p><strong>Autor:</strong> {user.username}</p>
+                    <small className="listing-date">
+                      Dodano: {new Date(l.created_at).toLocaleDateString()}
+                    </small>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
         <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
@@ -111,10 +194,17 @@ const Profile: React.FC = () => {
         ) : (
           <div className="listing-grid">
             {favorites.map((f) => (
-              <div key={f.id} className="listing-card">
+              <div
+                key={f.id}
+                className="listing-card"
+                onClick={() => navigate(`/listing/${f.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
                 <h4 className="listing-title">{f.title}</h4>
                 <p className="listing-desc">{f.description}</p>
-                <small className="listing-date">Dodano: {new Date(f.created_at).toLocaleDateString()}</small>
+                <small className="listing-date">
+                  Dodano: {new Date(f.created_at).toLocaleDateString()}
+                </small>
               </div>
             ))}
           </div>
