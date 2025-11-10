@@ -7,9 +7,10 @@ interface Listing {
   id: number;
   title: string;
   description: string;
+  location: string;
   created_at: string;
-  images?: any[];        
-  primary_image?: any;  
+  images?: any[];
+  primary_image?: any;
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
@@ -33,7 +34,6 @@ const toImageSrc = (val: any): string | null => {
   return null;
 };
 
-
 const Profile: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
@@ -41,8 +41,12 @@ const Profile: React.FC = () => {
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editedTitle, setEditedTitle] = useState('');
+  const [editedDescription, setEditedDescription] = useState('');
+  const [editedLocation, setEditedLocation] = useState('');
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const fetchListings = async () => {
       if (!user) return;
@@ -51,28 +55,28 @@ const Profile: React.FC = () => {
           credentials: 'include',
         });
         const data = await res.json();
-  
+
         if (res.ok && Array.isArray(data)) {
           setListings(data);
-  
+
           const thumbMap: Record<number, string> = {};
-  
+
           for (const item of data) {
             const direct =
               toImageSrc(item.primary_image) ||
               (Array.isArray(item.images) ? toImageSrc(item.images[0]) : null);
-  
+
             if (direct) {
               thumbMap[item.id] = direct;
               continue;
             }
-  
+
             try {
               const ri = await fetch(`${API_BASE}/api/listings/${item.id}/images`, {
                 headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
                 credentials: 'include',
               });
-  
+
               if (ri.ok) {
                 const imgs = await ri.json();
                 if (Array.isArray(imgs)) {
@@ -84,7 +88,7 @@ const Profile: React.FC = () => {
                       toImageSrc(it?.path)
                     )
                     .find((x: string | null): x is string => Boolean(x));
-  
+
                   if (first) {
                     thumbMap[item.id] = first;
                   }
@@ -94,7 +98,7 @@ const Profile: React.FC = () => {
               console.error('Błąd pobierania miniatury dla ogłoszenia', item.id, e);
             }
           }
-  
+
           setThumbnails(thumbMap);
         } else {
           console.error('Niepoprawna odpowiedź API:', data);
@@ -105,7 +109,7 @@ const Profile: React.FC = () => {
         setLoadingListings(false);
       }
     };
-  
+
     const fetchFavorites = async () => {
       if (!user) return;
       try {
@@ -124,12 +128,66 @@ const Profile: React.FC = () => {
         setLoadingFavorites(false);
       }
     };
-  
+
     fetchListings();
     fetchFavorites();
   }, [user]);
-  
-  
+
+  const handleEdit = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: editedTitle,
+          description: editedDescription,
+          location: editedLocation,
+        }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setListings((prev) =>
+          prev.map((item) => (item.id === id ? updated.updated : item))
+        );
+        setEditingId(null);
+      } else {
+        const error = await res.json();
+        alert(`Błąd: ${error.error}`);
+      }
+    } catch (err) {
+      console.error('Błąd podczas edycji:', err);
+      alert('Wystąpił błąd podczas edytowania.');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    const confirmed = window.confirm('Czy na pewno chcesz usunąć ogłoszenie?');
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+        method: 'DELETE',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        credentials: 'include',
+      });
+
+      if (res.ok) {
+        setListings((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        const error = await res.json();
+        alert(`Błąd: ${error.error}`);
+      }
+    } catch (err) {
+      console.error('Błąd podczas usuwania ogłoszenia:', err);
+      alert('Wystąpił błąd podczas usuwania ogłoszenia.');
+    }
+  };
+
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
 
@@ -140,11 +198,21 @@ const Profile: React.FC = () => {
 
         <div className="profile-info">
           <p className="profile-username">{user.username}</p>
-          <p><strong>Imię i nazwisko:</strong> {user.first_name} {user.last_name}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Data rejestracji:</strong> {new Date(user.created_at || '').toLocaleDateString()}</p>
+          <p>
+            <strong>Imię i nazwisko:</strong> {user.first_name} {user.last_name}
+          </p>
+          <p>
+            <strong>Email:</strong> {user.email}
+          </p>
+          <p>
+            <strong>Data rejestracji:</strong>{' '}
+            {new Date(user.created_at || '').toLocaleDateString()}
+          </p>
           <button
-            onClick={async () => { await logout(); navigate('/'); }}
+            onClick={async () => {
+              await logout();
+              navigate('/');
+            }}
             className="btn btn-logout"
           >
             Wyloguj
@@ -160,32 +228,103 @@ const Profile: React.FC = () => {
           <div className="listing-grid">
             {listings.map((l) => {
               const imgSrc = thumbnails[l.id];
-              return (
-                <div
-                  key={l.id}
-                  className="listing-card"
-                  onClick={() => navigate(`/listing/${l.id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {imgSrc && (
-                    <div className="listing-thumb">
-                      <img src={imgSrc} alt={l.title} />
-                    </div>
-                  )}
 
-                  <div className="listing-content">
-                    <h4 className="listing-title">{l.title}</h4>
-                    <p className="listing-desc">{l.description}</p>
-                    <p><strong>Autor:</strong> {user.username}</p>
-                    <small className="listing-date">
-                      Dodano: {new Date(l.created_at).toLocaleDateString()}
-                    </small>
+              // Tryb edycji
+              if (editingId === l.id) {
+                return (
+                  <div key={l.id} className="listing-card">
+                    <div className="listing-content">
+                      <input
+                        type="text"
+                        value={editedTitle}
+                        onChange={(e) => setEditedTitle(e.target.value)}
+                        placeholder="Tytuł"
+                      />
+                      <textarea
+                        value={editedDescription}
+                        onChange={(e) =>
+                          setEditedDescription(e.target.value)
+                        }
+                        placeholder="Opis"
+                      />
+                      <input
+                        type="text"
+                        value={editedLocation}
+                        onChange={(e) =>
+                          setEditedLocation(e.target.value)
+                        }
+                        placeholder="Lokalizacja"
+                      />
+                      <div className="edit-form-buttons">
+                        <button
+                          className="action-button save-button"
+                          onClick={() => handleEdit(l.id)}
+                        >
+                          Zapisz
+                        </button>
+                        <button
+                          className="action-button cancel-button"
+                          onClick={() => setEditingId(null)}
+                        >
+                          Anuluj
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Normalny widok ogłoszenia
+              return (
+                <div key={l.id} className="listing-card">
+                  <div
+                    onClick={() => navigate(`/listing/${l.id}`, { state: { fromProfile: true } })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {imgSrc && (
+                      <div className="listing-thumb">
+                        <img src={imgSrc} alt={l.title} />
+                      </div>
+                    )}
+
+                    <div className="listing-content">
+                      <h4 className="listing-title">{l.title}</h4>
+                      <p className="listing-desc">{l.description}</p>
+                      <p>
+                        <strong>Autor:</strong> {user.username}
+                      </p>
+                      <small className="listing-date">
+                        Dodano:{' '}
+                        {new Date(l.created_at).toLocaleDateString()}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="listing-actions">
+                    <button
+                      className="delete-button"
+                      onClick={() => handleDelete(l.id)}
+                    >
+                      Usuń
+                    </button>
+                    <button
+                      className="edit-button"
+                      onClick={() => {
+                        setEditingId(l.id);
+                        setEditedTitle(l.title);
+                        setEditedDescription(l.description);
+                        setEditedLocation(l.location);
+                      }}
+                    >
+                      Edytuj
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
+
         <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
         {loadingFavorites ? (
           <p>Ładowanie ulubionych…</p>

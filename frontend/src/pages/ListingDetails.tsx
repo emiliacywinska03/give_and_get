@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './ListingDetails.css'; 
+import { useLocation } from 'react-router-dom';
+
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -166,6 +168,8 @@ export default function ListingDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const location = useLocation();
+  const fromProfile = (location.state as any)?.fromProfile || false;
   const [data, setData] = useState<ListingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<string[]>([]);
@@ -249,7 +253,13 @@ export default function ListingDetails() {
 
   return (
     <div className="listing-details-container">
-      <Link to="/listings" className="listing-details-back">← Wróć do listy</Link>
+      <Link
+        to={fromProfile ? "/profile" : "/listings"}
+        className="listing-details-back"
+      >
+        ← Wróć 
+      </Link>
+
 
       <h1 className="listing-details-title">{data.title}</h1>
       <p className="listing-details-meta">
