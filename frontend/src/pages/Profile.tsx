@@ -277,7 +277,9 @@ const Profile: React.FC = () => {
               // Normalny widok ogłoszenia
               return (
                 <div key={l.id} className="listing-card">
+                  {/* NOWA klasa: listing-main */}
                   <div
+                    className="listing-main"
                     onClick={() => navigate(`/listing/${l.id}`, { state: { fromProfile: true } })}
                     style={{ cursor: 'pointer' }}
                   >
@@ -294,8 +296,7 @@ const Profile: React.FC = () => {
                         <strong>Autor:</strong> {user.username}
                       </p>
                       <small className="listing-date">
-                        Dodano:{' '}
-                        {new Date(l.created_at).toLocaleDateString()}
+                        Dodano: {new Date(l.created_at).toLocaleDateString()}
                       </small>
                     </div>
                   </div>
@@ -321,6 +322,7 @@ const Profile: React.FC = () => {
                   </div>
                 </div>
               );
+
             })}
           </div>
         )}
