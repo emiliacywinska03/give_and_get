@@ -181,7 +181,7 @@ export default function ListingDetails() {
           },
           credentials: 'include',
         });
-        if (res.status === 404) { navigate('/'); return; }
+        if (res.status === 404) { navigate('/listings'); return; }
         if (!res.ok) throw new Error(await res.text());
         const details = await res.json();
         setData(details);
@@ -249,7 +249,7 @@ export default function ListingDetails() {
 
   return (
     <div className="listing-details-container">
-      <Link to="/" className="listing-details-back">← Wróć do listy</Link>
+      <Link to="/listings" className="listing-details-back">← Wróć do listy</Link>
 
       <h1 className="listing-details-title">{data.title}</h1>
       <p className="listing-details-meta">
