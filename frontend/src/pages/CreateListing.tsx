@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './CreateListing.css'
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -9,6 +10,7 @@ type Subcategory = { id: number; name: string };
 
 
 const CreateListing: React.FC = () => {
+    const navigate = useNavigate(); 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [location, setLocation] = useState('');
@@ -189,6 +191,7 @@ const CreateListing: React.FC = () => {
             }
 
             alert('Ogłoszenie dodane!');
+            navigate('/');
             setTitle('');
             setDescription('');
             setLocation('');
