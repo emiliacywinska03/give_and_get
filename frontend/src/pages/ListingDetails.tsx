@@ -309,8 +309,7 @@ export default function ListingDetails() {
 
   return (
     <div className="listing-details-container">
-      <Link to={backTarget} className="listing-details-back">← Wróć </Link>
-
+      
       <h1 className="listing-details-title">{data.title}</h1>
       <p className="listing-details-meta">
         Autor: <strong>{data.author_username ?? 'nieznany'}</strong> •{' '}

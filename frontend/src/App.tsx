@@ -10,11 +10,13 @@ import CreateListing from './pages/CreateListing';
 import ListingPage from "./pages/ListingPage";
 import Favorites from './pages/Favorites';
 import ListingDetails from './pages/ListingDetails';
+import Breadcrumbs from './components/Breadcrumbs';
 
 function App() {
   return (
     <div>
       <Header />
+      <Breadcrumbs />
       <Routes>
           <Route path="/" element={<Main />}/>
           <Route path="/auth" element={<LoginRegiter />}/>
