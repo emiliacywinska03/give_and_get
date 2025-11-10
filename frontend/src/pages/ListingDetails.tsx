@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import './ListingDetails.css'; 
-import { useLocation } from 'react-router-dom';
-
+import './ListingDetails.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -167,12 +165,21 @@ function collectPairs(details: any): { key: string; label: string; value: string
 export default function ListingDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const location = useLocation();
+  const { user } = useAuth();
+
   const fromProfile = (location.state as any)?.fromProfile || false;
+  const startInEdit = (location.state as any)?.editMode || false;
+
   const [data, setData] = useState<ListingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<string[]>([]);
+
+  // stan edycji
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editLocation, setEditLocation] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -233,6 +240,7 @@ export default function ListingDetails() {
               payloadImages = normalized;
             }
           } catch (e) {
+          
           }
         }
 
@@ -245,21 +253,63 @@ export default function ListingDetails() {
     })();
   }, [id, navigate]);
 
+  const canEdit = !!user && !!data && user.id === data.user_id;
+  const infoPairs = collectPairs(data);
+
+  // kiedy wczytamy dane i mamy prawo edycji – ustaw wartości formularza
+  useEffect(() => {
+    if (data && canEdit) {
+      setEditTitle(data.title || '');
+      setEditDescription(data.description || '');
+      setEditLocation(data.location || '');
+      if (startInEdit) {
+        setEditMode(true);
+      }
+    }
+  }, [data, canEdit, startInEdit]);
+
+  const handleSave = async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          location: editLocation,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        alert(`Błąd zapisu: ${err?.error || res.statusText}`);
+        return;
+      }
+
+      const body = await res.json();
+      const updated = body.updated ?? body;
+
+      setData(updated);
+      setEditMode(false);
+    } catch (e) {
+      console.error('Błąd podczas zapisu ogłoszenia', e);
+      alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
+    }
+  };
+
   if (loading) return <div className="listing-details-container"><p>Ładowanie…</p></div>;
   if (!data)    return <div className="listing-details-container"><p>Brak danych.</p></div>;
 
-  const canEdit = user?.id === data.user_id;
-  const infoPairs = collectPairs(data);
+  const backTarget = fromProfile ? '/profile' : '/listings';
 
   return (
     <div className="listing-details-container">
-      <Link
-        to={fromProfile ? "/profile" : "/listings"}
-        className="listing-details-back"
-      >
-        ← Wróć 
-      </Link>
-
+      <Link to={backTarget} className="listing-details-back">← Wróć </Link>
 
       <h1 className="listing-details-title">{data.title}</h1>
       <p className="listing-details-meta">
@@ -275,6 +325,7 @@ export default function ListingDetails() {
             ))}
           </div>
         )}
+
         <p className="listing-details-description">{data.description}</p>
 
         <dl className="listing-details-dl">
@@ -288,8 +339,65 @@ export default function ListingDetails() {
       </div>
 
       {canEdit && (
-        <div className="listing-details-actions">
-          <Link to="/listings">Edytuj na liście</Link>
+        <div className="listing-details-edit-section">
+          {!editMode ? (
+            <button
+              className="edit-button"
+              onClick={() => setEditMode(true)}
+            >
+              Edytuj ogłoszenie
+            </button>
+          ) : (
+            <div className="edit-form">
+              <h2>Edytuj ogłoszenie</h2>
+              <label>
+                Tytuł
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                />
+              </label>
+
+              <label>
+                Opis
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={5}
+                />
+              </label>
+
+              <label>
+                Lokalizacja
+                <input
+                  type="text"
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                />
+              </label>
+
+              <div className="edit-form-buttons">
+                <button className="action-button save-button" onClick={handleSave}>
+                  Zapisz
+                </button>
+                <button
+                  className="action-button cancel-button"
+                  onClick={() => {
+                    setEditMode(false);
+                    // przy anulowaniu przywracamy oryginalne dane
+                    if (data) {
+                      setEditTitle(data.title || '');
+                      setEditDescription(data.description || '');
+                      setEditLocation(data.location || '');
+                    }
+                  }}
+                >
+                  Anuluj
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

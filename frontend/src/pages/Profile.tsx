@@ -133,37 +133,6 @@ const Profile: React.FC = () => {
     fetchFavorites();
   }, [user]);
 
-  const handleEdit = async (id: number) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: editedTitle,
-          description: editedDescription,
-          location: editedLocation,
-        }),
-      });
-
-      if (res.ok) {
-        const updated = await res.json();
-        setListings((prev) =>
-          prev.map((item) => (item.id === id ? updated.updated : item))
-        );
-        setEditingId(null);
-      } else {
-        const error = await res.json();
-        alert(`Błąd: ${error.error}`);
-      }
-    } catch (err) {
-      console.error('Błąd podczas edycji:', err);
-      alert('Wystąpił błąd podczas edytowania.');
-    }
-  };
 
   const handleDelete = async (id: number) => {
     const confirmed = window.confirm('Czy na pewno chcesz usunąć ogłoszenie?');
@@ -218,7 +187,7 @@ const Profile: React.FC = () => {
             Wyloguj
           </button>
         </div>
-
+        {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
         {loadingListings ? (
           <p>Ładowanie ogłoszeń...</p>
@@ -229,58 +198,16 @@ const Profile: React.FC = () => {
             {listings.map((l) => {
               const imgSrc = thumbnails[l.id];
 
-              // Tryb edycji
-              if (editingId === l.id) {
-                return (
-                  <div key={l.id} className="listing-card">
-                    <div className="listing-content">
-                      <input
-                        type="text"
-                        value={editedTitle}
-                        onChange={(e) => setEditedTitle(e.target.value)}
-                        placeholder="Tytuł"
-                      />
-                      <textarea
-                        value={editedDescription}
-                        onChange={(e) =>
-                          setEditedDescription(e.target.value)
-                        }
-                        placeholder="Opis"
-                      />
-                      <input
-                        type="text"
-                        value={editedLocation}
-                        onChange={(e) =>
-                          setEditedLocation(e.target.value)
-                        }
-                        placeholder="Lokalizacja"
-                      />
-                      <div className="edit-form-buttons">
-                        <button
-                          className="action-button save-button"
-                          onClick={() => handleEdit(l.id)}
-                        >
-                          Zapisz
-                        </button>
-                        <button
-                          className="action-button cancel-button"
-                          onClick={() => setEditingId(null)}
-                        >
-                          Anuluj
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              // Normalny widok ogłoszenia
               return (
                 <div key={l.id} className="listing-card">
-                  {/* NOWA klasa: listing-main */}
+                  {/* Lewa część – kliknięcie otwiera szczegóły */}
                   <div
                     className="listing-main"
-                    onClick={() => navigate(`/listing/${l.id}`, { state: { fromProfile: true } })}
+                    onClick={() =>
+                      navigate(`/listing/${l.id}`, {
+                        state: { fromProfile: true }, // info, że przyszliśmy z profilu
+                      })
+                    }
                     style={{ cursor: 'pointer' }}
                   >
                     {imgSrc && (
@@ -301,6 +228,7 @@ const Profile: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Prawa część – przyciski */}
                   <div className="listing-actions">
                     <button
                       className="delete-button"
@@ -310,23 +238,22 @@ const Profile: React.FC = () => {
                     </button>
                     <button
                       className="edit-button"
-                      onClick={() => {
-                        setEditingId(l.id);
-                        setEditedTitle(l.title);
-                        setEditedDescription(l.description);
-                        setEditedLocation(l.location);
-                      }}
+                      onClick={() =>
+                        navigate(`/listing/${l.id}`, {
+                          state: { fromProfile: true, editMode: true }, // od razu tryb edycji
+                        })
+                      }
                     >
                       Edytuj
                     </button>
                   </div>
                 </div>
               );
-
             })}
           </div>
         )}
 
+        {/* ---------------- Ulubione ---------------- */}
         <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
         {loadingFavorites ? (
           <p>Ładowanie ulubionych…</p>
