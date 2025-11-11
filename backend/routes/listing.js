@@ -218,6 +218,75 @@ router.get('/user/:id', async (req, res) => {
   }
 });
 
+// lista ulubionych dla zalogowanego użytkownika
+router.get('/favorites', authRequired, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT
+        l.*,
+        u.username AS author_username
+      FROM favorite_listing f
+      JOIN listing l ON l.id = f.listing_id
+      JOIN "user"  u ON u.id = l.user_id
+      WHERE f.user_id = $1
+      ORDER BY l.created_at DESC
+      `,
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Błąd pobierania ulubionych ogłoszeń:', err.message);
+    res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
+  }
+});
+
+// dodanie ogłoszenia do ulubionych
+router.post('/favorites/:id', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe id ogłoszenia' });
+  }
+
+  try {
+    await pool.query(
+      `
+      INSERT INTO favorite_listing (user_id, listing_id)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, listing_id) DO NOTHING
+      `,
+      [req.user.id, listingId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Błąd dodawania do ulubionych:', err.message);
+    res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
+  }
+});
+
+// usunięcie ogłoszenia z ulubionych
+router.delete('/favorites/:id', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe id ogłoszenia' });
+  }
+
+  try {
+    await pool.query(
+      `
+      DELETE FROM favorite_listing
+      WHERE user_id = $1 AND listing_id = $2
+      `,
+      [req.user.id, listingId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Błąd usuwania z ulubionych:', err.message);
+    res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
+  }
+});
+
+
 router.delete('/:id', authRequired, async (req, res) => {
   const listingId = req.params.id;
 

@@ -348,3 +348,81 @@ body.dark-mode .listing-thumb[src$="placeholder.jpg"]{
   overflow: hidden;
   min-height: 3em;
 }
+
+
+.listing-card {
+  position: relative; 
+}
+
+/* przycisk serduszka */
+.favorite-toggle {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.favorite-toggle:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+}
+
+
+
+/* === Ikona ulubionych w kafelku ogłoszenia === */
+
+.listing-card {
+  position: relative;
+}
+
+/* przycisk z sercem w rogu */
+.favorite-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: none;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.favorite-toggle:hover {
+  transform: translateY(-1px);
+}
+
+/* domyślnie serce jest puste */
+.favorite-toggle svg path {
+  fill: none;
+  stroke: currentColor;
+  transition: fill 0.15s ease, stroke 0.15s ease;
+}
+
+/* stan aktywny – serce „pełne”  */
+.favorite-toggle--active {
+  color: #e11d48;         
+  background: #ffe4e6;
+}
+
+.favorite-toggle--active svg path {
+  fill: currentColor;      
+}

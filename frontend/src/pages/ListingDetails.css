@@ -156,3 +156,51 @@
   }
 }
 
+.listing-details-header {
+  margin-bottom: 1rem;
+}
+
+.listing-details-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.favorite-toggle.favorite-toggle-details {
+  position: static;    
+  box-shadow: none;
+  width: 34px;
+  height: 34px;
+}
+
+
+/* Ikona ulubionych na stronie szczegółów */
+
+.listing-details-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.listing-details-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.favorite-toggle-details {
+  width: 36px;
+  height: 36px;
+}
+
+/* używamy tych samych bazowych styli co w listing-page */
+.favorite-toggle-details svg path {
+  fill: none;
+  stroke: currentColor;
+}
+
+/* gdy ogłoszenie jest w ulubionych */
+.favorite-toggle.favorite-toggle-details.favorite-toggle--active svg path {
+  fill: currentColor;
+}

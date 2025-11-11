@@ -181,6 +181,8 @@ export default function ListingDetails() {
   const [editDescription, setEditDescription] = useState('');
   const [editLocation, setEditLocation] = useState('');
 
+  const [isFavorite, setIsFavorite] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -253,8 +255,35 @@ export default function ListingDetails() {
     })();
   }, [id, navigate]);
 
+  
+  // sprawdzenie czy to ogłoszenie jest w ulubionych
+  useEffect(() => {
+    const checkFavorite = async () => {
+      if (!user || !id) {
+        setIsFavorite(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/listings/favorites`, {
+          credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data)) {
+          const found = data.some((it: any) => String(it.id) === String(id));
+          setIsFavorite(found);
+        }
+      } catch (e) {
+        console.error('Błąd sprawdzania ulubionych:', e);
+      }
+    };
+    checkFavorite();
+  }, [user, id]);
+
+
   const canEdit = !!user && !!data && user.id === data.user_id;
   const infoPairs = collectPairs(data);
+
 
   // kiedy wczytamy dane i mamy prawo edycji – ustaw wartości formularza
   useEffect(() => {
@@ -302,6 +331,39 @@ export default function ListingDetails() {
     }
   };
 
+
+  const handleToggleFavorite = async () => {
+    if (!user || !id) {
+      navigate('/auth');
+      return;
+    }
+
+
+    try {
+      const method = isFavorite ? 'DELETE' : 'POST';
+      const res = await fetch(`${API_BASE}/api/listings/favorites/${id}`, {
+
+        method,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
+
+
+      if (!res.ok) {
+        console.error('Błąd zmiany ulubionych:', await res.text());
+        return;
+      }
+
+      setIsFavorite((prev) => !prev);
+    } catch (e) {
+      console.error('Błąd podczas zmiany ulubionych:', e);
+    }
+  };
+
+
   if (loading) return <div className="listing-details-container"><p>Ładowanie…</p></div>;
   if (!data)    return <div className="listing-details-container"><p>Brak danych.</p></div>;
 
@@ -309,12 +371,47 @@ export default function ListingDetails() {
 
   return (
     <div className="listing-details-container">
-      
-      <h1 className="listing-details-title">{data.title}</h1>
-      <p className="listing-details-meta">
-        Autor: <strong>{data.author_username ?? 'nieznany'}</strong> •{' '}
-        Dodano: {new Date(data.created_at).toLocaleString()}
-      </p>
+      {/* nagłówek z tytułem + serce */}
+      <div className="listing-details-header">
+        
+        <div className="listing-details-title-row">
+          <h1 className="listing-details-title">{data.title}</h1>
+
+          {user && (
+            <button
+              className={`favorite-toggle favorite-toggle-details ${
+                isFavorite ? 'favorite-toggle--active' : ''
+              }`}
+              aria-label={
+                isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'
+              }
+              onClick={handleToggleFavorite}
+            >
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <p className="listing-details-meta">
+          Autor: <strong>{data.author_username ?? 'nieznany'}</strong> •{' '}
+          Dodano: {new Date(data.created_at).toLocaleString()}
+        </p>
+      </div>
 
       <div className="listing-details-card">
         {images.length > 0 && (
@@ -384,7 +481,6 @@ export default function ListingDetails() {
                   className="action-button cancel-button"
                   onClick={() => {
                     setEditMode(false);
-                    // przy anulowaniu przywracamy oryginalne dane
                     if (data) {
                       setEditTitle(data.title || '');
                       setEditDescription(data.description || '');
