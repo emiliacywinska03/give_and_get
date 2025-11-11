@@ -62,7 +62,8 @@ router.post('/', authRequired, async (req, res) => {
     status_id,
     type_id,
     category_id,
-    subcategory_id
+    subcategory_id,
+    helpType
   } = req.body;
 
   const catId =
@@ -88,11 +89,32 @@ router.post('/', authRequired, async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO listing (title, description, location, status_id, type_id, category_id, subcategory_id, user_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO listing (
+          title,
+          description,
+          location,
+          status_id,
+          type_id,
+          category_id,
+          subcategory_id,
+          user_id,
+          help_type
+        )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
        RETURNING *`,
-      [title, description, location, status_id, type_id, catId, subId, req.user.id]
+      [
+        title,
+        description,
+        location,
+        status_id,
+        type_id,
+        catId,
+        subId,
+        req.user.id,
+        type_id === 2 ? helpType || null : null  
+      ]
     );
+    
 
     const created = result.rows[0];
 
@@ -133,7 +155,7 @@ router.post('/', authRequired, async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const { type_id, category_id, subcategory_id, category } = req.query;
+    const { type_id, category_id, subcategory_id, category, help_type } = req.query;
 
     const where = [];
     const params = [];
@@ -149,6 +171,10 @@ router.get('/', async (req, res) => {
       if (Number.isNaN(v)) return res.status(400).json({ error: 'Nieprawidlowe category_id' });
       params.push(v);
       where.push(`l.category_id = $${params.length}`);
+    }
+    if (help_type) {
+      params.push(String(help_type));
+      where.push(`l.help_type = $${params.length}`);
     }
     if (subcategory_id) {
       const v = Number(subcategory_id);

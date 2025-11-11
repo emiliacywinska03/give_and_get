@@ -45,7 +45,7 @@ const ListingPage: React.FC = () => {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
-  
+  const [helpTypeFilter, setHelpTypeFilter] = useState<'all' | 'offer' | 'need'>('all');
 
   const params = new URLSearchParams(location.search);
   const urlType = params.get('type') as FilterType | null;
@@ -143,6 +143,10 @@ const ListingPage: React.FC = () => {
     if (categoryFilter) q.set('category_id', String(categoryFilter));
     if (subcategoryFilter) q.set('subcategory_id', String(subcategoryFilter));
 
+    if (typeFilter === 'help' && helpTypeFilter !== 'all') {
+      q.set('help_type', helpTypeFilter); 
+    }
+
     const qs = q.toString();
     const url = qs ? `${API_BASE}/api/listings?${qs}` : `${API_BASE}/api/listings`;
 
@@ -167,7 +171,7 @@ const ListingPage: React.FC = () => {
         setListings(filled);
       })
       .catch((err) => console.error('Błąd przy pobieraniu ogłoszeń: ', err));
-  }, [typeFilter, categoryFilter, subcategoryFilter]);
+  }, [typeFilter, categoryFilter, subcategoryFilter, helpTypeFilter]);
 
 
   //Kliknięcie serduszka w kafelku
@@ -230,8 +234,13 @@ const ListingPage: React.FC = () => {
         <label> Typ </label>
         <select
           value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as FilterType)}
+          onChange={(e) => {
+            const v = e.target.value as FilterType;
+            setTypeFilter(v);
+            setHelpTypeFilter('all'); 
+          }}
         >
+
           <option value="">Typ</option>
           <option value="work">Praca</option>
           <option value="help">Pomoc</option>
@@ -255,6 +264,23 @@ const ListingPage: React.FC = () => {
             ))}
           </select>
         </div>
+
+        {typeFilter === 'help' && (
+          <label>
+            Rodzaj pomocy
+            <select
+              value={helpTypeFilter}
+              onChange={(e) =>
+                setHelpTypeFilter(e.target.value as 'all' | 'offer' | 'need')
+              }
+            >
+              <option value="all">Wszystkie</option>
+              <option value="offer">Oferuję pomoc</option>
+              <option value="need">Szukam pomocy</option>
+            </select>
+          </label>
+        )}
+
       </div>
 
       {listings.length === 0 ? (

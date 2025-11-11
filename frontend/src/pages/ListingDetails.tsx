@@ -17,6 +17,7 @@ type ListingDetails = {
   category_name?: string;
   subcategory_name?: string;
   images?: string[];
+  help_type?: 'offer' | 'need' | null;
 };
 
 const HIDDEN_KEYS = new Set<string>([
@@ -96,6 +97,11 @@ function isPlainObject(v: any) {
 
 function formatVal(key: string, val: any): string {
   if (val === null || val === undefined) return '—';
+  if (key === 'help_type') {
+    if (val === 'offer') return 'Oferuję pomoc';
+    if (val === 'need')  return 'Szukam pomocy';
+    return String(val);
+  }
   if (typeof val === 'boolean') return val ? 'Tak' : 'Nie';
   if (typeof val === 'number') {
     if (/(price|salary)/i.test(key)) {
@@ -369,11 +375,18 @@ export default function ListingDetails() {
 
   const backTarget = fromProfile ? '/profile' : '/listings';
 
+  const helpTypeLabel =
+  data.help_type === 'offer'
+    ? 'Oferuję pomoc'
+    : data.help_type === 'need'
+    ? 'Szukam pomocy'
+    : null;
+
+
   return (
     <div className="listing-details-container">
       {/* nagłówek z tytułem + serce */}
       <div className="listing-details-header">
-        
         <div className="listing-details-title-row">
           <h1 className="listing-details-title">{data.title}</h1>
 
@@ -407,11 +420,18 @@ export default function ListingDetails() {
           )}
         </div>
 
+        {helpTypeLabel && (
+          <div className="listing-details-help-pill">
+            {helpTypeLabel}
+          </div>
+        )}
+
         <p className="listing-details-meta">
           Autor: <strong>{data.author_username ?? 'nieznany'}</strong> •{' '}
           Dodano: {new Date(data.created_at).toLocaleString()}
         </p>
       </div>
+
 
       <div className="listing-details-card">
         {images.length > 0 && (

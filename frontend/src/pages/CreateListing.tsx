@@ -26,7 +26,6 @@ const CreateListing: React.FC = () => {
     const[isFree, setIsFree]=useState(false);
     const[negotiable, setNegotiable]=useState(false);
     const[helpType, setHelpType]=useState('');
-    const[exchangeForHelp, setExchangeForHelp]=useState(false);
     const[salary, setSalary]=useState('');
     const[requirements, setRequirements]=useState('');
     const[jobMode, setJobMode]=useState('');
@@ -170,9 +169,9 @@ const CreateListing: React.FC = () => {
           body.jobCategory = jobCategory;
         }
         if (type === 'help') {
-          body.exchangeForHelp = exchangeForHelp;
-          body.helpType = helpType;
+            body.helpType = helpType;
         }
+          
 
         try {
             const response = await fetch(`${API_BASE}/api/listings`, {
@@ -274,14 +273,34 @@ const CreateListing: React.FC = () => {
                     </>
                 )}
 
-                {type === 'help' &&(
-                    <>
+                {type === 'help' && (
+                    <div className="help-type-group">
+                        <span>Rodzaj ogłoszenia</span>
+
                         <label>
-                            <input type="checkbox" checked={exchangeForHelp} onChange={() => setExchangeForHelp(!exchangeForHelp)}/>
-                            Pomoc za pomoc
+                        <input
+                            type="checkbox"
+                            checked={helpType === 'offer'}
+                            onChange={() =>
+                            setHelpType(helpType === 'offer' ? '' : 'offer')
+                            }
+                        />
+                        Oferuję pomoc
                         </label>
-                    </>
+
+                        <label>
+                        <input
+                            type="checkbox"
+                            checked={helpType === 'need'}
+                            onChange={() =>
+                            setHelpType(helpType === 'need' ? '' : 'need')
+                            }
+                        />
+                        Szukam pomocy
+                        </label>
+                    </div>
                 )}
+
 
                 {type === 'work' &&(
                     <>

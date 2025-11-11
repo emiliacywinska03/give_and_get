@@ -223,3 +223,15 @@
   .previews-grid{ gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
   .images-section input[type="file"]{ padding: 0.5rem 0.6rem; }
 }
+
+
+.help-type-group {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.help-type-group > span {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}

@@ -204,3 +204,16 @@
 .favorite-toggle.favorite-toggle-details.favorite-toggle--active svg path {
   fill: currentColor;
 }
+
+
+.listing-details-help-pill {
+  display: inline-block;
+  margin-top: 0.3rem;
+  margin-bottom: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 9999px;
+  background-color: #e0f2fe;  
+  color: #075985;          
+  font-size: 0.9rem;
+  font-weight: 600;
+}
