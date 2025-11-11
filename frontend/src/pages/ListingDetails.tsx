@@ -422,8 +422,6 @@ export default function ListingDetails() {
           </div>
         )}
 
-        <p className="listing-details-description">{data.description}</p>
-
         <dl className="listing-details-dl">
           {infoPairs.map(({ key, label, value }) => (
             <div key={key} className="listing-details-row">
