@@ -134,16 +134,17 @@ const CreateListing: React.FC = () => {
         if (!subcategoryId) { alert('Wybierz podkategorię'); return; }
 
         let imagesBase64: string[] = [];
-        if (images.length > 0) {
-          const toBase64 = (file: File): Promise<string> =>
+        if (type === 'sales' && images.length > 0) {
+        const toBase64 = (file: File): Promise<string> =>
             new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.readAsDataURL(file);
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = (error) => reject(error);
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = (error) => reject(error);
             });
-          imagesBase64 = await Promise.all(images.map(toBase64));
+        imagesBase64 = await Promise.all(images.map(toBase64));
         }
+
 
         let body: any = {
           title,
@@ -296,32 +297,39 @@ const CreateListing: React.FC = () => {
                         <input type="text" placeholder="Kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
                     </>
                 )}
+                {type === 'sales' && (
                 <div className="images-section">
                     <label>Zdjęcia (JPG/PNG/WebP, do {MAX_FILES} plików, max {MAX_FILE_SIZE_MB} MB każdy)</label>
                     <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        multiple
-                        onChange={handleFilesChange}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={handleFilesChange}
                     />
                     {imageErrors.length > 0 && (
-                        <ul className="image-errors">
-                            {imageErrors.map((er, i) => (
-                                <li key={i} style={{ color: 'red' }}>{er}</li>
-                            ))}
-                        </ul>
+                    <ul className="image-errors">
+                        {imageErrors.map((er, i) => (
+                        <li key={i} style={{ color: 'red' }}>{er}</li>
+                        ))}
+                    </ul>
                     )}
                     {previews.length > 0 && (
-                        <div className="previews-grid">
-                            {previews.map((src, i) => (
-                                <div key={i} className="preview-item">
-                                    <img src={src} alt={`podgląd ${i + 1}`} style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }} />
-                                    <button type="button" onClick={() => removeImageAt(i)}>Usuń</button>
-                                </div>
-                            ))}
+                    <div className="previews-grid">
+                        {previews.map((src, i) => (
+                        <div key={i} className="preview-item">
+                            <img
+                            src={src}
+                            alt={`podgląd ${i + 1}`}
+                            style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }}
+                            />
+                            <button type="button" onClick={() => removeImageAt(i)}>Usuń</button>
                         </div>
+                        ))}
+                    </div>
                     )}
                 </div>
+                )}
+
                 <button type="submit">Dodaj ogłoszenie</button>
             </form>
         </div>

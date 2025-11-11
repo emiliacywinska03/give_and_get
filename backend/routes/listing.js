@@ -96,7 +96,11 @@ router.post('/', authRequired, async (req, res) => {
 
     const created = result.rows[0];
 
-    const images = Array.isArray(req.body.images) ? req.body.images : [];
+    const images =
+      created.type_id === 1 && Array.isArray(req.body.images)
+        ? req.body.images
+        : [];
+    
     if (images.length > 0) {
       const values = [];
       const placeholders = [];
