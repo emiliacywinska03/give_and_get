@@ -34,6 +34,22 @@ const toImageSrc = (val: any): string | null => {
   return null;
 };
 
+
+async function fetchFirstImageFor(listingId: number): Promise<string | null> {
+  try {
+    const r = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
+      credentials: 'include',
+      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+    });
+    if (!r.ok) return null;
+    const imgs: { id: number; dataUrl: string }[] = await r.json();
+    return imgs.length ? imgs[0].dataUrl : null;
+  } catch {
+    return null;
+  }
+}
+
+
 const Profile: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
@@ -118,10 +134,18 @@ const Profile: React.FC = () => {
         });
         const data = await res.json();
         if (res.ok && Array.isArray(data)) {
-          setFavorites(data);
+          const withImages = await Promise.all(
+            data.map(async (it: any) => {
+              if (it.primary_image) return it;
+              const first = await fetchFirstImageFor(it.id);
+              return { ...it, primary_image: first };
+            })
+          );
+          setFavorites(withImages);
         } else {
           console.error('Niepoprawna odpowiedź API (favorites):', data);
         }
+        
       } catch (err) {
         console.error('Błąd pobierania ulubionych ogłoszeń:', err);
       } finally {
@@ -268,15 +292,33 @@ const Profile: React.FC = () => {
                 onClick={() => navigate(`/listing/${f.id}`)}
                 style={{ cursor: 'pointer' }}
               >
-                <h4 className="listing-title">{f.title}</h4>
-                <p className="listing-desc">{f.description}</p>
-                <small className="listing-date">
-                  Dodano: {new Date(f.created_at).toLocaleDateString()}
-                </small>
+                {/* miniatura po lewej */}
+                {f.primary_image && (
+                  <div className="listing-thumb">
+                    <img
+                      src={
+                        f.primary_image.startsWith('data:')
+                          ? f.primary_image
+                          : `${API_BASE}${f.primary_image}`
+                      }
+                      alt={f.title}
+                    />
+                  </div>
+                )}
+
+                {/* treść po prawej */}
+                <div className="listing-content">
+                  <h4 className="listing-title">{f.title}</h4>
+                  <p className="listing-desc">{f.description}</p>
+                  <small className="listing-date">
+                    Dodano: {new Date(f.created_at).toLocaleDateString('pl-PL')}
+                  </small>
+                </div>
               </div>
             ))}
           </div>
         )}
+
       </div>
     </div>
   );
