@@ -33,19 +33,28 @@ interface Listing {
   primary_image?: string | null;
 }
 
+type FilterType = '' | 'work' | 'help' | 'sales';
+
 const ListingPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const lastSearchRef = useRef<string>('');
   const { user } = useAuth();
-  const [typeFilter, setTypeFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
   const [subcategoryFilter, setSubcategoryFilter] = useState<number | ''>('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  
 
+  const params = new URLSearchParams(location.search);
+  const urlType = params.get('type') as FilterType | null;
+
+  const [typeFilter, setTypeFilter] = useState<FilterType>(
+    urlType === 'work' || urlType === 'sales' || urlType === 'help'
+      ? urlType
+      : ''
+  );
 
   // Wczytanie ulubionych ogłoszeń (raz, po zalogowaniu)
   useEffect(() => {
@@ -71,36 +80,7 @@ const ListingPage: React.FC = () => {
   }, [user]);
 
 
-  // Wczytanie filtrów z URL
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const type = params.get('type');
-    const cat = params.get('category_id');
-    const sub = params.get('subcategory_id');
 
-    if (type === 'work' || type === 'sales' || type === 'help') {
-      setTypeFilter(type);
-    } else {
-      setTypeFilter('');
-    }
-    if (cat) setCategoryFilter(Number(cat));
-    if (sub) setSubcategoryFilter(Number(sub));
-  }, [location.search]);
-
-  // Aktualizacja URL na podstawie filtrów
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (typeFilter) params.set('type', typeFilter);
-    if (categoryFilter) params.set('category_id', String(categoryFilter));
-    if (subcategoryFilter) params.set('subcategory_id', String(subcategoryFilter));
-
-    const newSearch = params.toString();
-    if (newSearch === lastSearchRef.current) return;
-    lastSearchRef.current = newSearch;
-
-    const newUrl = newSearch ? `/listings?${newSearch}` : '/listings';
-    navigate(newUrl, { replace: true });
-  }, [typeFilter, categoryFilter, subcategoryFilter, navigate]);
 
   // Pobieranie kategorii po zmianie typu
   useEffect(() => {
@@ -248,12 +228,16 @@ const ListingPage: React.FC = () => {
 
       <div className="filters-bar">
         <label> Typ </label>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value as FilterType)}
+        >
           <option value="">Typ</option>
           <option value="work">Praca</option>
           <option value="help">Pomoc</option>
           <option value="sales">Sprzedaż</option>
         </select>
+
 
         <div className="filter">
           <label>Podkategoria</label>
