@@ -205,15 +205,69 @@
   fill: currentColor;
 }
 
+/* === Dark mode – szczegóły ogłoszenia === */
+body.dark-mode .listing-details-container {
+  background: #020617;
+  border-radius: 16px;
+  border: 1px solid #111827;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85);
+  color: #e5e7eb;
+}
 
-.listing-details-help-pill {
-  display: inline-block;
-  margin-top: 0.3rem;
-  margin-bottom: 0.4rem;
-  padding: 0.25rem 0.7rem;
-  border-radius: 9999px;
-  background-color: #e0f2fe;  
-  color: #075985;          
-  font-size: 0.9rem;
-  font-weight: 600;
+body.dark-mode .listing-details-back {
+  color: #93c5fd;
+}
+
+body.dark-mode .listing-details-back:hover {
+  color: #bfdbfe;
+}
+
+body.dark-mode .listing-details-title {
+  color: #f9fafb;
+}
+
+body.dark-mode .listing-details-meta {
+  color: #9ca3af;
+}
+
+body.dark-mode .listing-details-card {
+  background: #020617;
+  border: 1px solid #1f2937;
+}
+
+body.dark-mode .listing-details-description {
+  color: #e5e7eb;
+}
+
+body.dark-mode .listing-details-dl dt {
+  color: #e5e7eb;
+}
+
+body.dark-mode .listing-details-dl dd {
+  color: #9ca3af;
+}
+
+body.dark-mode .listing-details-image {
+  border-color: #111827;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75);
+}
+
+body.dark-mode .listing-details-actions button,
+body.dark-mode .listing-details-actions a {
+  background-color: #2563eb;
+  color: #f9fafb;
+}
+
+body.dark-mode .listing-details-actions button:hover,
+body.dark-mode .listing-details-actions a:hover {
+  background-color: #1d4ed8;
+}
+
+body.dark-mode .favorite-toggle.favorite-toggle-details {
+  background: #020617;
+  border: 1px solid #1f2937;
+}
+
+body.dark-mode .favorite-toggle.favorite-toggle-details.favorite-toggle--active {
+  background: #4b1220;
 }

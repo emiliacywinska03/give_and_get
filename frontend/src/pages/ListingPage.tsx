@@ -290,7 +290,12 @@ const ListingPage: React.FC = () => {
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
             return (
-              <div key={listing.id} className="listing-card">
+              <div
+                key={listing.id}
+                className="listing-card"
+                onClick={() => navigate(`/listing/${listing.id}`)}
+                style={{ cursor: 'pointer' }}
+              >
                 {/* ikona serduszka w rogu kafelka */}
                 <button
                   className={`favorite-toggle ${
@@ -325,6 +330,7 @@ const ListingPage: React.FC = () => {
                   to={`/listing/${listing.id}`}
                   className="listing-link"
                   aria-label={`Zobacz ogłoszenie: ${listing.title}`}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
                 >
                   {listing.primary_image ? (
                     <img

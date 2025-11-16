@@ -183,6 +183,29 @@ body.dark-mode .listing-date {
   color: #9ca3af;
 }
 
+body.dark-mode .profile-page .listing-card:hover {
+  background: #111827;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.9);
+  border-color: #3b82f6;
+}
+
+body.dark-mode .profile-page .listing-content h4 {
+  color: #f9fafb;
+}
+
+body.dark-mode .profile-page .listing-content p {
+  color: #d1d5db;
+}
+
+body.dark-mode .profile-page .listing-content small {
+  color: #9ca3af;
+}
+
+body.dark-mode .profile-page .listing-thumb {
+  background-color: #020617;
+}
+
 .profile-page .listing-thumb {
   flex-shrink: 0;
   width: 220px;

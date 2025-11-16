@@ -19,7 +19,7 @@
   }
   
   /* Jeden ulubiony listing – wygląda jak w profilu */
-  .favorites-item {
+.favorites-item {
     display: flex;
     gap: 20px;
     text-decoration: none;
@@ -29,14 +29,17 @@
     border-radius: 16px;
     padding: 18px 22px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    border: 1px solid #e5e7eb;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    cursor: pointer;
   }
-  
+
   .favorites-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+    border-color: #3b82f6;
   }
-  
+
   /* lewa część – miniatura */
   .favorites-thumb-wrapper {
     flex: 0 0 220px;
@@ -105,3 +108,44 @@
     }
   }
   
+  /* === Dark mode – Ulubione === */
+  body.dark-mode .favorites-page {
+    color: #e5e7eb;
+  }
+  
+  body.dark-mode .favorites-page h2 {
+    color: #f9fafb;
+  }
+  
+  body.dark-mode .favorites-item {
+    background: #020617;
+    border-color: #1f2937;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85);
+  }
+  
+  body.dark-mode .favorites-item:hover {
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.95);
+    border-color: #3b82f6;
+  }
+  
+  body.dark-mode .favorites-title {
+    color: #f9fafb;
+  }
+  
+  body.dark-mode .favorites-description {
+    color: #d1d5db;
+  }
+  
+  body.dark-mode .favorites-meta {
+    color: #9ca3af;
+  }
+  
+  body.dark-mode .favorites-thumb {
+    background: #020617;
+    border-color: #111827;
+  }
+  
+  body.dark-mode .favorites-thumb-placeholder {
+    background: #020617;
+    border-color: #374151;
+  }

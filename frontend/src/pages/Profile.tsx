@@ -134,14 +134,55 @@ const Profile: React.FC = () => {
         });
         const data = await res.json();
         if (res.ok && Array.isArray(data)) {
-          const withImages = await Promise.all(
-            data.map(async (it: any) => {
-              if (it.primary_image) return it;
-              const first = await fetchFirstImageFor(it.id);
-              return { ...it, primary_image: first };
-            })
-          );
-          setFavorites(withImages);
+          setFavorites(data);
+
+          const favThumbMap: Record<number, string> = {};
+
+          for (const item of data) {
+            const listingId = (item as any).listing_id ?? item.id;
+
+            const direct =
+              toImageSrc((item as any).primary_image) ||
+              (Array.isArray((item as any).images)
+                ? toImageSrc((item as any).images[0])
+                : null);
+
+            if (direct && listingId != null) {
+              favThumbMap[listingId] = direct;
+              continue;
+            }
+
+            if (listingId == null) continue;
+
+            try {
+              const ri = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
+                headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+                credentials: 'include',
+              });
+
+              if (ri.ok) {
+                const imgs = await ri.json();
+                if (Array.isArray(imgs)) {
+                  const first = imgs
+                    .map((it: any) =>
+                      toImageSrc(it) ||
+                      toImageSrc(it?.dataUrl) ||
+                      toImageSrc(it?.url) ||
+                      toImageSrc(it?.path)
+                    )
+                    .find((x: string | null): x is string => Boolean(x));
+
+                  if (first) {
+                    favThumbMap[listingId] = first;
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Błąd pobierania miniatury dla ulubionego ogłoszenia', item.id, e);
+            }
+          }
+
+          setThumbnails((prev) => ({ ...prev, ...favThumbMap }));
         } else {
           console.error('Niepoprawna odpowiedź API (favorites):', data);
         }
@@ -285,37 +326,34 @@ const Profile: React.FC = () => {
           <p>Nie masz jeszcze ulubionych ogłoszeń.</p>
         ) : (
           <div className="listing-grid">
-            {favorites.map((f) => (
-              <div
-                key={f.id}
-                className="listing-card"
-                onClick={() => navigate(`/listing/${f.id}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                {/* miniatura po lewej */}
-                {f.primary_image && (
-                  <div className="listing-thumb">
-                    <img
-                      src={
-                        f.primary_image.startsWith('data:')
-                          ? f.primary_image
-                          : `${API_BASE}${f.primary_image}`
-                      }
-                      alt={f.title}
-                    />
-                  </div>
-                )}
+            {favorites.map((f) => {
+              const listingId = (f as any).listing_id ?? f.id;
+              const imgSrc = thumbnails[listingId];
 
-                {/* treść po prawej */}
-                <div className="listing-content">
-                  <h4 className="listing-title">{f.title}</h4>
-                  <p className="listing-desc">{f.description}</p>
-                  <small className="listing-date">
-                    Dodano: {new Date(f.created_at).toLocaleDateString('pl-PL')}
-                  </small>
+              return (
+                <div key={f.id} className="listing-card">
+                  <div
+                    className="listing-main"
+                    onClick={() => navigate(`/listing/${f.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {imgSrc && (
+                      <div className="listing-thumb">
+                        <img src={imgSrc} alt={f.title} />
+                      </div>
+                    )}
+
+                    <div className="listing-content">
+                      <h4 className="listing-title">{f.title}</h4>
+                      <p className="listing-desc">{f.description}</p>
+                      <small className="listing-date">
+                        Dodano: {new Date(f.created_at).toLocaleDateString()}
+                      </small>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
