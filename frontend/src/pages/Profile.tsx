@@ -232,6 +232,7 @@ const Profile: React.FC = () => {
 
       <div className="profile-header">
         <div className="profile-avatar">
+        
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -262,6 +263,17 @@ const Profile: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <div className="profile-counters">
+          <div>
+            <strong>{listings.length}</strong>
+            <span>ogłoszeń</span>
+          </div>
+          <div>
+            <strong>{favorites.length}</strong>
+            <span>ulubione</span>
+          </div>
+        </div>
 
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
