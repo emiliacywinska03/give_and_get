@@ -31,12 +31,13 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
 }
 
 const Profile: React.FC = () => {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, setUser } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const navigate = useNavigate();
+
 
   useEffect(() => {
     if (!user) return;
@@ -139,6 +140,7 @@ const Profile: React.FC = () => {
     }
   };
 
+
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
 
@@ -147,60 +149,79 @@ const Profile: React.FC = () => {
       <div className="profile-card">
         <h2 className="profile-title">Profil użytkownika</h2>
 
-        <div className="profile-header">
-          <div className="profile-avatar">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.8}
-              stroke="currentColor"
-              className="profile-avatar-icon"
+
+        <div className="profile-top">
+          {/* LEWA STRONA — avatar + dane */}
+          <div className="profile-left">
+            <div className="profile-avatar">
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="80"
+                height="80"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 8a7 7 0 1 1 14 0H5Z"
+                />
+              </svg>
+            </div>
+
+            <div className="profile-user-data">
+              <p className="profile-username">{user.username}</p>
+              <p>
+                <strong>Imię i nazwisko:</strong> {user.first_name}{' '}
+                {user.last_name}
+              </p>
+              <p>
+                <strong>Email:</strong> {user.email}
+              </p>
+              <p>
+                <strong>Data rejestracji:</strong>{' '}
+                {new Date(user.created_at || '').toLocaleDateString()}
+              </p>
+              <p>
+                <strong>Punkty:</strong> {user.points ?? 0}
+              </p>
+            </div>
+          </div>
+
+          {/* PRAWA STRONA — kafelki + przycisk */}
+          <div className="profile-right">
+            <div className="profile-counters">
+              <div>
+                <strong>{listings.length}</strong>
+                <span>ogłoszeń</span>
+              </div>
+              <div>
+                <strong>{favorites.length}</strong>
+                <span>ulubione</span>
+              </div>
+              <div>
+                <strong>{user.points ?? 0}</strong>
+                <span>punktów</span>
+              </div>
+            </div>
+
+            <button
+              className="profile-rewards-button"
+              onClick={() => navigate('/rewards')}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.25a8.25 8.25 0 0 1 15 0v.75H4.5v-.75z"
-              />
-            </svg>
-          </div>
-
-          <div className="profile-basic">
-            <p className="profile-username">{user.username}</p>
-            <p>
-              <strong>Imię i nazwisko:</strong> {user.first_name} {user.last_name}
-            </p>
-            <p>
-              <strong>Email:</strong> {user.email}
-            </p>
-            <p>
-              <strong>Data rejestracji:</strong>{' '}
-              {new Date(user.created_at || '').toLocaleDateString()}
-            </p>
-            <p>
-              <strong>Punkty:</strong> {user?.points ?? 0}
-            </p>
+              Zobacz nagrody za punkty
+            </button>
           </div>
         </div>
 
-        <div className="profile-counters">
-          <div>
-            <strong>{listings.length}</strong>
-            <span>ogłoszeń</span>
-          </div>
-          <div>
-            <strong>{favorites.length}</strong>
-            <span>ulubione</span>
-          </div>
-          <div>
-            <strong>{user.points ?? 0}</strong>
-            <span>punktów</span>
-          </div>
-        </div>
 
 
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
+
         {loadingListings ? (
           <p>Ładowanie ogłoszeń...</p>
         ) : listings.length === 0 ? (
@@ -354,6 +375,8 @@ const Profile: React.FC = () => {
             })}
           </div>
         )}
+
+
       </div>
     </div>
   );

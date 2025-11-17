@@ -252,12 +252,6 @@ body.dark-mode .profile-page .listing-thumb {
   flex: 1;
 }
 
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
 
 .profile-avatar {
   background-color: #f1f5f9;
@@ -276,23 +270,12 @@ body.dark-mode .profile-page .listing-thumb {
   height: 48px;
 }
 
-.profile-basic p {
-  margin: 0.2rem 0;
-}
-
 .profile-username {
   font-size: 1.3rem;
   font-weight: 700;
   color: #111827;
 }
 
-
-.profile-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 1rem;
-  align-items: center;
-}
 
 .profile-counters {
   display: flex;
@@ -368,4 +351,96 @@ body.dark-mode .profile-page .listing-thumb {
   display: flex;
   gap: 1.5rem; 
   align-items: flex-start;
+}
+
+
+.profile-actions {
+  margin-top: 12px;
+}
+
+.profile-rewards-button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.profile-rewards-button:hover {
+  background: #eef2ff;
+  border-color: #6366f1;
+}
+
+/* Górny wiersz profilu: lewa i prawa część */
+.profile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+  padding: 24px 0 16px;
+}
+
+/* Lewa kolumna: avatar + dane */
+.profile-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.profile-user-data p {
+  margin: 4px 0;
+}
+
+/* Prawa kolumna: liczniki + przycisk nagród */
+.profile-right {
+  margin-left: auto;              
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+/* Kafelki z liczbami */
+.profile-counters {
+  display: flex;
+  gap: 16px;
+}
+
+.profile-counters > div {
+  min-width: 96px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: center;
+  box-shadow: 0 0 0 1px #e5e7eb;
+}
+
+.profile-counters strong {
+  display: block;
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+
+.profile-counters span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Przycisk "Zobacz nagrody za punkty" */
+.profile-rewards-button {
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid #d0d7e2;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.profile-rewards-button:hover {
+  background: #f1f5f9;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
 }

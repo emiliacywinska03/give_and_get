@@ -11,6 +11,7 @@ import ListingPage from "./pages/ListingPage";
 import Favorites from './pages/Favorites';
 import ListingDetails from './pages/ListingDetails';
 import Breadcrumbs from './components/Breadcrumbs';
+import RewardsPage from './pages/RewardsPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/rewards" element={<RewardsPage />} />
           <Route
           path="/favorites"
           element={

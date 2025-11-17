@@ -1,0 +1,94 @@
+.rewards-page {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  
+  .rewards-page h1 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  
+  .rewards-points-info {
+    font-size: 18px;
+    margin-bottom: 25px;
+  }
+  
+  
+  /* Komunikat o wymianie */
+  .rewards-message {
+    background: #e7f8ed;
+    color: #1a7f37;
+    border: 1px solid #a7e3b4;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  
+  
+  /* Grid z kartami nagród */
+  .rewards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+  
+  
+  /* Kartka nagrody */
+  .reward-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e6e6e6;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.04);
+    transition: 0.2s ease;
+  }
+  
+  .reward-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 5px 14px rgba(0,0,0,0.08);
+  }
+  
+  
+  /* Teksty */
+  .reward-brand {
+    font-size: 20px;
+    margin-bottom: 5px;
+  }
+  
+  .reward-desc {
+    margin-bottom: 8px;
+    color: #555;
+  }
+  
+  .reward-percent,
+  .reward-cost {
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  
+  
+  /* Button "Odbierz" */
+  .reward-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #3a86ff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+  
+  .reward-button:hover {
+    background-color: #2d6dd8;
+  }
+  
+  .reward-button:disabled {
+    background-color: #b6c7e1;
+    cursor: not-allowed;
+  }
+  
