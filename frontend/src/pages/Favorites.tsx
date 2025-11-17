@@ -100,14 +100,39 @@ const Favorites: React.FC = () => {
                   <img
                     className="favorites-thumb"
                     src={
-                      listing.primary_image.startsWith('data:')
-                        ? listing.primary_image
+                      (listing.primary_image || '').startsWith('data:')
+                        ? listing.primary_image!
                         : `${API_BASE}${listing.primary_image}`
                     }
                     alt={listing.title}
                   />
                 ) : (
-                  <div className="favorites-thumb-placeholder" />
+                  <div className="favorites-thumb-placeholder">
+                    <svg
+                      className="favorites-thumb-placeholder-icon"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="3"
+                        y="3"
+                        width="18"
+                        height="18"
+                        rx="3"
+                        ry="3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M7 7l10 10M17 7L7 17"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </div>
                 )}
               </div>
 

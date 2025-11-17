@@ -293,14 +293,41 @@ const Profile: React.FC = () => {
                     className="listing-main"
                     onClick={() =>
                       navigate(`/listing/${l.id}`, {
-                        state: { fromProfile: true }, // info, że przyszliśmy z profilu
+                        state: { fromProfile: true }, 
                       })
                     }
                     style={{ cursor: 'pointer' }}
                   >
-                    {imgSrc && (
+                    {imgSrc ? (
                       <div className="listing-thumb">
                         <img src={imgSrc} alt={l.title} />
+                      </div>
+                    ) : (
+                      <div className="listing-thumb-space">
+                        <svg
+                          className="listing-thumb-placeholder-icon"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <rect
+                            x="3"
+                            y="3"
+                            width="18"
+                            height="18"
+                            rx="3"
+                            ry="3"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          />
+                          <path
+                            d="M7 7l10 10M17 7L7 17"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
                       </div>
                     )}
 
@@ -328,7 +355,7 @@ const Profile: React.FC = () => {
                       className="edit-button"
                       onClick={() =>
                         navigate(`/listing/${l.id}`, {
-                          state: { fromProfile: true, editMode: true }, // od razu tryb edycji
+                          state: { fromProfile: true, editMode: true },
                         })
                       }
                     >
@@ -338,6 +365,7 @@ const Profile: React.FC = () => {
                 </div>
               );
             })}
+            
           </div>
         )}
 

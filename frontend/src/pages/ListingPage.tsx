@@ -343,11 +343,19 @@ const ListingPage: React.FC = () => {
                       alt={listing.title}
                     />
                   ) : (
-                    <div
-                      className="listing-thumb-space"
-                      aria-hidden="true"
-                    />
+                    <div className="listing-thumb-space">
+                      <svg
+                        className="listing-thumb-placeholder-icon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="3" ry="3" fill="none" />
+                        <path d="M7 7l10 10M17 7L7 17" />
+                      </svg>
+                    </div>
                   )}
+
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
                     <span className="mini-avatar">

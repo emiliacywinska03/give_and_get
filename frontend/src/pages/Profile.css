@@ -206,18 +206,6 @@ body.dark-mode .profile-page .listing-thumb {
   background-color: #020617;
 }
 
-.profile-page .listing-thumb {
-  flex-shrink: 0;
-  width: 220px;
-  height: 140px;
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 1.5rem;
-}
 
 .profile-page .listing-thumb img {
   width: 100%;
@@ -344,4 +332,40 @@ body.dark-mode .profile-page .listing-thumb {
     justify-content: flex-start;
     margin-top: .5rem;
   }
+}
+
+/* Miniaturka ogłoszenia w profilu (foto lub placeholder X) */
+.profile-page .listing-thumb,
+.profile-page .listing-thumb-space {
+  width: 180px;           
+  height: 140px;          
+  border-radius: 12px;
+  background-color: #f9fafb;
+  border: 1px dashed #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;    
+}
+
+/* prawdziwe zdjęcie – dopasowane do kafelka */
+.profile-page .listing-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* ikona X w placeholderze */
+.profile-page .listing-thumb-placeholder-icon {
+  width: 40px;
+  height: 40px;
+  color: #9ca3af;
+}
+
+/* Odstęp między miniaturą a tekstem */
+.profile-page .listing-main {
+  display: flex;
+  gap: 1.5rem; 
+  align-items: flex-start;
 }
