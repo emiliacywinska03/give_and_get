@@ -10,30 +10,11 @@ interface Listing {
   location: string;
   created_at: string;
   images?: any[];
-  primary_image?: any;
+  primary_image?: string | null;
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
-
-const toImageSrc = (val: any): string | null => {
-  if (!val) return null;
-
-  if (typeof val === 'string') {
-    if (val.startsWith('http') || val.startsWith('data:')) return val;
-    return `${API_BASE}${val}`;
-  }
-
-  if (typeof val === 'object') {
-    const candidate = val.dataUrl || val.url || val.path;
-    if (!candidate) return null;
-    if (candidate.startsWith('http') || candidate.startsWith('data:')) return candidate;
-    return `${API_BASE}${candidate}`;
-  }
-
-  return null;
-};
-
 
 async function fetchFirstImageFor(listingId: number): Promise<string | null> {
   try {
@@ -49,76 +30,46 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
   }
 }
 
-
 const Profile: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
-  const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editedTitle, setEditedTitle] = useState('');
-  const [editedDescription, setEditedDescription] = useState('');
-  const [editedLocation, setEditedLocation] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!user) return;
+
+    // ---------- Twoje ogłoszenia ----------
     const fetchListings = async () => {
-      if (!user) return;
       try {
         const res = await fetch(`${API_BASE}/api/listings/my`, {
           credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
         });
         const data = await res.json();
 
-        if (res.ok && Array.isArray(data)) {
-          setListings(data);
-
-          const thumbMap: Record<number, string> = {};
-
-          for (const item of data) {
-            const direct =
-              toImageSrc(item.primary_image) ||
-              (Array.isArray(item.images) ? toImageSrc(item.images[0]) : null);
-
-            if (direct) {
-              thumbMap[item.id] = direct;
-              continue;
-            }
-
-            try {
-              const ri = await fetch(`${API_BASE}/api/listings/${item.id}/images`, {
-                headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-                credentials: 'include',
-              });
-
-              if (ri.ok) {
-                const imgs = await ri.json();
-                if (Array.isArray(imgs)) {
-                  const first = imgs
-                    .map((it: any) =>
-                      toImageSrc(it) ||
-                      toImageSrc(it?.dataUrl) ||
-                      toImageSrc(it?.url) ||
-                      toImageSrc(it?.path)
-                    )
-                    .find((x: string | null): x is string => Boolean(x));
-
-                  if (first) {
-                    thumbMap[item.id] = first;
-                  }
-                }
-              }
-            } catch (e) {
-              console.error('Błąd pobierania miniatury dla ogłoszenia', item.id, e);
-            }
-          }
-
-          setThumbnails(thumbMap);
-        } else {
-          console.error('Niepoprawna odpowiedź API:', data);
+        if (!res.ok || !Array.isArray(data)) {
+          console.error('Niepoprawna odpowiedź API (my):', data);
+          return;
         }
+
+        const withImages: Listing[] = await Promise.all(
+          data.map(async (item: any) => {
+            // Spróbuj pobrać pierwsze zdjęcie z osobnego endpointu
+            const primary =
+              (item.primary_image as string | null) ??
+              (await fetchFirstImageFor(item.id));
+
+            return {
+              ...item,
+              primary_image: primary ?? null,
+            };
+          })
+        );
+
+        setListings(withImages);
       } catch (err) {
         console.error('Błąd pobierania ogłoszeń:', err);
       } finally {
@@ -126,67 +77,34 @@ const Profile: React.FC = () => {
       }
     };
 
+    // ---------- Ulubione ----------
     const fetchFavorites = async () => {
-      if (!user) return;
       try {
         const res = await fetch(`${API_BASE}/api/listings/favorites`, {
           credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
         });
         const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
-          setFavorites(data);
 
-          const favThumbMap: Record<number, string> = {};
-
-          for (const item of data) {
-            const listingId = (item as any).listing_id ?? item.id;
-
-            const direct =
-              toImageSrc((item as any).primary_image) ||
-              (Array.isArray((item as any).images)
-                ? toImageSrc((item as any).images[0])
-                : null);
-
-            if (direct && listingId != null) {
-              favThumbMap[listingId] = direct;
-              continue;
-            }
-
-            if (listingId == null) continue;
-
-            try {
-              const ri = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
-                headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-                credentials: 'include',
-              });
-
-              if (ri.ok) {
-                const imgs = await ri.json();
-                if (Array.isArray(imgs)) {
-                  const first = imgs
-                    .map((it: any) =>
-                      toImageSrc(it) ||
-                      toImageSrc(it?.dataUrl) ||
-                      toImageSrc(it?.url) ||
-                      toImageSrc(it?.path)
-                    )
-                    .find((x: string | null): x is string => Boolean(x));
-
-                  if (first) {
-                    favThumbMap[listingId] = first;
-                  }
-                }
-              }
-            } catch (e) {
-              console.error('Błąd pobierania miniatury dla ulubionego ogłoszenia', item.id, e);
-            }
-          }
-
-          setThumbnails((prev) => ({ ...prev, ...favThumbMap }));
-        } else {
+        if (!res.ok || !Array.isArray(data)) {
           console.error('Niepoprawna odpowiedź API (favorites):', data);
+          return;
         }
-        
+
+        const withImages: Listing[] = await Promise.all(
+          data.map(async (item: any) => {
+            const primary =
+              (item.primary_image as string | null) ??
+              (await fetchFirstImageFor(item.id));
+
+            return {
+              ...item,
+              primary_image: primary ?? null,
+            };
+          })
+        );
+
+        setFavorites(withImages);
       } catch (err) {
         console.error('Błąd pobierania ulubionych ogłoszeń:', err);
       } finally {
@@ -197,7 +115,6 @@ const Profile: React.FC = () => {
     fetchListings();
     fetchFavorites();
   }, [user]);
-
 
   const handleDelete = async (id: number) => {
     const confirmed = window.confirm('Czy na pewno chcesz usunąć ogłoszenie?');
@@ -230,41 +147,40 @@ const Profile: React.FC = () => {
       <div className="profile-card">
         <h2 className="profile-title">Profil użytkownika</h2>
 
-      <div className="profile-header">
-        <div className="profile-avatar">
-        
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.8}
-            stroke="currentColor"
-            className="profile-avatar-icon"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.25a8.25 8.25 0 0 1 15 0v.75H4.5v-.75z"
-            />
-          </svg>
+        <div className="profile-header">
+          <div className="profile-avatar">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.8}
+              stroke="currentColor"
+              className="profile-avatar-icon"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.25a8.25 8.25 0 0 1 15 0v.75H4.5v-.75z"
+              />
+            </svg>
+          </div>
+
+          <div className="profile-basic">
+            <p className="profile-username">{user.username}</p>
+            <p>
+              <strong>Imię i nazwisko:</strong> {user.first_name} {user.last_name}
+            </p>
+            <p>
+              <strong>Email:</strong> {user.email}
+            </p>
+            <p>
+              <strong>Data rejestracji:</strong>{' '}
+              {new Date(user.created_at || '').toLocaleDateString()}
+            </p>
+          </div>
         </div>
 
-        <div className="profile-basic">
-          <p className="profile-username">{user.username}</p>
-          <p>
-            <strong>Imię i nazwisko:</strong> {user.first_name} {user.last_name}
-          </p>
-          <p>
-            <strong>Email:</strong> {user.email}
-          </p>
-          <p>
-            <strong>Data rejestracji:</strong>{' '}
-            {new Date(user.created_at || '').toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-
-      <div className="profile-counters">
+        <div className="profile-counters">
           <div>
             <strong>{listings.length}</strong>
             <span>ogłoszeń</span>
@@ -284,16 +200,15 @@ const Profile: React.FC = () => {
         ) : (
           <div className="listing-grid">
             {listings.map((l) => {
-              const imgSrc = thumbnails[l.id];
+              const imgSrc = l.primary_image || null;
 
               return (
                 <div key={l.id} className="listing-card">
-                  {/* Lewa część – kliknięcie otwiera szczegóły */}
                   <div
                     className="listing-main"
                     onClick={() =>
                       navigate(`/listing/${l.id}`, {
-                        state: { fromProfile: true }, 
+                        state: { fromProfile: true },
                       })
                     }
                     style={{ cursor: 'pointer' }}
@@ -343,7 +258,6 @@ const Profile: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Prawa część – przyciski */}
                   <div className="listing-actions">
                     <button
                       className="delete-button"
@@ -365,7 +279,6 @@ const Profile: React.FC = () => {
                 </div>
               );
             })}
-            
           </div>
         )}
 
@@ -378,8 +291,7 @@ const Profile: React.FC = () => {
         ) : (
           <div className="listing-grid">
             {favorites.map((f) => {
-              const listingId = (f as any).listing_id ?? f.id;
-              const imgSrc = thumbnails[listingId];
+              const imgSrc = f.primary_image || null;
 
               return (
                 <div key={f.id} className="listing-card">
@@ -388,9 +300,36 @@ const Profile: React.FC = () => {
                     onClick={() => navigate(`/listing/${f.id}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    {imgSrc && (
+                    {imgSrc ? (
                       <div className="listing-thumb">
                         <img src={imgSrc} alt={f.title} />
+                      </div>
+                    ) : (
+                      <div className="listing-thumb-space">
+                        <svg
+                          className="listing-thumb-placeholder-icon"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <rect
+                            x="3"
+                            y="3"
+                            width="18"
+                            height="18"
+                            rx="3"
+                            ry="3"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          />
+                          <path
+                            d="M7 7l10 10M17 7L7 17"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
                       </div>
                     )}
 
@@ -407,7 +346,6 @@ const Profile: React.FC = () => {
             })}
           </div>
         )}
-
       </div>
     </div>
   );
