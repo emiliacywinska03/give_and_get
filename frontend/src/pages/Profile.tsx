@@ -230,7 +230,25 @@ const Profile: React.FC = () => {
       <div className="profile-card">
         <h2 className="profile-title">Profil użytkownika</h2>
 
-        <div className="profile-info">
+      <div className="profile-header">
+        <div className="profile-avatar">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.8}
+            stroke="currentColor"
+            className="profile-avatar-icon"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.25a8.25 8.25 0 0 1 15 0v.75H4.5v-.75z"
+            />
+          </svg>
+        </div>
+
+        <div className="profile-basic">
           <p className="profile-username">{user.username}</p>
           <p>
             <strong>Imię i nazwisko:</strong> {user.first_name} {user.last_name}
@@ -242,16 +260,9 @@ const Profile: React.FC = () => {
             <strong>Data rejestracji:</strong>{' '}
             {new Date(user.created_at || '').toLocaleDateString()}
           </p>
-          <button
-            onClick={async () => {
-              await logout();
-              navigate('/');
-            }}
-            className="btn btn-logout"
-          >
-            Wyloguj
-          </button>
         </div>
+      </div>
+
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
         {loadingListings ? (
