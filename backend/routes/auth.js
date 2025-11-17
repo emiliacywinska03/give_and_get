@@ -135,12 +135,24 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 router.get('/me', authRequired, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, username, email, first_name, last_name, created_at
-       FROM "user" WHERE id = $1`,
+      `SELECT id, username, email, first_name, last_name, created_at, points
+       FROM "user"
+       WHERE id = $1`,
       [req.user.id]
     );
-    if (!rows[0]) return res.status(404).json({ ok: false, message: 'Nie znaleziono użytkownika' });
-    return res.json({ ok: true, user: rows[0] });
+    
+    if (!rows[0]) {
+      return res.status(404).json({ ok: false, message: 'Nie znaleziono użytkownika' });
+    }
+
+    return res.json({
+      ok: true,
+      user: {
+        ...rows[0],
+        points: rows[0].points ?? 0,   
+      }
+    });
+
   } catch (err) {
     console.error('Błąd /me:', err);
     return res.status(500).json({ ok: false, message: 'Błąd serwera' });

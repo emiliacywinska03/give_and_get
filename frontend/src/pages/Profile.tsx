@@ -177,6 +177,9 @@ const Profile: React.FC = () => {
               <strong>Data rejestracji:</strong>{' '}
               {new Date(user.created_at || '').toLocaleDateString()}
             </p>
+            <p>
+              <strong>Punkty:</strong> {user?.points ?? 0}
+            </p>
           </div>
         </div>
 
@@ -189,7 +192,12 @@ const Profile: React.FC = () => {
             <strong>{favorites.length}</strong>
             <span>ulubione</span>
           </div>
+          <div>
+            <strong>{user.points ?? 0}</strong>
+            <span>punktów</span>
+          </div>
         </div>
+
 
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>

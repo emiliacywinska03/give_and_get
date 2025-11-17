@@ -146,7 +146,24 @@ router.post('/', authRequired, async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: 'Ogloszenie stworzone', listing: created });
+    // DODAJEMY 10 punktów użytkownikowi
+    const pointsResult = await pool.query(
+      `UPDATE "user"
+       SET points = points + 10
+       WHERE id = $1
+       RETURNING points`,
+      [req.user.id]
+    );
+
+    const newPoints = pointsResult.rows[0]?.points ?? null;
+
+    // Zwracamy też aktualną liczbę punktów
+    res.status(201).json({
+      message: 'Ogloszenie stworzone',
+      listing: created,
+      points: newPoints,
+    });
+
   } catch (err) {
     console.error('Blad podczas dodawania ogloszenia', err.message);
     res.status(500).json({ error: 'Blad wewnetrzny', details: err.message });

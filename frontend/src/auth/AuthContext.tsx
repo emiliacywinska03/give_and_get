@@ -7,6 +7,7 @@ type User = {
   first_name?: string;
   last_name?: string;
   created_at?: string;
+  points: number; 
 };
 
 type AuthContextType = {
@@ -35,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.ok && data?.user) {
-        setUser(data.user);
+        setUser({
+          ...data.user,
+          points: data.user.points ?? 0,
+        });
         return { ok: true };
       }
       const message = data?.errors?.[0]?.message || data?.message || 'Nie udało się zalogować';
@@ -51,8 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' });
       const isJson = res.headers.get('content-type')?.includes('application/json');
       const data = isJson ? await res.json() : null;
-      if (res.ok && data?.ok) setUser(data.user);
-      else setUser(null);
+      if (res.ok && data?.ok && data.user) {
+        setUser({
+          ...data.user,
+          points: data.user.points ?? 0,
+        });
+      } else {
+        setUser(null);
+      }
     } catch (e) {
       console.error('Auth refresh failed:', e);
       setUser(null);
