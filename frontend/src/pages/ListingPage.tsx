@@ -350,6 +350,9 @@ const ListingPage: React.FC = () => {
                   )}
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
+                    <span className="mini-avatar">
+                      {(listing.author_username || 'U')[0].toUpperCase()}
+                    </span>
                     Autor: {listing.author_username ?? 'nieznany'}
                   </p>
                   <p className="listing-location">

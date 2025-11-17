@@ -494,3 +494,18 @@ body.dark-mode .favorite-toggle--active {
   color: inherit;
   display: block;
 }
+
+.mini-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 700;
+  font-size: .8rem;
+  margin-right: .4rem;
+  border: 1px solid #e5e7eb;
+}
