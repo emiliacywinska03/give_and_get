@@ -118,11 +118,20 @@ const CreateListing: React.FC = () => {
         setPreviews(nextPreviews);
     };
 
-    useEffect(() => {
-        return () => {
-            previews.forEach(url => URL.revokeObjectURL(url));
-        };
-    }, [previews]);
+    const moveImage = (idx: number, direction: 'left' | 'right') => {
+        const newIndex = direction === 'left' ? idx - 1 : idx + 1;
+        if (newIndex < 0 || newIndex >= images.length) return;
+      
+        const newImages = [...images];
+        const newPreviews = [...previews];
+      
+        [newImages[idx], newImages[newIndex]] = [newImages[newIndex], newImages[idx]];
+        [newPreviews[idx], newPreviews[newIndex]] = [newPreviews[newIndex], newPreviews[idx]];
+      
+        setImages(newImages);
+        setPreviews(newPreviews);
+    };
+      
 
 
     const handleSubmit = async (e: React.FormEvent) =>{
@@ -316,38 +325,73 @@ const CreateListing: React.FC = () => {
                         <input type="text" placeholder="Kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
                     </>
                 )}
+                
                 {type === 'sales' && (
-                <div className="images-section">
-                    <label>Zdjęcia (JPG/PNG/WebP, do {MAX_FILES} plików, max {MAX_FILE_SIZE_MB} MB każdy)</label>
-                    <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    onChange={handleFilesChange}
-                    />
-                    {imageErrors.length > 0 && (
-                    <ul className="image-errors">
-                        {imageErrors.map((er, i) => (
-                        <li key={i} style={{ color: 'red' }}>{er}</li>
-                        ))}
-                    </ul>
-                    )}
-                    {previews.length > 0 && (
-                    <div className="previews-grid">
-                        {previews.map((src, i) => (
-                        <div key={i} className="preview-item">
-                            <img
-                            src={src}
-                            alt={`podgląd ${i + 1}`}
-                            style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }}
-                            />
-                            <button type="button" onClick={() => removeImageAt(i)}>Usuń</button>
+                    <div className="images-section">
+                        <div className="images-header">
+                        <div className="images-text">
+                            <div className="images-title">Zdjęcia</div>
+                            <div className="images-subtitle">
+                            (JPG/PNG/WebP, do {MAX_FILES} plików, max {MAX_FILE_SIZE_MB} MB każdy)
+                            </div>
                         </div>
-                        ))}
+
+                        <label className="file-btn">
+                            Wybierz pliki
+                            <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            onChange={handleFilesChange}
+                            />
+                        </label>
+                        </div>
+
+                        {imageErrors.length > 0 && (
+                        <ul className="image-errors">
+                            {imageErrors.map((er, i) => (
+                            <li key={i} style={{ color: 'red' }}>{er}</li>
+                            ))}
+                        </ul>
+                        )}
+
+                        {previews.length > 0 && (
+                            <div className="previews-grid">
+                                {previews.map((src, i) => (
+                                <div key={i} className="preview-item">
+                                <img
+                                    src={src}
+                                    alt={`podgląd ${i + 1}`}
+                                    style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }}
+                                />
+                            
+                                { i === 0 ? (
+                                    <span className="main-image-label">Zdjęcie główne</span>
+                                ) : (
+                                    <span className="main-image-label">{i + 1}</span>
+                                )}
+                            
+                                <div className="reorder-buttons">
+                                    <button type="button" onClick={() => moveImage(i, 'left')} disabled={i === 0}>←</button>
+                                    <button type="button" onClick={() => moveImage(i, 'right')} disabled={i === previews.length - 1}>→</button>
+                                </div>
+                            
+                                <button
+                                    type="button"
+                                    className="delete-button"
+                                    onClick={() => removeImageAt(i)}
+                                >
+                                    x
+                                </button>
+                            </div>
+                            
+                                ))}
+                            </div>
+                        )}
+
                     </div>
-                    )}
-                </div>
                 )}
+
 
                 <button type="submit">Dodaj ogłoszenie</button>
             </form>
