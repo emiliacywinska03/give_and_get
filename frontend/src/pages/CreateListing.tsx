@@ -222,179 +222,181 @@ const CreateListing: React.FC = () => {
 
 
     return(
-        <div className='create-listing-container'>
-            <h2>Dodaj ogłoszenie</h2>
-            <form onSubmit={handleSubmit}>
-                <input
-                type="text"
-                placeholder="Tytuł"
-                value={title}
-                onChange={(e)=> setTitle(e.target.value)}
-                required
-                />
-                <textarea
-                    placeholder="Opis (maks. 1000 znaków)"
-                    value={description}
-                    onChange={(e)=> setDescription(e.target.value)}
-                    maxLength={1000}
-                    required
-                />
-                <input
+        <div className="create-listing-page"> 
+            <div className='create-listing-container'>
+                <h2>Dodaj ogłoszenie</h2>
+                <form onSubmit={handleSubmit}>
+                    <input
                     type="text"
-                    placeholder="Lokalizacja"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                />
-                <select value={type} onChange={(e) => setType(e.target.value)} required>
-                    <option value="">Wybierz typ</option>
-                    <option value="sales">Sprzedaż</option>
-                    <option value="help">Pomoc</option>
-                    <option value="work">Praca</option>
-                </select>
-
-                {type && (
-                    <>
-                        <select
-                        value={subcategoryId ?? ''}
-                        onChange={(e) => setSubcategoryId(Number(e.target.value))}
+                    placeholder="Tytuł"
+                    value={title}
+                    onChange={(e)=> setTitle(e.target.value)}
+                    required
+                    />
+                    <textarea
+                        placeholder="Opis (maks. 1000 znaków)"
+                        value={description}
+                        onChange={(e)=> setDescription(e.target.value)}
+                        maxLength={1000}
                         required
-                        >
-                        <option value="">Wybierz podkategorię</option>
-                        {subcategories.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                        </select>
-                    </>
-                )}
-                
-                {type === 'sales' && (
-                    <>
-                        <input type="text" placeholder="Stan przedmiotu" value={condition} onChange={(e) => setCondition(e.target.value)} required/>
-                        <input type="number" placeholder="Cena" value={price} onChange={(e) => setPrice(e.target.value)} disabled={isFree} required={!isFree}/>
-                        <label>
-                            <input type="checkbox" checked={negotiable} onChange={()=> setNegotiable(!negotiable)} disabled={isFree}/>
-                            Do negocjacji
-                        </label>
-                        <label>
-                            <input type="checkbox" checked={isFree} onChange={()=> setIsFree(!isFree)} />
-                            Oddam za darmo
-                        </label>
-                    </>
-                )}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Lokalizacja"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                    />
+                    <select value={type} onChange={(e) => setType(e.target.value)} required>
+                        <option value="">Wybierz typ</option>
+                        <option value="sales">Sprzedaż</option>
+                        <option value="help">Pomoc</option>
+                        <option value="work">Praca</option>
+                    </select>
 
-                {type === 'help' && (
-                    <div className="help-type-group">
-                        <span>Rodzaj ogłoszenia</span>
-
-                        <label>
-                        <input
-                            type="checkbox"
-                            checked={helpType === 'offer'}
-                            onChange={() =>
-                            setHelpType(helpType === 'offer' ? '' : 'offer')
-                            }
-                        />
-                        Oferuję pomoc
-                        </label>
-
-                        <label>
-                        <input
-                            type="checkbox"
-                            checked={helpType === 'need'}
-                            onChange={() =>
-                            setHelpType(helpType === 'need' ? '' : 'need')
-                            }
-                        />
-                        Szukam pomocy
-                        </label>
-                    </div>
-                )}
-
-
-                {type === 'work' &&(
-                    <>
-                        <input type="text" placeholder="Wynagrodzenie (PLN)" value={salary} onChange={(e)=> setSalary(e.target.value)}required/>
-                        <input type="text" placeholder="Wymagania" value={requirements} onChange={(e)=>setRequirements(e.target.value)} required/>
-                        <select value={jobMode} onChange={(e)=> setJobMode(e.target.value)} required>
-                        <option value="">Tryb pracy</option>
-                        <option value="zdalna">Zdalna</option>
-                        <option value="stacjonarna">Stacjonarna</option>
-                        <option value="hybrydowa">Hybrydowa</option>
-                        <option value="jednorazowa">Jednorazowa</option>
-                        </select>
-                        <input type="text" placeholder="Kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
-                    </>
-                )}
-                
-                {type === 'sales' && (
-                    <div className="images-section">
-                        <div className="images-header">
-                        <div className="images-text">
-                            <div className="images-title">Zdjęcia</div>
-                            <div className="images-subtitle">
-                            (JPG/PNG/WebP, do {MAX_FILES} plików, max {MAX_FILE_SIZE_MB} MB każdy)
-                            </div>
-                        </div>
-
-                        <label className="file-btn">
-                            Wybierz pliki
-                            <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                            multiple
-                            onChange={handleFilesChange}
-                            />
-                        </label>
-                        </div>
-
-                        {imageErrors.length > 0 && (
-                        <ul className="image-errors">
-                            {imageErrors.map((er, i) => (
-                            <li key={i} style={{ color: 'red' }}>{er}</li>
+                    {type && (
+                        <>
+                            <select
+                            value={subcategoryId ?? ''}
+                            onChange={(e) => setSubcategoryId(Number(e.target.value))}
+                            required
+                            >
+                            <option value="">Wybierz podkategorię</option>
+                            {subcategories.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
-                        </ul>
-                        )}
+                            </select>
+                        </>
+                    )}
+                    
+                    {type === 'sales' && (
+                        <>
+                            <input type="text" placeholder="Stan przedmiotu" value={condition} onChange={(e) => setCondition(e.target.value)} required/>
+                            <input type="number" placeholder="Cena" value={price} onChange={(e) => setPrice(e.target.value)} disabled={isFree} required={!isFree}/>
+                            <label>
+                                <input type="checkbox" checked={negotiable} onChange={()=> setNegotiable(!negotiable)} disabled={isFree}/>
+                                Do negocjacji
+                            </label>
+                            <label>
+                                <input type="checkbox" checked={isFree} onChange={()=> setIsFree(!isFree)} />
+                                Oddam za darmo
+                            </label>
+                        </>
+                    )}
 
-                        {previews.length > 0 && (
-                            <div className="previews-grid">
-                                {previews.map((src, i) => (
-                                <div key={i} className="preview-item">
-                                <img
-                                    src={src}
-                                    alt={`podgląd ${i + 1}`}
-                                    style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }}
-                                />
-                            
-                                { i === 0 ? (
-                                    <span className="main-image-label">Zdjęcie główne</span>
-                                ) : (
-                                    <span className="main-image-label">{i + 1}</span>
-                                )}
-                            
-                                <div className="reorder-buttons">
-                                    <button type="button" onClick={() => moveImage(i, 'left')} disabled={i === 0}>←</button>
-                                    <button type="button" onClick={() => moveImage(i, 'right')} disabled={i === previews.length - 1}>→</button>
+                    {type === 'help' && (
+                        <div className="help-type-group">
+                            <span>Rodzaj ogłoszenia</span>
+
+                            <label>
+                            <input
+                                type="checkbox"
+                                checked={helpType === 'offer'}
+                                onChange={() =>
+                                setHelpType(helpType === 'offer' ? '' : 'offer')
+                                }
+                            />
+                            Oferuję pomoc
+                            </label>
+
+                            <label>
+                            <input
+                                type="checkbox"
+                                checked={helpType === 'need'}
+                                onChange={() =>
+                                setHelpType(helpType === 'need' ? '' : 'need')
+                                }
+                            />
+                            Szukam pomocy
+                            </label>
+                        </div>
+                    )}
+
+
+                    {type === 'work' &&(
+                        <>
+                            <input type="text" placeholder="Wynagrodzenie (PLN)" value={salary} onChange={(e)=> setSalary(e.target.value)}required/>
+                            <input type="text" placeholder="Wymagania" value={requirements} onChange={(e)=>setRequirements(e.target.value)} required/>
+                            <select value={jobMode} onChange={(e)=> setJobMode(e.target.value)} required>
+                            <option value="">Tryb pracy</option>
+                            <option value="zdalna">Zdalna</option>
+                            <option value="stacjonarna">Stacjonarna</option>
+                            <option value="hybrydowa">Hybrydowa</option>
+                            <option value="jednorazowa">Jednorazowa</option>
+                            </select>
+                            <input type="text" placeholder="Kategoria stanowiska" value={jobCategory} onChange={(e)=> setJobCategory(e.target.value)} required/>
+                        </>
+                    )}
+                    
+                    {type === 'sales' && (
+                        <div className="images-section">
+                            <div className="images-header">
+                            <div className="images-text">
+                                <div className="images-title">Zdjęcia</div>
+                                <div className="images-subtitle">
+                                (JPG/PNG/WebP, do {MAX_FILES} plików, max {MAX_FILE_SIZE_MB} MB każdy)
                                 </div>
-                            
-                                <button
-                                    type="button"
-                                    className="delete-button"
-                                    onClick={() => removeImageAt(i)}
-                                >
-                                    x
-                                </button>
                             </div>
-                            
+
+                            <label className="file-btn">
+                                Wybierz pliki
+                                <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                onChange={handleFilesChange}
+                                />
+                            </label>
+                            </div>
+
+                            {imageErrors.length > 0 && (
+                            <ul className="image-errors">
+                                {imageErrors.map((er, i) => (
+                                <li key={i} style={{ color: 'red' }}>{er}</li>
                                 ))}
-                            </div>
-                        )}
+                            </ul>
+                            )}
 
-                    </div>
-                )}
+                            {previews.length > 0 && (
+                                <div className="previews-grid">
+                                    {previews.map((src, i) => (
+                                    <div key={i} className="preview-item">
+                                    <img
+                                        src={src}
+                                        alt={`podgląd ${i + 1}`}
+                                        style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'cover', borderRadius: 8 }}
+                                    />
+                                
+                                    { i === 0 ? (
+                                        <span className="main-image-label">Zdjęcie główne</span>
+                                    ) : (
+                                        <span className="main-image-label">{i + 1}</span>
+                                    )}
+                                
+                                    <div className="reorder-buttons">
+                                        <button type="button" onClick={() => moveImage(i, 'left')} disabled={i === 0}>←</button>
+                                        <button type="button" onClick={() => moveImage(i, 'right')} disabled={i === previews.length - 1}>→</button>
+                                    </div>
+                                
+                                    <button
+                                        type="button"
+                                        className="image-delete-btn"
+                                        onClick={() => removeImageAt(i)}
+                                    >
+                                        x
+                                    </button>
+                                </div>
+                                
+                                    ))}
+                                </div>
+                            )}
+
+                        </div>
+                    )}
 
 
-                <button type="submit">Dodaj ogłoszenie</button>
-            </form>
+                    <button type="submit">Dodaj ogłoszenie</button>
+                </form>
+            </div>
         </div>
     );
 };
