@@ -110,3 +110,76 @@
     cursor: not-allowed;    
   }
   
+  .copy-btn {
+    background: white;
+    border: 1px solid #a7e3af;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-left: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+  }
+  
+  .copy-btn:hover {
+    background: #eaffea;
+    transform: scale(1.05);
+  }
+  
+  .copy-icon {
+    display: block;
+  }
+  
+
+  .rewards-message {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  
+  .rewards-message-text {
+    flex: 1;
+  }
+  
+  /* kontener na przycisk i napis "Skopiowano!" */
+  .rewards-message-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  /* mały przycisk kopiowania, przyklejony do prawej */
+  .copy-code-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 9999px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+  }
+  
+  .copy-code-btn:hover {
+    background: #dbeafe;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  }
+  
+  .copy-code-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+  
+  .copy-hint {
+    font-size: 0.85rem;
+    color: #15803d; 
+    font-weight: 500;
+  }
+  

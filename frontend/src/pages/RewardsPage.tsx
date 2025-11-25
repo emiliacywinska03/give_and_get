@@ -19,8 +19,15 @@ const RewardsPage: React.FC = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [loading, setLoading] = useState(true);
   const [redeemMessage, setRedeemMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false); 
 
   useEffect(() => {
+    setCopied(false);
+  }, [redeemMessage]);
+
+  
+  useEffect(() => {
+    
     const fetchCatalog = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/rewards/catalog`, {
@@ -64,9 +71,29 @@ const RewardsPage: React.FC = () => {
     }
   };
 
+  const extractCodeFromMessage = (msg: string | null): string | null => {
+    if (!msg) return null;
+    const match = msg.match(/:\s*([A-Z0-9-]+)/i);
+    return match ? match[1] : null;
+  };
+
+  const handleCopyCode = async () => {
+    const code = extractCodeFromMessage(redeemMessage);
+    if (!code) return;
+
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+    } catch (e) {
+      console.error('Nie udało się skopiować kodu', e);
+    }
+  };
+
   if (!user) {
     return <p style={{ padding: '40px' }}>Musisz być zalogowany, aby korzystać z nagród.</p>;
   }
+
+  const codeToCopy = extractCodeFromMessage(redeemMessage);
 
   return (
     <div className="rewards-page">
@@ -81,9 +108,54 @@ const RewardsPage: React.FC = () => {
             redeemMessage.includes('zbyt mało punktów') ? 'rewards-error' : 'rewards-success'
           }`}
         >
-          {redeemMessage}
+          <span className="rewards-message-text">{redeemMessage}</span>
+
+          {codeToCopy && (
+            <div className="rewards-message-actions">
+              <button
+                type="button"
+                className="copy-code-btn"
+                onClick={handleCopyCode}
+                aria-label="Skopiuj kod"
+              >
+                {/* SVG ikony schowka */}
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect
+                    x="9"
+                    y="3"
+                    width="11"
+                    height="14"
+                    rx="2"
+                    ry="2"
+                    fill="none"
+                    stroke="#2563eb"
+                    strokeWidth="1.8"
+                  />
+                  <rect
+                    x="4"
+                    y="7"
+                    width="11"
+                    height="14"
+                    rx="2"
+                    ry="2"
+                    fill="white"
+                    stroke="#2563eb"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              </button>
+              {copied && <span className="copy-hint">Skopiowano!</span>}
+            </div>
+          )}
         </div>
       )}
+
+
 
 
       {loading ? (
