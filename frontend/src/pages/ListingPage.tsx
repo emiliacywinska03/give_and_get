@@ -52,6 +52,9 @@ const ListingPage: React.FC = () => {
   const params = new URLSearchParams(location.search);
   const urlType = params.get('type') as FilterType | null;
 
+  const searchParamRaw = params.get('search');
+  const searchParam = (searchParamRaw ?? '').trim().toLowerCase();
+
   const [typeFilter, setTypeFilter] = useState<FilterType>(
     urlType === 'work' || urlType === 'sales' || urlType === 'help'
       ? urlType
@@ -208,10 +211,26 @@ const ListingPage: React.FC = () => {
 
         setListingImages(imgsMap);
 
-        setListings(filled);
+        // filtrowanie po tym, co wpisane w ?search=
+        const filtered = searchParam
+          ? filled.filter((l: any) => {
+              const title = (l.title ?? '').toLowerCase();
+              const desc  = (l.description ?? '').toLowerCase();
+              const loc   = (l.location ?? '').toLowerCase();
+
+              return (
+                title.includes(searchParam) ||
+                desc.includes(searchParam)  ||
+                loc.includes(searchParam)
+              );
+            })
+          : filled;
+
+        setListings(filtered);
       })
+
       .catch((err) => console.error('Błąd przy pobieraniu ogłoszeń: ', err));
-  }, [typeFilter, categoryFilter, subcategoryFilter, helpTypeFilter]);
+  }, [typeFilter, categoryFilter, subcategoryFilter, helpTypeFilter, location.search]);
 
 
   //Kliknięcie serduszka w kafelku

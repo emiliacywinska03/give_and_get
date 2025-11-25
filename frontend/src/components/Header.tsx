@@ -2,15 +2,24 @@ import React , {useState, useEffect} from 'react';
 import './Header.css';
 import MobileSidebar from './MobileSidebar';
 import './MobileSidebar.css';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+
+const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
+const API_KEY = process.env.REACT_APP_API_KEY;
 
 const Header: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const location = useLocation();
+    
+    const [search, setSearch] = useState('');
+    const [allTitles, setAllTitles] = useState<string[]>([]);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
 
     useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -19,6 +28,75 @@ const Header: React.FC = () => {
         setIsDarkMode(true);
     }
     }, []);
+
+       
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearch(params.get('search') ?? '');
+    }, [location.search]);
+
+
+    useEffect(() => {
+        const fetchTitles = async () => {
+          try {
+            const res = await fetch(`${API_BASE}/api/listings`, {
+              headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            setAllTitles(data.map((l: any) => l.title as string));
+          } catch (e) {
+            console.error('Błąd pobierania tytułów do podpowiedzi', e);
+          }
+        };
+        fetchTitles();
+    }, []);
+
+    useEffect(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) {
+          setSuggestions([]);
+          return;
+        }
+  
+        const uniq = Array.from(new Set(allTitles)); 
+        const filtered = uniq
+          .filter((t) => t.toLowerCase().includes(q))
+          .slice(0, 5); 
+  
+        setSuggestions(filtered);
+    }, [search, allTitles]);
+
+
+    const submitSearch = (value: string) => {
+        const trimmed = value.trim();
+        const params = new URLSearchParams(location.search);
+      
+        if (trimmed) {
+          params.set('search', trimmed);
+        } else {
+          params.delete('search');
+        }
+      
+        navigate({
+            pathname: '/listings',      
+            search: params.toString(),
+        });
+      
+        setShowSuggestions(false);
+    };
+      
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        submitSearch(search);
+    };
+      
+    const handleSuggestionClick = (s: string) => {
+        setSearch(s);
+        submitSearch(s);
+    };
+
+      
 
     const toggleTheme = () => {
     const newTheme = isDarkMode ? 'light' : 'dark';
@@ -110,9 +188,38 @@ const Header: React.FC = () => {
                     </button>
 
                     {/* WYSZUKIWARKA */}
-                    <div className="search-bar">
-                        <input type="text" placeholder="Szukaj..." />
-                    </div>
+                    <form
+                    className="search-bar"
+                    onSubmit={handleSearchSubmit}
+                    autoComplete="off"
+                    >
+                    <input
+                        type="text"
+                        placeholder="Szukaj..."
+                        value={search}
+                        onChange={(e) => {
+                        setSearch(e.target.value);
+                        setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                    />
+
+                    {showSuggestions && suggestions.length > 0 && (
+                        <div className="search-suggestions">
+                        {suggestions.map((s) => (
+                            <button
+                            key={s}
+                            type="button"
+                            className="search-suggestion-item"
+                            onClick={() => handleSuggestionClick(s)}
+                            >
+                            {s}
+                            </button>
+                        ))}
+                        </div>
+                    )}
+                    </form>
+
 
                     {/* KONTO */}
                     <div className="my-account">

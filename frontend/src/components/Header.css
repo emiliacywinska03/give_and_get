@@ -222,3 +222,62 @@ body.dark-mode .menu-button:hover {
   transform: translateY(-2px);
   opacity: 0.8;
 }
+
+
+/* --- SZUKAJKA --- */
+.search-bar {
+  position: relative;
+  width: 260px;
+  padding: 0;       
+  border: none;       
+  background: none;    
+}
+
+
+.search-bar input {
+  width: 100%;
+  padding: 0.55rem 1rem;
+  border-radius: 18px;       
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-bar input:focus {
+  border-color: #3b82f6;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+
+/* DROPDOWN z podpowiedziami */
+.search-suggestions {
+  position: absolute;
+  top: 105%;                     
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.15);
+  padding: 0.35rem 0;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.search-suggestion-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #111827;
+  transition: background 0.15s;
+}
+
+.search-suggestion-item:hover {
+  background: #f3f4f6;
+}
