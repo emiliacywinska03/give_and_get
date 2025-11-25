@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './CreateListing.css'
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -198,6 +199,7 @@ const CreateListing: React.FC = () => {
                 alert('Błąd: ' + (data?.error || 'nie udało się dodać ogłoszenia'));
                 return;
             }
+
 
             alert('Ogłoszenie dodane!');
             navigate('/');

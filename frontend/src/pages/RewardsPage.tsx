@@ -170,7 +170,6 @@ const RewardsPage: React.FC = () => {
               <div key={r.id} className="reward-card">
                 <p className="reward-brand"><strong>{r.brand}</strong></p>
                 <p className="reward-desc">{r.description}</p>
-                <p className="reward-percent">Zniżka: -{r.percent}%</p>
                 <p className="reward-cost">Koszt: {r.points_cost} pkt</p>
 
                 <button

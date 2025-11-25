@@ -46,6 +46,8 @@ const ListingPage: React.FC = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   const [helpTypeFilter, setHelpTypeFilter] = useState<'all' | 'offer' | 'need'>('all');
+  const [imageIndex, setImageIndex] = useState<Record<number, number>>({});
+  const [listingImages, setListingImages] = useState<Record<number, string[]>>({});
 
   const params = new URLSearchParams(location.search);
   const urlType = params.get('type') as FilterType | null;
@@ -55,6 +57,25 @@ const ListingPage: React.FC = () => {
       ? urlType
       : ''
   );
+
+  const showPrev = (listingId: number) => {
+    setImageIndex(prev => {
+      const images = listingImages[listingId] || [];
+      const current = prev[listingId] || 0;
+      const next = current === 0 ? images.length - 1 : current - 1;
+      return { ...prev, [listingId]: next };
+    });
+  };
+  
+  const showNext = (listingId: number) => {
+    setImageIndex(prev => {
+      const images = listingImages[listingId] || [];
+      const current = prev[listingId] || 0;
+      const next = current === images.length - 1 ? 0 : current + 1;
+      return { ...prev, [listingId]: next };
+    });
+  };
+  
 
   // Wczytanie ulubionych ogłoszeń (raz, po zalogowaniu)
   useEffect(() => {
@@ -168,6 +189,25 @@ const ListingPage: React.FC = () => {
             return { ...it, primary_image: first };
           })
         );
+        // pobranie WSZYSTKICH zdjęć do karuzeli
+        const imgsMap: Record<number, string[]> = {};
+
+        for (const l of filled) {
+          try {
+            const res = await fetch(`${API_BASE}/api/listings/${l.id}/images`);
+            if (res.ok) {
+              const imgs = await res.json();
+              imgsMap[l.id] = imgs.map((i: any) => i.dataUrl);
+            } else {
+              imgsMap[l.id] = l.primary_image ? [l.primary_image] : [];
+            }
+          } catch {
+            imgsMap[l.id] = l.primary_image ? [l.primary_image] : [];
+          }
+        }
+
+        setListingImages(imgsMap);
+
         setListings(filled);
       })
       .catch((err) => console.error('Błąd przy pobieraniu ogłoszeń: ', err));
@@ -332,29 +372,46 @@ const ListingPage: React.FC = () => {
                   aria-label={`Zobacz ogłoszenie: ${listing.title}`}
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >
-                  {listing.primary_image ? (
-                    <img
-                      className="listing-thumb"
-                      src={
-                        listing.primary_image.startsWith('data:')
-                          ? listing.primary_image
-                          : `${API_BASE}${listing.primary_image}`
-                      }
-                      alt={listing.title}
-                    />
-                  ) : (
-                    <div className="listing-thumb-space">
-                      <svg
-                        className="listing-thumb-placeholder-icon"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="3" ry="3" fill="none" />
-                        <path d="M7 7l10 10M17 7L7 17" />
-                      </svg>
-                    </div>
-                  )}
+                  <div className="listing-thumb-wrapper">
+                    {listingImages[listing.id] && listingImages[listing.id].length > 0 ? (
+                      <>
+                        <img
+                          className="listing-thumb"
+                          src={listingImages[listing.id][ imageIndex[listing.id] ?? 0 ]}
+                          alt={listing.title}
+                        />
+
+                        {listingImages[listing.id].length > 1 && (
+                          <>
+                            <button
+                              className="thumb-arrow left"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                showPrev(listing.id);
+                              }}
+                            >
+                              ←
+                            </button>
+
+                            <button
+                              className="thumb-arrow right"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                showNext(listing.id);
+                              }}
+                            >
+                              →
+                            </button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div className="listing-thumb-space"></div>
+                    )}
+                  </div>
+
 
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
