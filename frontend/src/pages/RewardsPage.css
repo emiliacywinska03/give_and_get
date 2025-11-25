@@ -17,15 +17,28 @@
   
   
   /* Komunikat o wymianie */
-  .rewards-message {
-    background: #e7f8ed;
-    color: #1a7f37;
-    border: 1px solid #a7e3b4;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-weight: 600;
-  }
+ /* OGÓLNY BOX */
+.rewards-message {
+  margin: 20px 0;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* SUKCES – zielony */
+.rewards-success {
+  background-color: #d9f7e3;
+  color: #116b36;
+  border: 1px solid #8ee2ab;
+}
+
+/* BŁĄD – czerwony */
+.rewards-error {
+  background-color: #fde2e1;
+  color: #a42020;
+  border: 1px solid #f5a9a5;
+}
   
   
   /* Grid z kartami nagród */
@@ -90,5 +103,10 @@
   .reward-button:disabled {
     background-color: #b6c7e1;
     cursor: not-allowed;
+  }
+  
+  .reward-button--locked {
+    opacity: 0.5;          
+    cursor: not-allowed;    
   }
   

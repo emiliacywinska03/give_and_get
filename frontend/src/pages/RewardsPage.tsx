@@ -76,30 +76,50 @@ const RewardsPage: React.FC = () => {
       </p>
 
       {redeemMessage && (
-        <div className="rewards-message">
+        <div
+          className={`rewards-message ${
+            redeemMessage.includes('zbyt mało punktów') ? 'rewards-error' : 'rewards-success'
+          }`}
+        >
           {redeemMessage}
         </div>
       )}
+
 
       {loading ? (
         <p>Ładowanie nagród...</p>
       ) : (
         <div className="rewards-grid">
-          {rewards.map((r) => (
-            <div key={r.id} className="reward-card">
-              <p className="reward-brand"><strong>{r.brand}</strong></p>
-              <p className="reward-desc">{r.description}</p>
-              <p className="reward-percent">Zniżka: -{r.percent}%</p>
-              <p className="reward-cost">Koszt: {r.points_cost} pkt</p>
-              <button
-                className="reward-button"
-                disabled={(user.points ?? 0) < r.points_cost}
-                onClick={() => redeemReward(r.id)}
-              >
-                Odbierz
-              </button>
-            </div>
-          ))}
+          {rewards.map((r) => {
+            const userPoints = user.points ?? 0;
+            const canRedeem = userPoints >= r.points_cost;
+
+            return (
+              <div key={r.id} className="reward-card">
+                <p className="reward-brand"><strong>{r.brand}</strong></p>
+                <p className="reward-desc">{r.description}</p>
+                <p className="reward-percent">Zniżka: -{r.percent}%</p>
+                <p className="reward-cost">Koszt: {r.points_cost} pkt</p>
+
+                <button
+                  className={`reward-button ${!canRedeem ? 'reward-button--locked' : ''}`}
+                  onClick={() => {
+                    setRedeemMessage(null);
+
+                    if (!canRedeem) {
+                      setRedeemMessage('Masz zbyt mało punktów, aby odebrać tę nagrodę.');
+                      return;
+                    }
+
+                    redeemReward(r.id);
+                  }}
+                >
+                  Odbierz
+                </button>
+              </div>
+            );
+          })}
+
         </div>
       )}
     </div>

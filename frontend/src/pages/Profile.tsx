@@ -214,6 +214,13 @@ const Profile: React.FC = () => {
             >
               Zobacz nagrody za punkty
             </button>
+
+            <button
+              className="profile-add-listing-button"
+              onClick={() => navigate('/listings/create')}   
+            >
+              Dodaj ogłoszenie
+            </button>
           </div>
         </div>
 
