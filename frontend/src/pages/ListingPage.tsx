@@ -31,6 +31,7 @@ interface Listing {
   user_id: number;
   author_username?: string;
   primary_image?: string | null;
+  is_featured?: boolean;  
 }
 
 type FilterType = '' | 'work' | 'help' | 'sales';
@@ -384,6 +385,21 @@ const ListingPage: React.FC = () => {
                     />
                   </svg>
                 </button>
+
+                  {/* znaczek WYRÓŻNIONE */}
+                  {listing.is_featured && (
+                    <div className="featured-badge">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="#FACC15"     
+                      >
+                        <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+                      </svg>
+                    </div>
+                  )}
 
                 <Link
                   to={`/listing/${listing.id}`}

@@ -11,6 +11,7 @@ interface Listing {
   created_at: string;
   images?: any[];
   primary_image?: string | null;
+  is_featured?: boolean; 
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
@@ -143,6 +144,36 @@ const Profile: React.FC = () => {
 
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
+
+  const handleToggleFeatured = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}/featured`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Błąd wyróżniania ogłoszenia:', err);
+        alert(err.error || 'Nie udało się zmienić wyróżnienia.');
+        return;
+      }
+
+      const data = await res.json();
+
+      setListings(prev =>
+        prev.map(l =>
+          l.id === id ? { ...l, is_featured: data.is_featured } : l
+        )
+      );
+    } catch (e) {
+      console.error('Błąd żądania wyróżnienia:', e);
+      alert('Wystąpił błąd po stronie klienta.');
+    }
+  };
+
+
 
   return (
     <div className="profile-page">
@@ -296,6 +327,13 @@ const Profile: React.FC = () => {
 
                   <div className="listing-actions">
                     <button
+                      className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
+                      onClick={() => handleToggleFeatured(l.id)}
+                    >
+                      {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
+                    </button>
+
+                    <button
                       className="delete-button"
                       onClick={() => handleDelete(l.id)}
                     >
@@ -312,6 +350,7 @@ const Profile: React.FC = () => {
                       Edytuj
                     </button>
                   </div>
+
                 </div>
               );
             })}

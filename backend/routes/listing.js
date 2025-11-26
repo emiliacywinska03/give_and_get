@@ -265,6 +265,39 @@ router.get('/user/:id', async (req, res) => {
   }
 });
 
+
+// Wyróżnione ogłoszenia (wszystkich użytkowników)
+router.get('/featured', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `
+      SELECT
+        l.*,
+        u.username AS author_username,
+        (
+          SELECT 'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          FROM listing_images li
+          WHERE li.listing_id = l.id
+          ORDER BY li.id ASC
+          LIMIT 1
+        ) AS primary_image
+      FROM listing l
+      JOIN "user" u ON u.id = l.user_id
+      WHERE l.is_featured = TRUE
+      ORDER BY l.created_at DESC
+      LIMIT 50
+      `
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error('Błąd pobierania wyróżnionych ogłoszeń:', err.message);
+    res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
+  }
+});
+
+
+
 // lista ulubionych dla zalogowanego użytkownika
 router.get('/favorites', authRequired, async (req, res) => {
   try {
@@ -332,6 +365,42 @@ router.delete('/favorites/:id', authRequired, async (req, res) => {
     res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
   }
 });
+
+
+// Włączenie/wyłączenie wyróżnienia ogłoszenia (tylko właściciel)
+router.patch('/:id/featured', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+      UPDATE listing
+      SET is_featured = NOT is_featured
+      WHERE id = $1 AND user_id = $2
+      RETURNING is_featured
+      `,
+      [listingId, req.user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: 'Ogłoszenie nie istnieje lub nie jest Twoje' });
+    }
+
+    res.json({
+      ok: true,
+      is_featured: result.rows[0].is_featured,
+    });
+  } catch (err) {
+    console.error('Błąd przełączania wyróżnienia:', err.message);
+    res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
+  }
+});
+
 
 
 router.delete('/:id', authRequired, async (req, res) => {

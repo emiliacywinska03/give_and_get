@@ -12,6 +12,8 @@ import Favorites from './pages/Favorites';
 import ListingDetails from './pages/ListingDetails';
 import Breadcrumbs from './components/Breadcrumbs';
 import RewardsPage from './pages/RewardsPage';
+import FeaturedListings from './pages/FeaturedListings';
+
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
       <Routes>
           <Route path="/" element={<Main />}/>
           <Route path="/auth" element={<LoginRegiter />}/>
+
           <Route
             path="/profile"
             element={
@@ -29,6 +32,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+
           <Route path="/rewards" element={<RewardsPage />} />
           <Route
           path="/favorites"
@@ -38,6 +42,13 @@ function App() {
             </ProtectedRoute>
           }
           />
+
+          <Route path="/featured" element={
+            <ProtectedRoute>
+              <FeaturedListings />
+            </ProtectedRoute>
+          } />
+
           <Route path="/listings/create" element={<CreateListing/>} />
           <Route path="/listings" element={<ListingPage/>} />
           <Route path="/listing/:id" element={<ListingDetails />} />

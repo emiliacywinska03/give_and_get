@@ -128,10 +128,10 @@ const Header: React.FC = () => {
 
                     {/* NAGRODY */}
                     <div
-                        className="rewards"
+                        className="icon-btn rewards"
                         onClick={() => navigate('/rewards')}
-                        style={{ cursor: 'pointer' }}
                     >
+
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="24"
@@ -154,18 +154,43 @@ const Header: React.FC = () => {
 
                     {/* ULUBIONE */}
                     <div
-                        className="favourites"
+                        className="icon-btn favourites"
                         onClick={() => navigate('/favorites')}
-                        style={{ cursor: 'pointer' }}
                     >
+
                         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                                 d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"/>
                         </svg>
                     </div>
 
+                    {/* WYRÓŻNIONE (MOJE) */}
+                    <div
+                        className="icon-btn featured-nav"
+                        onClick={() => navigate('/featured')}
+                    >
+
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path
+                            d="M12 2l2.39 4.84 5.34.78-3.87 3.77.91 5.31L12 14.77l-4.77 2.51.91-5.31L4.27 7.62l5.34-.78L12 2z"
+                        />
+
+                      </svg>
+                    </div>
+
+
                     {/* WIADOMOŚCI */}
-                    <div className="messages" style={{ cursor: 'pointer' }}>
+                    <div className="icon-btn messages">
                         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                                 d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4Z"/>

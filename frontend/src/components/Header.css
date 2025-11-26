@@ -281,3 +281,31 @@ body.dark-mode .menu-button:hover {
 .search-suggestion-item:hover {
   background: #f3f4f6;
 }
+
+.featured-nav {
+  margin: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wspólna baza dla ikonek w headerze */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Płynna animacja koloru */
+.icon-btn svg {
+  transition: stroke 0.2s ease, fill 0.2s ease;
+}
+
+/* Po najechaniu ikonki stają się szare */
+.icon-btn:hover svg {
+  stroke: #4b5563;
+  fill: #4b5563;
+}
