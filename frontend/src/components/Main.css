@@ -285,3 +285,64 @@ main {
 }
 
 
+/* === Sekcja WYRÓŻNIONE OGŁOSZENIA na głównej === */
+
+.featured-section {
+  max-width: 1200px;
+  margin: 3rem auto 4rem;
+  padding: 2rem 2.5rem 2.25rem;
+  background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* nagłówek na środku */
+.featured-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+/* opis pod nagłówkiem, też na środku */
+.featured-description {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.98rem;
+  margin: 0 0 1.5rem;
+}
+
+/* Grid ogłoszeń TYLKO w sekcji wyróżnionych na głównej */
+.featured-section .listing-grid {
+  margin-top: 1.2rem;
+  padding: 0;
+  gap: 1rem;               
+  justify-content: flex-start;
+}
+
+/* Podstawowy rozmiar kart w tej sekcji */
+.featured-section .listing-card {
+  max-width: 190px;
+  padding: 0.75rem 0.8rem 1rem;
+}
+
+/* Na dużych ekranach ~6 kart w jednym rzędzie */
+@media (min-width: 1200px) {
+  .featured-section .listing-card {
+    flex: 0 0 calc(16.66% - 1rem);   
+    max-width: calc(16.66% - 1rem);
+  }
+}
+
+/* Mniejszy tytuł ogłoszenia TYLKO w sekcji wyróżnionych */
+.featured-section .listing-title {
+  font-size: 1rem;      
+  line-height: 1.25;
+  margin-top: 0.4rem;
+  margin-bottom: 0.2rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; 
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+

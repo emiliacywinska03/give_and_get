@@ -1,11 +1,46 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import './Main.css'
 import { Link } from "react-router-dom";
 import zdjecie from '../assets/zdj.png';
+import "../pages/ListingPage.css"; 
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5050";
+const API_KEY = process.env.REACT_APP_API_KEY;
+
+interface Listing {
+  id: number;
+  title: string;
+  description: string;
+  location: string;
+  primary_image?: string | null;
+  is_featured?: boolean;
+}
 
 
 const Main: React.FC = () => {
+    const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
+    const [loadingFeatured, setLoadingFeatured] = useState(true);
+
+    // --- pobranie wszystkich wyróżnionych ogłoszeń  ---
+    useEffect(() => {
+        const run = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/api/listings/featured`, {
+            headers: { ...(API_KEY ? { "x-api-key": API_KEY } : {}) },
+            });
+            const data = await res.json();
+            if (!Array.isArray(data)) return;
+            setFeaturedListings(data);
+        } catch (e) {
+            console.error("Błąd pobierania wyróżnionych:", e);
+        } finally {
+            setLoadingFeatured(false);
+        }
+        };
+        run();
+    }, []);
+
+
     return(
         <main>
             <section className="about">
@@ -62,12 +97,95 @@ const Main: React.FC = () => {
                 </div>
             </section>
 
+            {/* 👉 NOWA SEKCJA: WYRÓŻNIONE OGŁOSZENIA (wszyscy użytkownicy) */}
+            <section className="featured-section">
+                <h2 className="featured-title">Wyróżnione ogłoszenia</h2>
+                <p className="featured-description">
+                Najciekawsze oferty od wszystkich użytkowników Give&amp;Get.
+                </p>
+
+                {loadingFeatured ? (
+                <p>Ładowanie…</p>
+                ) : featuredListings.length === 0 ? (
+                <p>Brak wyróżnionych ogłoszeń.</p>
+                ) : (
+                <div className="listing-grid">
+                    {featuredListings.map((listing) => (
+                    <div key={listing.id} className="listing-card">
+                        {/* gwiazdka w lewym górnym rogu */}
+                        {listing.is_featured && (
+                        <div
+                            className="featured-badge"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="#FACC15"
+                            >
+                            <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+                            </svg>
+                        </div>
+                        )}
+
+                        <Link
+                        to={`/listing/${listing.id}`}
+                        className="listing-link"
+                        style={{ textDecoration: "none", color: "inherit" }}
+                        >
+                        <div className="listing-thumb-wrapper">
+                            {listing.primary_image ? (
+                            <img
+                                className="listing-thumb"
+                                src={listing.primary_image}
+                                alt={listing.title}
+                            />
+                            ) : (
+                                <div className="listing-thumb-space">
+                                <svg
+                                  className="listing-thumb-placeholder-icon"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                >
+                                  <rect
+                                    x="4"
+                                    y="4"
+                                    width="16"
+                                    height="16"
+                                    rx="3"
+                                    ry="3"
+                                  />
+                                  <path
+                                    d="M9 9l6 6M15 9l-6 6"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                        </div>
+
+                        <h3 className="listing-title">{listing.title}</h3>
+                        <p className="listing-location">
+                            Lokalizacja: {listing.location}
+                        </p>
+                        </Link>
+                    </div>
+                    ))}
+                </div>
+                )}
+            </section>
+
+            {/* OBRAZEK NA DOLE */}
             <div className="full-bleed">
                 <img src={zdjecie} alt="Give&Get" className="hero-img" />
             </div>
-
-        </main>
-    )
+            </main>
+        );         
+    
 }
 
 interface CategoryCardProps {
@@ -77,15 +195,21 @@ interface CategoryCardProps {
     to: string;
 }
 
-const CategoryCard: React.FC<CategoryCardProps> = ({ svg, title, description, to }) => (
+const CategoryCard: React.FC<CategoryCardProps> = ({
+    svg,
+    title,
+    description,
+    to,
+  }) => (
     <div className="category-card">
       <div className="category-icon">{svg}</div>
       <h3 className="category-title">{title}</h3>
       <p className="category-description">{description}</p>
-      <Link to={to} className="button button-outline">Przeglądaj {title}</Link>
+      <Link to={to} className="button button-outline">
+        Przeglądaj {title}
+      </Link>
     </div>
-);
-
+  );
 
 
 export default Main;

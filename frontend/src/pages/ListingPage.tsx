@@ -448,8 +448,19 @@ const ListingPage: React.FC = () => {
                         )}
                       </>
                     ) : (
-                      <div className="listing-thumb-space"></div>
+                      <div className="listing-thumb-space">
+                        <svg
+                          className="listing-thumb-placeholder-icon"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <rect x="4" y="4" width="16" height="16" rx="3" />
+                          <path d="M9 9l6 6M15 9l-6 6" />
+                        </svg>
+                      </div>
                     )}
+                    
                   </div>
 
 
