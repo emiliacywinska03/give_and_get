@@ -59,31 +59,50 @@ const FeaturedListings: React.FC = () => {
         <div className="listing-grid">
           {listings.map((listing) => (
             <div key={listing.id} className="listing-card">
-              <Link
-                to={`/listing/${listing.id}`}
-                className="listing-link"
-                style={{ textDecoration: 'none', color: 'inherit' }}
+
+            {/* Wyróżnienie — gwiazdka */}
+            {listing.is_featured && (
+              <div
+                className="featured-badge"
+                onClick={(e) => e.stopPropagation()}
               >
-                <div className="listing-thumb-wrapper">
-                  {listing.primary_image ? (
-                    <img
-                      className="listing-thumb"
-                      src={listing.primary_image}
-                      alt={listing.title}
-                    />
-                  ) : (
-                    <div className="listing-thumb-space" />
-                  )}
-                </div>
-                <h3 className="listing-title">{listing.title}</h3>
-                <p className="listing-location">
-                  Lokalizacja: {listing.location}
-                </p>
-                <small className="listing-date">
-                  Dodano: {new Date(listing.created_at).toLocaleDateString()}
-                </small>
-              </Link>
-            </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="#FACC15"
+                >
+                  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+                </svg>
+              </div>
+            )}
+          
+            <Link
+              to={`/listing/${listing.id}`}
+              className="listing-link"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <div className="listing-thumb-wrapper">
+                {listing.primary_image ? (
+                  <img
+                    className="listing-thumb"
+                    src={listing.primary_image}
+                    alt={listing.title}
+                  />
+                ) : (
+                  <div className="listing-thumb-space" />
+                )}
+              </div>
+          
+              <h3 className="listing-title">{listing.title}</h3>
+              <p className="listing-location">Lokalizacja: {listing.location}</p>
+              <small className="listing-date">
+                Dodano: {new Date(listing.created_at).toLocaleDateString()}
+              </small>
+            </Link>
+          </div>
+          
           ))}
         </div>
       )}

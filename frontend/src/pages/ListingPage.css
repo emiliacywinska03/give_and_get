@@ -561,11 +561,19 @@ body.dark-mode .favorite-toggle--active {
   position: absolute;
   top: 10px;
   left: 10px;
-  background: #fef9c3;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
-  padding: 4px 8px;
-  display: inline-flex;
+  background: #ffffff;    
+  display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+}
+
+/* rozmiar gwiazdki */
+.featured-badge__icon {
+  width: 20px;
+  height: 20px;
 }

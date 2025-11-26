@@ -388,7 +388,12 @@ const ListingPage: React.FC = () => {
 
                   {/* znaczek WYRÓŻNIONE */}
                   {listing.is_featured && (
-                    <div className="featured-badge">
+                    <div
+                      className="featured-badge"
+                      onClick={(e) => {
+                        e.stopPropagation();   
+                      }}
+                    >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="20"
