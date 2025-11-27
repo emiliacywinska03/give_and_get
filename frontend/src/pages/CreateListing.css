@@ -36,6 +36,21 @@
     resize: none;
 }
 
+
+.create-listing-container select {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  appearance: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 7l5 5 5-5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 18px 18px;
+}
+
 .create-listing-container textarea{
     height: 120px;
 }
@@ -45,6 +60,9 @@
 .create-listing-container textarea:focus{
     border-color: #1b2332;
     outline: none;
+}
+.create-listing-container select:focus {
+  box-shadow: 0 0 0 3px rgba(27, 35, 50, 0.12);
 }
 
 /* tylko przycisk "Dodaj ogłoszenie" */
@@ -386,3 +404,117 @@
   background: radial-gradient(circle, #ffd1d8 30%, #e11d48 100%);
 }
 
+/* === DARK MODE: CREATE LISTING PAGE === */
+
+body.dark-mode .create-listing-page {
+  background: radial-gradient(circle at top, #020617 0%, #020617 35%, #020617 100%);
+  background-image: none;
+}
+
+body.dark-mode .create-listing-container {
+  background-color: #020617;
+  border-color: #111827;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85);
+  color: #e5e7eb;
+}
+
+body.dark-mode .create-listing-container h2 {
+  color: #f9fafb;
+}
+
+body.dark-mode .create-listing-container label {
+  color: #e5e7eb;
+}
+
+body.dark-mode .create-listing-container input,
+body.dark-mode .create-listing-container select,
+body.dark-mode .create-listing-container textarea {
+  background-color: #020617;
+  border-color: #1f2937;
+  color: #e5e7eb;
+}
+body.dark-mode .create-listing-container select {
+  padding-right: 2.5rem;
+  background-image:
+    url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 7l5 5 5-5' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 18px 18px;
+}
+
+body.dark-mode .create-listing-container input::placeholder,
+body.dark-mode .create-listing-container textarea::placeholder {
+  color: #6b7280;
+}
+
+body.dark-mode .create-listing-container input:focus,
+body.dark-mode .create-listing-container select:focus,
+body.dark-mode .create-listing-container textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.45);
+}
+
+body.dark-mode .images-section {
+  border-color: #1f2937;
+  background: radial-gradient(circle at top left, #020617 0%, #020617 40%, #020617 100%);
+}
+
+body.dark-mode .images-section input[type="file"] {
+  background-color: #020617;
+  border-color: #1f2937;
+  color: #e5e7eb;
+}
+
+body.dark-mode .images-section input[type="file"]::file-selector-button {
+  background: #3b82f6;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.55);
+}
+
+body.dark-mode .images-section input[type="file"]::file-selector-button:hover {
+  background: #2563eb;
+}
+
+body.dark-mode .image-errors li {
+  color: #fecaca;
+}
+
+body.dark-mode .preview-item {
+  background: #020617;
+  border-color: #1f2937;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .main-image-label,
+body.dark-mode .images-subtitle,
+body.dark-mode .images-label-small {
+  color: #9ca3af;
+}
+
+body.dark-mode .file-btn {
+  background-color: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.6);
+}
+
+body.dark-mode .file-btn:hover {
+  background-color: #1d4ed8;
+}
+
+body.dark-mode .reorder-buttons button {
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb !important;
+}
+
+body.dark-mode .reorder-buttons button:hover:not(:disabled) {
+  background: #111827;
+}
+
+body.dark-mode .reorder-buttons button:disabled {
+  color: #6b7280 !important;
+}
+
+body.dark-mode .image-delete-btn {
+  background: radial-gradient(circle, #fecaca 5%, #f97373 100%);
+  color: #020617;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.75);
+}

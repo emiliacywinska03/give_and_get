@@ -1,4 +1,4 @@
-.container.about-content{
+Main.css>.container.about-content{
     width: 100%;
     max-width: 1200px;
     margin: 0 1rem;
@@ -346,3 +346,64 @@ main {
   overflow: hidden;
 }
 
+
+
+body.dark-mode .featured-section {
+  background: linear-gradient(180deg, #111318 0%, #0d0f12 100%);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  color: #e5e7eb;
+}
+
+body.dark-mode .featured-title {
+  color: #f3f4f6;
+}
+
+body.dark-mode .featured-description {
+  color: #9ca3af;
+}
+
+body.dark-mode .featured-section .listing-grid {
+  background: transparent;
+}
+
+body.dark-mode .featured-section .listing-card {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.55);
+  color: #f1f5f9;
+}
+
+body.dark-mode .featured-section .listing-card:hover {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.7);
+}
+
+body.dark-mode .featured-section .listing-title {
+  color: #f9fafb;
+}
+
+body.dark-mode .featured-section .listing-location {
+  color: #d1d5db;
+}
+
+body.dark-mode .featured-section .listing-thumb-wrapper {
+  background-color: #111318;
+  border-color: #374151;
+}
+
+body.dark-mode .featured-section .listing-thumb-space {
+  background-color: #1e232c;
+  border: 1px solid #374151;
+}
+
+body.dark-mode .featured-section .listing-thumb-placeholder-icon rect,
+body.dark-mode .featured-section .listing-thumb-placeholder-icon path {
+  stroke: #9ca3af;
+  fill: #2d3440;
+}
+
+body.dark-mode .featured-badge {
+  background-color: #1f2937;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+}

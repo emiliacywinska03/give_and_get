@@ -183,3 +183,70 @@
     font-weight: 500;
   }
   
+/* === DARK MODE === */
+.dark-mode .rewards-page {
+  color: #e2e8f0;
+}
+
+.dark-mode .reward-card {
+  background: #1f2937;
+  border: 1px solid #374151;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+}
+
+.dark-mode .reward-card:hover {
+  box-shadow: 0 5px 14px rgba(0,0,0,0.6);
+}
+
+.dark-mode .reward-brand {
+  color: #f1f5f9;
+}
+
+.dark-mode .reward-desc {
+  color: #cbd5e1;
+}
+
+.dark-mode .reward-percent,
+.dark-mode .reward-cost {
+  color: #e2e8f0;
+}
+
+/* przycisk odbierz */
+.dark-mode .reward-button {
+  background-color: #2563eb;
+}
+
+.dark-mode .reward-button:hover {
+  background-color: #1d4ed8;
+}
+
+.dark-mode .reward-button:disabled {
+  background-color: #475569;
+}
+
+/* komunikaty */
+.dark-mode .rewards-success {
+  background-color: #064e3b;
+  color: #bbf7d0;
+  border-color: #10b981;
+}
+
+.dark-mode .rewards-error {
+  background-color: #7f1d1d;
+  color: #fecaca;
+  border-color: #f87171;
+}
+
+/* copy button */
+.dark-mode .copy-code-btn {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+.dark-mode .copy-code-btn:hover {
+  background: #1e40af;
+}
+
+.dark-mode .copy-hint {
+  color: #4ade80;
+}
