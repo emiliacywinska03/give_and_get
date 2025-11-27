@@ -290,58 +290,75 @@ const ListingPage: React.FC = () => {
           : 'Wszystkie ogłoszenia'}
       </h2>
 
-      <div className="filters-bar">
-        <label> Typ </label>
-        <select
-          value={typeFilter}
-          onChange={(e) => {
-            const v = e.target.value as FilterType;
-            setTypeFilter(v);
-            setHelpTypeFilter('all'); 
-          }}
-        >
-
-          <option value="">Typ</option>
-          <option value="work">Praca</option>
-          <option value="help">Pomoc</option>
-          <option value="sales">Sprzedaż</option>
-        </select>
-
-
-        <div className="filter">
-          <label>Podkategoria</label>
-          <select
-            value={subcategoryFilter}
-            onChange={(e) =>
-              setSubcategoryFilter(Number(e.target.value) || '')
-            }
-          >
-            <option value="">Wszystkie</option>
-            {subcategories.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {typeFilter === 'help' && (
-          <label>
-            Rodzaj pomocy
+      <div className="filters-shell">
+        <div className="filters-bar">
+          {/* Typ ogłoszenia */}
+          <div className="filter-group">
+            <label className="filter-label" htmlFor="typeFilter">
+              Typ
+            </label>
             <select
-              value={helpTypeFilter}
+              id="typeFilter"
+              className="filter-select"
+              value={typeFilter}
+              onChange={(e) => {
+                const v = e.target.value as FilterType;
+                setTypeFilter(v);
+                setHelpTypeFilter('all');
+              }}
+            >
+              <option value="">Wszystkie typy</option>
+              <option value="work">Praca</option>
+              <option value="help">Pomoc</option>
+              <option value="sales">Sprzedaż</option>
+            </select>
+          </div>
+
+          {/* Podkategoria */}
+          <div className="filter-group">
+            <label className="filter-label" htmlFor="subcategoryFilter">
+              Podkategoria
+            </label>
+            <select
+              id="subcategoryFilter"
+              className="filter-select"
+              value={subcategoryFilter}
               onChange={(e) =>
-                setHelpTypeFilter(e.target.value as 'all' | 'offer' | 'need')
+                setSubcategoryFilter(Number(e.target.value) || '')
               }
             >
-              <option value="all">Wszystkie</option>
-              <option value="offer">Oferuję pomoc</option>
-              <option value="need">Szukam pomocy</option>
+              <option value="">Wszystkie</option>
+              {subcategories.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
             </select>
-          </label>
-        )}
+          </div>
 
+          {/* Rodzaj pomocy – tylko dla typu „Pomoc” */}
+          {typeFilter === 'help' && (
+            <div className="filter-group">
+              <label className="filter-label" htmlFor="helpTypeFilter">
+                Rodzaj pomocy
+              </label>
+              <select
+                id="helpTypeFilter"
+                className="filter-select"
+                value={helpTypeFilter}
+                onChange={(e) =>
+                  setHelpTypeFilter(e.target.value as 'all' | 'offer' | 'need')
+                }
+              >
+                <option value="all">Wszystkie</option>
+                <option value="offer">Oferuję pomoc</option>
+                <option value="need">Szukam pomocy</option>
+              </select>
+            </div>
+          )}
+        </div>
       </div>
+
 
       {listings.length === 0 ? (
         <p>Brak ogłoszeń.</p>
