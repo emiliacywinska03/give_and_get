@@ -20,6 +20,12 @@ type ListingDetails = {
   help_type?: 'offer' | 'need' | null;
 };
 
+type ListingImage = {
+  id: number;
+  src: string;
+};
+
+
 const HIDDEN_KEYS = new Set<string>([
   'id','user_id','created_at','updated_at','type_id','images','primary_image',
   'author_id','status','deleted_at','__v'
@@ -35,6 +41,8 @@ const ALIASES: Record<string, string> = {
   categoryId: '__hide',
   subcategoryId: '__hide',
 
+  is_featured: '__hide',
+  isFeatured: '__hide',
   price_pln: 'price',
   priceValue: 'price',
   price_value: 'price',
@@ -179,7 +187,15 @@ export default function ListingDetails() {
 
   const [data, setData] = useState<ListingDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<ListingImage[]>([]);
+
+
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
+
+
 
   // stan edycji
   const [editMode, setEditMode] = useState<boolean>(false);
@@ -188,6 +204,8 @@ export default function ListingDetails() {
   const [editLocation, setEditLocation] = useState('');
 
   const [isFavorite, setIsFavorite] = useState(false);
+  const [newImages, setNewImages] = useState<File[]>([]);
+  
 
   useEffect(() => {
     if (!id) return;
@@ -196,15 +214,20 @@ export default function ListingDetails() {
         const res = await fetch(`${API_BASE}/api/listings/${id}`, {
           headers: {
             'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {})
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
           },
           credentials: 'include',
         });
-        if (res.status === 404) { navigate('/listings'); return; }
+  
+        if (res.status === 404) {
+          navigate('/listings');
+          return;
+        }
         if (!res.ok) throw new Error(await res.text());
+  
         const details = await res.json();
         setData(details);
-
+  
         const toSrc = (val: any): string | null => {
           if (!val) return null;
           if (typeof val === 'string') {
@@ -224,35 +247,43 @@ export default function ListingDetails() {
           }
           return null;
         };
-
-        let payloadImages: string[] = [];
-        if (Array.isArray(details?.images)) {
-          payloadImages = details.images
-            .map((it: any) => toSrc(it))
-            .filter((x: string | null): x is string => Boolean(x));
-        }
-
-        if (!payloadImages.length) {
-          try {
-            const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-              headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-              credentials: 'include',
-            });
-            if (ri.ok) {
-              const imgs = await ri.json();
-              const normalized = Array.isArray(imgs)
-                ? imgs
-                    .map((it: any) => toSrc(it) || toSrc(it?.dataUrl) || toSrc(it?.url) || toSrc(it?.path))
-                    .filter((x: string | null): x is string => Boolean(x))
-                : [];
-              payloadImages = normalized;
-            }
-          } catch (e) {
-          
+  
+        let imagesList: ListingImage[] = [];
+  
+        // 1) Spróbuj pobrać z /:id/images
+        try {
+          const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+            credentials: 'include',
+          });
+          if (ri.ok) {
+            const imgs = await ri.json();
+            imagesList = Array.isArray(imgs)
+              ? imgs
+                  .map((it: any) => {
+                    const src = toSrc(it.dataUrl || it.url || it.path || null);
+                    if (!src) return null;
+                    return { id: it.id, src };
+                  })
+                  .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
+              : [];
           }
+        } catch (e) {
+          console.error('Błąd pobierania zdjęć:', e);
         }
-
-        setImages(payloadImages);
+  
+        // 2) Fallback – jeśli nic nie przyszło z /images, użyj details.images (jeśli są)
+        if (!imagesList.length && Array.isArray(details?.images)) {
+          imagesList = details.images
+            .map((it: any, idx: number) => {
+              const src = toSrc(it);
+              if (!src) return null;
+              return { id: idx, src };
+            })
+            .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
+        }
+  
+        setImages(imagesList);
       } catch (e) {
         console.error(e);
       } finally {
@@ -260,6 +291,7 @@ export default function ListingDetails() {
       }
     })();
   }, [id, navigate]);
+  
 
   
   // sprawdzenie czy to ogłoszenie jest w ulubionych
@@ -303,6 +335,35 @@ export default function ListingDetails() {
     }
   }, [data, canEdit, startInEdit]);
 
+
+  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const filesArray = Array.from(e.target.files);
+    setNewImages(filesArray);
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}/images/${imageId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+  
+      if (!res.ok) {
+        console.error('Błąd usuwania zdjęcia:', await res.text());
+        return;
+      }
+  
+    
+      setImages((prev) => prev.filter((img) => img.id !== imageId));
+    } catch (e) {
+      console.error('Błąd usuwania zdjęcia:', e);
+    }
+  };
+  
+
   const handleSave = async () => {
     if (!id) return;
     try {
@@ -331,11 +392,83 @@ export default function ListingDetails() {
 
       setData(updated);
       setEditMode(false);
+
+      // --- JEŚLI WYBRANO NOWE ZDJĘCIA, WYŚLIJ JE ---
+      if (newImages.length > 0) {
+        const formData = new FormData();
+        newImages.forEach((file) => {
+          formData.append('images', file);
+        });
+
+        try {
+          const imgRes = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+            },
+            body: formData,
+          });
+
+          if (!imgRes.ok) {
+            console.error('Błąd zapisu zdjęć:', await imgRes.text());
+          } else {
+            try {
+              const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+                credentials: 'include',
+                headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+              });
+              if (ri.ok) {
+                const imgs = await ri.json();
+
+                const toSrc = (val: any): string | null => {
+                  if (!val) return null;
+                  if (typeof val === 'string') {
+                    if (val.startsWith('data:') || val.startsWith('http')) return val;
+                    return `${API_BASE}${val}`;
+                  }
+                  if (typeof val === 'object') {
+                    if (val.dataUrl) return val.dataUrl as string;
+                    if (val.url) {
+                      const u = val.url as string;
+                      return u.startsWith('http') || u.startsWith('data:') ? u : `${API_BASE}${u}`;
+                    }
+                    if (val.path) {
+                      const p = val.path as string;
+                      return p.startsWith('http') || p.startsWith('data:') ? p : `${API_BASE}${p}`;
+                    }
+                  }
+                  return null;
+                };
+
+                const normalized: ListingImage[] = Array.isArray(imgs)
+                  ? imgs
+                      .map((it: any) => {
+                        const src = toSrc(it.dataUrl || it.url || it.path || null);
+                        if (!src) return null;
+                        return { id: it.id, src };
+                      })
+                      .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
+                  : [];
+
+                setImages(normalized);
+                setNewImages([]);
+
+              }
+            } catch (e) {
+              console.error('Błąd odświeżania zdjęć:', e);
+            }
+          }
+        } catch (e) {
+          console.error('Błąd przy wysyłaniu zdjęć:', e);
+        }
+      }
     } catch (e) {
       console.error('Błąd podczas zapisu ogłoszenia', e);
       alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
     }
   };
+
 
 
   const handleToggleFavorite = async () => {
@@ -432,15 +565,38 @@ export default function ListingDetails() {
         </p>
       </div>
 
-
       <div className="listing-details-card">
         {images.length > 0 && (
           <div className="listing-details-gallery">
-            {images.map((src, i) => (
-              <img key={i} src={src} alt={`Zdjęcie ${i + 1}`} className="listing-details-image" />
-            ))}
+            {images.map((img, i) => (
+            <div key={img.id} className="listing-details-thumb">
+              <img
+                src={img.src}
+                alt={`Zdjęcie ${i + 1}`}
+                className="listing-details-image"
+                onClick={() => {
+                  setLightboxIndex(i);
+                  setLightboxImage(img.src);   
+                  setLightboxOpen(true);
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+
+              {canEdit && editMode && (
+                <button
+                  type="button"
+                  className="image-delete-btn"
+                  onClick={() => handleDeleteImage(img.id)}
+                >
+                  Usuń
+                </button>
+              )}
+            </div>
+          ))}
+
           </div>
         )}
+
 
         <dl className="listing-details-dl">
           {infoPairs.map(({ key, label, value }) => (
@@ -491,6 +647,17 @@ export default function ListingDetails() {
                 />
               </label>
 
+              <label>
+                Zdjęcia
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImagesChange}
+                />
+              </label>
+
+
               <div className="edit-form-buttons">
                 <button className="action-button save-button" onClick={handleSave}>
                   Zapisz
@@ -513,6 +680,68 @@ export default function ListingDetails() {
           )}
         </div>
       )}
+
+      {/* LIGHTBOX – pełnoekranowy podgląd zdjęcia */}
+      {lightboxOpen && lightboxImage && (
+        <div
+          className="lightbox-overlay"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* strzałka w lewo */}
+          {images.length > 1 && (
+            <button
+              className="lightbox-arrow lightbox-arrow-left"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => {
+                  if (!images.length) return prev;
+                  const next = prev === 0 ? images.length - 1 : prev - 1;
+                  setLightboxImage(images[next].src);
+                  return next;
+                });
+              }}
+            >
+              ‹
+            </button>
+          )}
+
+          <img
+            src={lightboxImage}
+            alt="Podgląd"
+            className="lightbox-image"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* strzałka w prawo */}
+          {images.length > 1 && (
+            <button
+              className="lightbox-arrow lightbox-arrow-right"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((prev) => {
+                  if (!images.length) return prev;
+                  const next = prev === images.length - 1 ? 0 : prev + 1;
+                  setLightboxImage(images[next].src);
+                  return next;
+                });
+              }}
+            >
+              ›
+            </button>
+          )}
+
+          <button
+            className="lightbox-close"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxOpen(false);
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
