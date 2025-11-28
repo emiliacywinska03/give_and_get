@@ -507,6 +507,57 @@ router.get('/:id/images', async (req, res) => {
   }
 });
 
+router.delete('/:id/images/:imageId', authRequired, async (req, res) => {
+  try {
+    const listingId = Number(req.params.id);
+    const imageId   = Number(req.params.imageId);
+
+    if (Number.isNaN(listingId) || Number.isNaN(imageId)) {
+      return res.status(400).json({ error: 'Nieprawidłowe ID' });
+    }
+
+    // sprawdź, czy ogłoszenie jest tego użytkownika
+    const check = await pool.query(
+      'SELECT id FROM listing WHERE id = $1 AND user_id = $2',
+      [listingId, req.user.id]
+    );
+    if (check.rowCount === 0) {
+      return res
+        .status(404)
+        .json({ error: 'Ogłoszenie nie istnieje lub nie należy do Ciebie' });
+    }
+
+    // pobierz ścieżkę pliku, jeśli jest
+    const { rows } = await pool.query(
+      'SELECT path FROM listing_images WHERE id = $1 AND listing_id = $2',
+      [imageId, listingId]
+    );
+
+    // usuń rekord z bazy
+    await pool.query(
+      'DELETE FROM listing_images WHERE id = $1 AND listing_id = $2',
+      [imageId, listingId]
+    );
+
+    // usuń fizyczny plik (jeśli jest path)
+    if (rows[0]?.path) {
+      const filePath = path.join(process.cwd(), 'backend', rows[0].path);
+      if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Błąd przy usuwaniu pliku:', err);
+        });
+      }
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Błąd usuwania zdjęcia:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera', details: err.message });
+  }
+});
+
+
+
 let upload = null;
 if (multer) {
   const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -573,5 +624,55 @@ if (upload) {
     }
   });
 }
+
+router.delete('/:id/images/:imageId', authRequired, async (req, res) => {
+  try {
+    const listingId = Number(req.params.id);
+    const imageId = Number(req.params.imageId);
+
+    if (!listingId || !imageId) {
+      return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia lub zdjęcia' });
+    }
+
+    // Czy ogłoszenie jest tego użytkownika?
+    const check = await pool.query(
+      'SELECT id FROM listing WHERE id = $1 AND user_id = $2',
+      [listingId, req.user.id]
+    );
+    if (check.rowCount === 0) {
+      return res.status(404).json({ error: 'Ogłoszenie nie istnieje lub nie jest Twoje' });
+    }
+
+    // Pobierz ścieżkę do pliku (jeśli jest)
+    const { rows } = await pool.query(
+      'SELECT path FROM listing_images WHERE id = $1 AND listing_id = $2',
+      [imageId, listingId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Zdjęcie nie istnieje' });
+    }
+
+    const img = rows[0];
+
+    // Usuń rekord z bazy
+    await pool.query('DELETE FROM listing_images WHERE id = $1', [imageId]);
+
+    // Usuń plik z dysku, jeśli ma path
+    if (img.path) {
+      const filePath = path.join(process.cwd(), 'backend', img.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('❌ Błąd przy usuwaniu pliku:', err);
+        });
+      }
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Błąd usuwania zdjęcia:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera', details: err.message });
+  }
+});
+
 
 module.exports = router;
