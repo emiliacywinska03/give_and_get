@@ -502,19 +502,28 @@ export default function ListingDetails() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="listing-details-container">
+        <p>Ładowanie…</p>
+      </div>
+    );
+  }
 
-  if (loading) return <div className="listing-details-container"><p>Ładowanie…</p></div>;
-  if (!data)    return <div className="listing-details-container"><p>Brak danych.</p></div>;
-
-  const backTarget = fromProfile ? '/profile' : '/listings';
+  if (!data) {
+    return (
+      <div className="listing-details-container">
+        <p>Brak danych.</p>
+      </div>
+    );
+  }
 
   const helpTypeLabel =
-  data.help_type === 'offer'
-    ? 'Oferuję pomoc'
-    : data.help_type === 'need'
-    ? 'Szukam pomocy'
-    : null;
-
+    data.help_type === 'offer'
+      ? 'Oferuję pomoc'
+      : data.help_type === 'need'
+      ? 'Szukam pomocy'
+      : null;
 
   return (
     <div className="listing-details-container">
@@ -554,49 +563,82 @@ export default function ListingDetails() {
         </div>
 
         {helpTypeLabel && (
-          <div className="listing-details-help-pill">
-            {helpTypeLabel}
-          </div>
+          <div className="listing-details-help-pill">{helpTypeLabel}</div>
         )}
 
+        {/* AUTOR – tuż pod tytułem */}
+        <div className="listing-author-box">
+          <div className="listing-author-left">
+            <div className="listing-user-avatar">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="34"
+                height="34"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="7" r="4" />
+                <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
+              </svg>
+            </div>
+
+            <div className="listing-author-info">
+              <div className="listing-author-label">OGŁOSZENIE DODAŁ(A)</div>
+              <div className="listing-author-name">{data.author_username}</div>
+            </div>
+          </div>
+
+          {user && (
+            <button className="message-button-author">
+              Napisz wiadomość
+            </button>
+          )}
+
+        </div>
+
+
+
+        {/* data dodania */}
         <p className="listing-details-meta">
-          Autor: <strong>{data.author_username ?? 'nieznany'}</strong> •{' '}
           Dodano: {new Date(data.created_at).toLocaleString()}
         </p>
       </div>
 
+      {/* KARTA OGŁOSZENIA – pod nagłówkiem */}
       <div className="listing-details-card">
         {images.length > 0 && (
           <div className="listing-details-gallery">
             {images.map((img, i) => (
-            <div key={img.id} className="listing-details-thumb">
-              <img
-                src={img.src}
-                alt={`Zdjęcie ${i + 1}`}
-                className="listing-details-image"
-                onClick={() => {
-                  setLightboxIndex(i);
-                  setLightboxImage(img.src);   
-                  setLightboxOpen(true);
-                }}
-                style={{ cursor: 'pointer' }}
-              />
+              <div key={img.id} className="listing-details-thumb">
+                <img
+                  src={img.src}
+                  alt={`Zdjęcie ${i + 1}`}
+                  className="listing-details-image"
+                  onClick={() => {
+                    setLightboxIndex(i);
+                    setLightboxImage(img.src);
+                    setLightboxOpen(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
 
-              {canEdit && editMode && (
-                <button
-                  type="button"
-                  className="image-delete-btn"
-                  onClick={() => handleDeleteImage(img.id)}
-                >
-                  Usuń
-                </button>
-              )}
-            </div>
-          ))}
-
+                {canEdit && editMode && (
+                  <button
+                    type="button"
+                    className="image-delete-btn"
+                    onClick={() => handleDeleteImage(img.id)}
+                  >
+                    Usuń
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
         )}
-
 
         <dl className="listing-details-dl">
           {infoPairs.map(({ key, label, value }) => (
@@ -608,6 +650,7 @@ export default function ListingDetails() {
         </dl>
       </div>
 
+      {/* SEKCJA EDYCJI */}
       {canEdit && (
         <div className="listing-details-edit-section">
           {!editMode ? (
@@ -657,9 +700,11 @@ export default function ListingDetails() {
                 />
               </label>
 
-
               <div className="edit-form-buttons">
-                <button className="action-button save-button" onClick={handleSave}>
+                <button
+                  className="action-button save-button"
+                  onClick={handleSave}
+                >
                   Zapisz
                 </button>
                 <button
@@ -695,7 +740,8 @@ export default function ListingDetails() {
                 e.stopPropagation();
                 setLightboxIndex((prev) => {
                   if (!images.length) return prev;
-                  const next = prev === 0 ? images.length - 1 : prev - 1;
+                  const next =
+                    prev === 0 ? images.length - 1 : prev - 1;
                   setLightboxImage(images[next].src);
                   return next;
                 });
@@ -720,7 +766,8 @@ export default function ListingDetails() {
                 e.stopPropagation();
                 setLightboxIndex((prev) => {
                   if (!images.length) return prev;
-                  const next = prev === images.length - 1 ? 0 : prev + 1;
+                  const next =
+                    prev === images.length - 1 ? 0 : prev + 1;
                   setLightboxImage(images[next].src);
                   return next;
                 });
@@ -741,7 +788,6 @@ export default function ListingDetails() {
           </button>
         </div>
       )}
-
     </div>
   );
 }

@@ -360,3 +360,387 @@ body.dark-mode .favorite-toggle.favorite-toggle-details.favorite-toggle--active 
 .lightbox-arrow-right {
   right: 40px;
 }
+
+/* --- Box z informacją o autorze --- */
+
+.listing-user-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.listing-user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.listing-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.listing-user-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-bottom: 0.1rem;
+}
+
+.listing-user-name {
+  font-weight: 600;
+  font-size: 0.98rem;
+  color: #111827;
+  margin-bottom: 0.4rem;
+}
+
+.message-button {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.1s ease,
+    box-shadow 0.18s ease;
+}
+
+.message-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+body.dark-mode .listing-user-box {
+  background: #020617;
+  border-color: #1f2937;
+}
+
+body.dark-mode .listing-user-label {
+  color: #9ca3af;
+}
+
+body.dark-mode .listing-user-name {
+  color: #e5e7eb;
+}
+
+body.dark-mode .message-button {
+  background: #2563eb;
+}
+
+/* wrapper karta + panel autora */
+.listing-details-main {
+  display: flex;
+  justify-content: space-between; 
+  align-items: flex-start;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+/* karta ogłoszenia rozszerza się na resztę szerokości */
+.listing-details-card {
+  flex: 1;
+}
+
+/* panel autora po prawej */
+.listing-user-box {
+  width: 260px;
+  padding: 1rem 1.25rem;
+  border-radius: 999px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+/* avatar */
+.listing-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #eef2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+
+.listing-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.listing-user-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.listing-user-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* przycisk wiadomości */
+.message-button {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: none;
+  background: #111827;
+  color: #f9fafb;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.message-button:hover {
+  background: #000;
+  transform: translateY(-1px);
+}
+
+/* mobile – pod sobą */
+@media (max-width: 900px) {
+  .listing-details-main {
+    flex-direction: column;
+  }
+
+  .listing-user-box {
+    width: 100%;
+    border-radius: 1rem;
+    order: -1; /* panel autora nad kartą, jeśli chcesz */
+  }
+}
+
+/* Karta ogłoszenia wewnątrz układu z panelem autora */
+.listing-details-main .listing-details-card {
+  flex: 1 1 auto;
+  max-width: none;     
+  margin: 0;            
+}
+
+.listing-user-box {
+  width: 260px;
+  padding: 1rem 1.25rem;
+  border-radius: 999px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.details-layout {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  width: 100%;
+  margin-top: 2rem;
+}
+
+.details-left {
+  flex: 0 1 820px;   
+}
+
+.details-right {
+  flex: 0 0 260px;   
+}
+
+/* panel autora */
+.details-right .listing-user-box {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+
+
+/* Sam panel autora */
+.details-right .listing-user-box {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+}
+
+/* BOX autora */
+.listing-author-box {
+  margin-top: 8px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+
+
+/* Lewa część: avatar + dane */
+.listing-author-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Avatar */
+.listing-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f5f5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Teksty autora */
+.listing-author-label {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #7d7d7d;
+  text-transform: uppercase;
+}
+
+.listing-author-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Przyciski */
+.message-button-author {
+  padding: 10px 18px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.message-button-author:hover {
+  background: #135cc8;
+}
+
+/* BOX autora */
+.listing-author-box {
+  margin-top: 8px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 420px;
+}
+
+/* Lewa część: avatar + dane */
+.listing-author-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Avatar */
+.listing-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f5f5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Teksty autora */
+.listing-author-label {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #7d7d7d;
+  text-transform: uppercase;
+}
+
+.listing-author-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Przyciski */
+.message-button-author {
+  padding: 10px 18px;
+  background: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+  white-space: nowrap;
+}
+
+.message-button-author:hover {
+  background: #135cc8;
+}
+
+.listing-author-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.message-button-author {
+  margin-left: auto;     
+  padding: 10px 18px;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s;
+}
+
+.message-button-author:hover {
+  background: #135cc8;
+}
