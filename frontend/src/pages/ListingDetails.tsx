@@ -205,6 +205,7 @@ export default function ListingDetails() {
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
+
   
 
   useEffect(() => {
@@ -477,11 +478,9 @@ export default function ListingDetails() {
       return;
     }
 
-
     try {
       const method = isFavorite ? 'DELETE' : 'POST';
       const res = await fetch(`${API_BASE}/api/listings/favorites/${id}`, {
-
         method,
         credentials: 'include',
         headers: {
@@ -489,7 +488,6 @@ export default function ListingDetails() {
           ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
         },
       });
-
 
       if (!res.ok) {
         console.error('Błąd zmiany ulubionych:', await res.text());
@@ -501,6 +499,7 @@ export default function ListingDetails() {
       console.error('Błąd podczas zmiany ulubionych:', e);
     }
   };
+
 
   if (loading) {
     return (
@@ -592,9 +591,29 @@ export default function ListingDetails() {
             </div>
           </div>
 
-          {user && (
-            <button className="message-button-author">
-              Napisz wiadomość
+          {user ? (
+            user.id === data.user_id ? (
+              <span className="message-info-self">
+                To jest Twoje ogłoszenie.
+              </span>
+            ) : (
+              <button
+                className="message-button-author"
+                type="button"
+                onClick={() =>
+                  navigate(`/messages/listing/${data.id}?peer=${data.user_id}`)
+                }
+              >
+                Napisz wiadomość
+              </button>
+            )
+          ) : (
+            <button
+              className="message-button-author"
+              type="button"
+              onClick={() => navigate('/auth')}
+            >
+              Zaloguj się, aby napisać
             </button>
           )}
 
@@ -607,6 +626,7 @@ export default function ListingDetails() {
           Dodano: {new Date(data.created_at).toLocaleString()}
         </p>
       </div>
+
 
       {/* KARTA OGŁOSZENIA – pod nagłówkiem */}
       <div className="listing-details-card">

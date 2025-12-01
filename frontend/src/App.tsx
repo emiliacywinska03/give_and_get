@@ -13,7 +13,8 @@ import ListingDetails from './pages/ListingDetails';
 import Breadcrumbs from './components/Breadcrumbs';
 import RewardsPage from './pages/RewardsPage';
 import FeaturedListings from './pages/FeaturedListings';
-
+import MessagesPage from './pages/MessagesPage';
+import MessagesConversationPage from './pages/MessagesConversationPage';
 
 function App() {
   return (
@@ -41,6 +42,22 @@ function App() {
               <Favorites />
             </ProtectedRoute>
           }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages/listing/:id"
+            element={
+              <ProtectedRoute>
+                <MessagesConversationPage />
+              </ProtectedRoute>
+            }
           />
 
           <Route path="/featured" element={

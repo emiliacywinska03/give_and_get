@@ -1,0 +1,161 @@
+.messages-conv-page {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 16px 40px;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.messages-conv-header h2 {
+  font-size: 24px;
+  margin: 8px 0 4px;
+}
+
+.messages-conv-subtitle,
+.messages-conv-peer {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.messages-conv-listing-link {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+.messages-conv-listing-link:hover {
+  text-decoration: underline;
+}
+
+.messages-conv-back {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.messages-conv-back:hover {
+  background: #f3f4f6;
+}
+
+.messages-conv-info {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.messages-conv-error {
+  font-size: 14px;
+  color: #b91c1c;
+}
+
+/* wątek czatu */
+.messages-conv-thread {
+  flex: 1;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.messages-conv-bubble {
+  max-width: 75%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.messages-conv-bubble.mine {
+  margin-left: auto;
+  background: #1d4ed8;
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.messages-conv-bubble.theirs {
+  margin-right: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-bottom-left-radius: 2px;
+}
+
+.messages-conv-bubble-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2px;
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+.messages-conv-author {
+  font-weight: 600;
+}
+
+.messages-conv-date {
+  color: #9ca3af;
+}
+
+.messages-conv-text {
+  white-space: pre-wrap;
+}
+
+/* formularz odpowiedzi */
+.messages-conv-form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.messages-conv-textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.messages-conv-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.messages-conv-submit {
+  align-self: flex-end;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #1d4ed8;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.messages-conv-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* mobile */
+@media (max-width: 640px) {
+  .messages-conv-thread {
+    max-height: 50vh;
+  }
+
+  .messages-conv-bubble {
+    max-width: 85%;
+  }
+}

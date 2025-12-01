@@ -660,6 +660,134 @@ body.dark-mode .message-button {
   background: #135cc8;
 }
 
+/* --- Formularz wiadomości do autora --- */
+
+.listing-message-box {
+  margin-top: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.listing-message-box h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.listing-message-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.listing-message-textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.listing-message-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.listing-message-submit {
+  align-self: flex-end;
+  margin-top: 4px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: none;
+  background: #1a73e8;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s ease, transform 0.1s ease,
+    box-shadow 0.18s ease;
+}
+
+.listing-message-submit:hover:not(:disabled) {
+  background: #135cc8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(19, 92, 200, 0.35);
+}
+
+.listing-message-submit:disabled {
+  opacity: 0.65;
+  cursor: default;
+  box-shadow: none;
+}
+
+.listing-message-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.listing-message-success {
+  margin: 0;
+  font-size: 13px;
+  color: #15803d;
+}
+
+.message-info-self {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Dark mode dla formularza wiadomości */
+body.dark-mode .listing-message-box {
+  background: #020617;
+  border-color: #1f2937;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .listing-message-box h3 {
+  color: #e5e7eb;
+}
+
+body.dark-mode .listing-message-textarea {
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .listing-message-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+}
+
+body.dark-mode .listing-message-submit {
+  background: #2563eb;
+}
+
+body.dark-mode .listing-message-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+body.dark-mode .listing-message-error {
+  color: #fecaca;
+}
+
+body.dark-mode .listing-message-success {
+  color: #bbf7d0;
+}
+
+body.dark-mode .message-info-self {
+  color: #9ca3af;
+}
+
 /* BOX autora */
 .listing-author-box {
   margin-top: 8px;

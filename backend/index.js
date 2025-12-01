@@ -7,6 +7,7 @@ const { pool } = require('./db');
 const listingRoutes = require('./routes/listing');
 const authRoutes = require('./routes/auth');
 const rewardsRouter = require('./routes/rewards');
+const messagesRouter = require('./routes/messages');
 
 const path = require('path');
 
@@ -46,6 +47,7 @@ app.get('/healthz', async (req, res) => {
 app.use('/api/listings', listingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/rewards', rewardsRouter);
+app.use('/api/messages', messagesRouter);
 
 
 app.listen(PORT, '0.0.0.0', () => {

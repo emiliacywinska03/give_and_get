@@ -19,6 +19,7 @@ const Header: React.FC = () => {
     const [allTitles, setAllTitles] = useState<string[]>([]);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [unreadCount, setUnreadCount] = useState<number>(0);
 
 
     useEffect(() => {
@@ -66,6 +67,35 @@ const Header: React.FC = () => {
   
         setSuggestions(filtered);
     }, [search, allTitles]);
+
+    useEffect(() => {
+      if (!user) {
+        setUnreadCount(0);
+        return;
+      }
+  
+      const fetchUnread = async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/messages/unread-count`, {
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+            },
+          });
+  
+          const data = await res.json().catch(() => null);
+  
+          if (res.ok && data?.ok && typeof data.count === 'number') {
+            setUnreadCount(data.count);
+          }
+        } catch (err) {
+          console.error('Błąd pobierania liczby nieprzeczytanych wiadomości:', err);
+        }
+      };
+  
+      fetchUnread();
+    }, [user]);
 
 
     const submitSearch = (value: string) => {
@@ -190,11 +220,31 @@ const Header: React.FC = () => {
 
 
                     {/* WIADOMOŚCI */}
-                    <div className="icon-btn messages">
-                        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                                d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4Z"/>
+                    <div
+                      className="icon-btn messages"
+                      onClick={() => navigate('/messages')}
+                    >
+                        <svg
+                          aria-hidden="true"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                            <path
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4Z"
+                            />
                         </svg>
+                        {unreadCount > 0 && (
+                          <span className="icon-badge">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                     </div>
 
                     {/* MOTYW */}
