@@ -660,6 +660,37 @@ body.dark-mode .message-button {
   background: #135cc8;
 }
 
+/* --- Dark mode dla BOXU autora na stronie szczegółów --- */
+
+body.dark-mode .listing-author-box {
+  background: #020617;
+  border-color: #1f2937;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .listing-user-avatar {
+  background: #0b1120;
+  border-color: #1d4ed8;
+  color: #bfdbfe;
+}
+
+body.dark-mode .listing-author-label {
+  color: #9ca3af;
+}
+
+body.dark-mode .listing-author-name {
+  color: #e5e7eb;
+}
+
+body.dark-mode .message-button-author {
+  background: #2563eb;
+  color: #f9fafb;
+}
+
+body.dark-mode .message-button-author:hover {
+  background: #1d4ed8;
+}
+
 /* --- Formularz wiadomości do autora --- */
 
 .listing-message-box {

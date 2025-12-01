@@ -159,3 +159,80 @@
     max-width: 85%;
   }
 }
+
+/* --- Dark mode dla strony konwersacji wiadomości --- */
+body.dark-mode .messages-conv-page {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-header h2 {
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-conv-subtitle,
+body.dark-mode .messages-conv-peer {
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-conv-listing-link {
+  color: #60a5fa;
+}
+
+body.dark-mode .messages-conv-back {
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-back:hover {
+  background: #111827;
+}
+
+body.dark-mode .messages-conv-info {
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-conv-error {
+  color: #fecaca;
+}
+
+body.dark-mode .messages-conv-thread {
+  border-color: #1f2937;
+  background: #020617;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+}
+
+body.dark-mode .messages-conv-bubble.mine {
+  background: #2563eb;
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-conv-bubble.theirs {
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-date {
+  color: #6b7280;
+}
+
+body.dark-mode .messages-conv-textarea {
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+}
+
+body.dark-mode .messages-conv-submit {
+  background: #2563eb;
+}
+
+body.dark-mode .messages-conv-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}

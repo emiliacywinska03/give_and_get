@@ -123,3 +123,68 @@
     padding: 10px 12px;
   }
 }
+
+/* --- Dark mode dla strony listy wiadomości --- */
+body.dark-mode .messages-page {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-header h2 {
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-subtitle {
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-info {
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-error {
+  color: #fecaca;
+}
+
+body.dark-mode .messages-list {
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-item {
+  background: #020617;
+  border-color: #1f2937;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+}
+
+body.dark-mode .messages-item.incoming {
+  border-left-color: #16a34a;
+}
+
+body.dark-mode .messages-item.outgoing {
+  border-left-color: #2563eb;
+}
+
+body.dark-mode .messages-direction {
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-date {
+  color: #6b7280;
+}
+
+body.dark-mode .messages-peer-label,
+body.dark-mode .messages-listing-label {
+  color: #d1d5db;
+}
+
+body.dark-mode .messages-peer-name {
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-listing-link {
+  color: #60a5fa;
+}
+
+body.dark-mode .messages-content {
+  color: #e5e7eb;
+}

@@ -37,6 +37,17 @@ const Breadcrumbs: React.FC = () => {
     items.push({ label: 'Ulubione' });
   }
 
+  // /messages — lista wszystkich rozmów
+  if (pathname === '/messages') {
+    items.push({ label: 'Wiadomości' });
+  }
+
+  // /messages/listing/:id — konkretna konwersacja
+  if (pathname.startsWith('/messages/listing/')) {
+    items.push({ label: 'Wiadomości', to: '/messages' });
+    items.push({ label: 'Konwersacja' });
+  }
+
   // /auth
   if (pathname.startsWith('/auth')) {
     items.push({ label: 'Logowanie / Rejestracja' });

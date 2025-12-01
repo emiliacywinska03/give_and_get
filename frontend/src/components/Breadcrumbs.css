@@ -53,3 +53,28 @@
     color: #f9fafb;
   }
   
+
+body.dark-mode .breadcrumbs-back {
+  color: #e5e7eb;
+}
+
+body.dark-mode .breadcrumbs-back:hover {
+  color: #f3f4f6;
+  text-decoration: underline;
+}
+
+body.dark-mode .breadcrumbs-separator {
+  color: #9ca3af;
+}
+
+body.dark-mode .breadcrumbs-trail a {
+  color: #93c5fd; 
+}
+
+body.dark-mode .breadcrumbs-trail a:hover {
+  color: #bfdbfe;
+}
+
+body.dark-mode .breadcrumbs-current {
+  color: #60a5fa; 
+}
