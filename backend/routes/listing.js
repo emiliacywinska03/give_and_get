@@ -172,37 +172,73 @@ router.post('/', authRequired, async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const { type_id, category_id, subcategory_id, category, help_type } = req.query;
+    const {
+      type_id,
+      category_id,
+      subcategory_id,
+      category,
+      help_type,
+      page,
+      limit,
+    } = req.query;
 
     const where = [];
     const params = [];
 
     if (type_id) {
       const v = Number(type_id);
-      if (Number.isNaN(v)) return res.status(400).json({ error: 'Nieprawidlowe type_id' });
+      if (Number.isNaN(v)) {
+        return res.status(400).json({ error: 'Nieprawidlowe type_id' });
+      }
       params.push(v);
       where.push(`l.type_id = $${params.length}`);
     }
+
     if (category_id) {
       const v = Number(category_id);
-      if (Number.isNaN(v)) return res.status(400).json({ error: 'Nieprawidlowe category_id' });
+      if (Number.isNaN(v)) {
+        return res.status(400).json({ error: 'Nieprawidlowe category_id' });
+      }
       params.push(v);
       where.push(`l.category_id = $${params.length}`);
     }
+
     if (help_type) {
       params.push(String(help_type));
       where.push(`l.help_type = $${params.length}`);
     }
+
     if (subcategory_id) {
       const v = Number(subcategory_id);
-      if (Number.isNaN(v)) return res.status(400).json({ error: 'Nieprawidlowe subcategory_id' });
+      if (Number.isNaN(v)) {
+        return res.status(400).json({ error: 'Nieprawidlowe subcategory_id' });
+      }
       params.push(v);
       where.push(`l.subcategory_id = $${params.length}`);
     }
+
     if (category) {
       params.push(String(category).toLowerCase());
-      where.push(`l.category_id IN (SELECT id FROM category WHERE LOWER(name) = $${params.length})`);
+      where.push(
+        `l.category_id IN (
+          SELECT id FROM category WHERE LOWER(name) = $${params.length}
+        )`
+      );
     }
+
+    // paginacja – domyślnie 20 ogłoszeń na stronę
+    let pageNum = Number(page) || 1;
+    let limitNum = Number(limit) || 20;
+
+    if (!Number.isFinite(pageNum) || pageNum < 1) pageNum = 1;
+    if (!Number.isFinite(limitNum) || limitNum < 1 || limitNum > 100) limitNum = 20;
+
+    const offset = (pageNum - 1) * limitNum;
+
+    params.push(limitNum);
+    const limitIdx = params.length;
+    params.push(offset);
+    const offsetIdx = params.length;
 
     const sql = `
       SELECT
@@ -219,7 +255,9 @@ router.get('/', async (req, res) => {
       JOIN "user" u ON u.id = l.user_id
       ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
       ORDER BY l.created_at DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
     `;
+
     const { rows } = await pool.query(sql, params);
     res.json(rows);
   } catch (err) {
