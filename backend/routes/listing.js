@@ -63,16 +63,24 @@ router.post('/', authRequired, async (req, res) => {
     type_id,
     category_id,
     subcategory_id,
-    helpType
+    helpType,
+    price,
+    isFree,
+    negotiable,
+    condition,
   } = req.body;
 
   const catId =
-    category_id === null || category_id === '' || typeof category_id === 'undefined'
+    category_id === null ||
+    category_id === '' ||
+    typeof category_id === 'undefined'
       ? null
       : Number(category_id);
 
   const subId =
-    subcategory_id === null || subcategory_id === '' || typeof subcategory_id === 'undefined'
+    subcategory_id === null ||
+    subcategory_id === '' ||
+    typeof subcategory_id === 'undefined'
       ? null
       : Number(subcategory_id);
 
@@ -87,6 +95,43 @@ router.post('/', authRequired, async (req, res) => {
     return res.status(400).json({ error: 'Tytul i opis wymagane!' });
   }
 
+  const numericTypeId = Number(type_id);
+  if (Number.isNaN(numericTypeId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe type_id' });
+  }
+
+
+  let priceValue = null;
+  let itemCondition = null;
+  let isFreeValue = false;
+  let negotiableValue = false;
+
+
+  if (numericTypeId === 1) {
+    const free = isFree === true || isFree === 'true';
+
+    if (free) {
+
+      priceValue = 0;
+      isFreeValue = true;
+    } else if (
+      price !== null &&
+      price !== '' &&
+      typeof price !== 'undefined'
+    ) {
+      const num = Number(price);
+      if (Number.isNaN(num)) {
+        return res.status(400).json({ error: 'Nieprawidłowa cena' });
+      }
+      priceValue = num;
+    } else {
+      priceValue = null;
+    }
+
+    itemCondition = condition || null;
+    negotiableValue = !!negotiable;
+  }
+
   try {
     const result = await pool.query(
       `INSERT INTO listing (
@@ -98,23 +143,30 @@ router.post('/', authRequired, async (req, res) => {
           category_id,
           subcategory_id,
           user_id,
-          help_type
+          help_type,
+          price,
+          item_condition,
+          is_free,
+          negotiable
         )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
        RETURNING *`,
       [
         title,
         description,
         location,
         status_id,
-        type_id,
+        numericTypeId,
         catId,
         subId,
         req.user.id,
-        type_id === 2 ? helpType || null : null  
+        numericTypeId === 2 ? helpType || null : null,
+        priceValue,
+        itemCondition,
+        isFreeValue,
+        negotiableValue,
       ]
     );
-    
 
     const created = result.rows[0];
 
@@ -122,7 +174,7 @@ router.post('/', authRequired, async (req, res) => {
       created.type_id === 1 && Array.isArray(req.body.images)
         ? req.body.images
         : [];
-    
+
     if (images.length > 0) {
       const values = [];
       const placeholders = [];
@@ -135,12 +187,16 @@ router.post('/', authRequired, async (req, res) => {
         const buf = Buffer.from(b64, 'base64');
         values.push(created.id, mime, buf.length, buf);
         const base = i * 4;
-        placeholders.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`);
+        placeholders.push(
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`
+        );
       });
 
       if (placeholders.length) {
         await pool.query(
-          `INSERT INTO listing_images (listing_id, mime, size, data) VALUES ${placeholders.join(',')}`,
+          `INSERT INTO listing_images (listing_id, mime, size, data) VALUES ${placeholders.join(
+            ','
+          )}`,
           values
         );
       }
@@ -163,10 +219,11 @@ router.post('/', authRequired, async (req, res) => {
       listing: created,
       points: newPoints,
     });
-
   } catch (err) {
     console.error('Blad podczas dodawania ogloszenia', err.message);
-    res.status(500).json({ error: 'Blad wewnetrzny', details: err.message });
+    res
+      .status(500)
+      .json({ error: 'Blad wewnetrzny', details: err.message });
   }
 });
 

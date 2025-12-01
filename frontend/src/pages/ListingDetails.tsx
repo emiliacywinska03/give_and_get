@@ -25,10 +25,19 @@ type ListingImage = {
   src: string;
 };
 
-
 const HIDDEN_KEYS = new Set<string>([
-  'id','user_id','created_at','updated_at','type_id','images','primary_image',
-  'author_id','status','deleted_at','__v'
+  'id',
+  'user_id',
+  'created_at',
+  'updated_at',
+  'type_id',
+  'images',
+  'primary_image',
+  'author_id',
+  'status',
+  'deleted_at',
+  '__v',
+  'author_username',
 ]);
 
 const ALIASES: Record<string, string> = {
@@ -62,7 +71,7 @@ const ALIASES: Record<string, string> = {
   item_condition: 'condition',
 };
 
-const LABELS: Record<string,string> = {
+const LABELS: Record<string, string> = {
   title: 'Tytuł',
   description: 'Opis',
   location: 'Lokalizacja',
@@ -91,12 +100,29 @@ const LABELS: Record<string,string> = {
 };
 
 const PREFERRED_ORDER = [
-  'title','category_name','subcategory_name','location','city','district',
-  'price','is_free','negotiable','condition',
-  'salary','salary_min','salary_max','employment_type','work_mode',
-  'requirements','responsibilities','benefits',
-  'help_type','help_for_help',
-  'contact_email','contact_phone','tags'
+  'title',
+  'category_name',
+  'subcategory_name',
+  'location',
+  'city',
+  'district',
+  'price',
+  'is_free',
+  'negotiable',
+  'condition',
+  'salary',
+  'salary_min',
+  'salary_max',
+  'employment_type',
+  'work_mode',
+  'requirements',
+  'responsibilities',
+  'benefits',
+  'help_type',
+  'help_for_help',
+  'contact_email',
+  'contact_phone',
+  'tags',
 ];
 
 function isPlainObject(v: any) {
@@ -107,13 +133,16 @@ function formatVal(key: string, val: any): string {
   if (val === null || val === undefined) return '—';
   if (key === 'help_type') {
     if (val === 'offer') return 'Oferuję pomoc';
-    if (val === 'need')  return 'Szukam pomocy';
+    if (val === 'need') return 'Szukam pomocy';
     return String(val);
   }
   if (typeof val === 'boolean') return val ? 'Tak' : 'Nie';
   if (typeof val === 'number') {
     if (/(price|salary)/i.test(key)) {
-      return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(val);
+      return new Intl.NumberFormat('pl-PL', {
+        style: 'currency',
+        currency: 'PLN',
+      }).format(val);
     }
     return String(val);
   }
@@ -122,9 +151,14 @@ function formatVal(key: string, val: any): string {
     const trimmed = val.trim();
     if (!trimmed) return '—';
     if (/(price|salary)/i.test(key)) {
-      const num = Number(trimmed.replace(/[^0-9.,-]/g, '').replace(',', '.'));
+      const num = Number(
+        trimmed.replace(/[^0-9.,-]/g, '').replace(',', '.'),
+      );
       if (!Number.isNaN(num) && Number.isFinite(num)) {
-        return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(num);
+        return new Intl.NumberFormat('pl-PL', {
+          style: 'currency',
+          currency: 'PLN',
+        }).format(num);
       }
     }
     return trimmed;
@@ -136,35 +170,104 @@ function collectPairs(details: any): { key: string; label: string; value: string
   const pairs: { key: string; label: string; value: string }[] = [];
   const pushField = (k: string, v: any) => {
     if (HIDDEN_KEYS.has(k)) return;
-    const label = LABELS[k] ?? k.replace(/_/g,' ');
+
+    if (
+      v === null ||
+      v === undefined ||
+      (typeof v === 'string' && !v.trim()) ||
+      (Array.isArray(v) && v.length === 0)
+    ) {
+      if (typeof v !== 'boolean') {
+        return;
+      }
+    }
+
+    const label = LABELS[k] ?? k.replace(/_/g, ' ');
     pairs.push({ key: k, label, value: formatVal(k, v) });
   };
+
+  const rawFree =
+    (details as any)?.is_free ??
+    (details as any)?.isFree ??
+    (details as any)?.free;
+
+  const isFreeListing =
+    typeof rawFree === 'string' ? rawFree === 'true' : Boolean(rawFree);
 
   Object.entries(details || {}).forEach(([origKey, v]) => {
     const mapped = ALIASES.hasOwnProperty(origKey) ? ALIASES[origKey] : origKey;
     if (mapped === '__hide') return;
+
+    if (
+      (mapped === 'help_type' || mapped === 'help_for_help') &&
+      (v === null || v === undefined || v === '')
+    ) {
+      return;
+    }
+
+    if (mapped === 'is_free') {
+      const boolVal = typeof v === 'string' ? v === 'true' : Boolean(v);
+      if (!boolVal) {
+        return;
+      }
+    }
+
+    if (mapped === 'price' && isFreeListing) {
+      return;
+    }
+
     const k = mapped;
-    if ([
-          'title','description','location','city','district','author_username','category_name','subcategory_name',
-          'price','negotiable','is_free','condition','salary','salary_min','salary_max','employment_type','work_mode',
-          'requirements','responsibilities','benefits','help_type','help_for_help','contact_email','contact_phone','tags'
-        ].includes(k) || (!HIDDEN_KEYS.has(k) && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || Array.isArray(v)))) {
+
+    if (
+      [
+        'title',
+        'description',
+        'location',
+        'city',
+        'district',
+        'author_username',
+        'category_name',
+        'subcategory_name',
+        'price',
+        'negotiable',
+        'is_free',
+        'condition',
+        'salary',
+        'salary_min',
+        'salary_max',
+        'employment_type',
+        'work_mode',
+        'requirements',
+        'responsibilities',
+        'benefits',
+        'help_type',
+        'help_for_help',
+        'contact_email',
+        'contact_phone',
+        'tags',
+      ].includes(k) ||
+      (!HIDDEN_KEYS.has(k) &&
+        (typeof v === 'string' ||
+          typeof v === 'number' ||
+          typeof v === 'boolean' ||
+          Array.isArray(v)))
+    ) {
       pushField(k, v);
     }
   });
 
-  ['attributes','details','metadata','contact'].forEach((node) => {
+  ['attributes', 'details', 'metadata', 'contact'].forEach((node) => {
     const obj = (details as any)?.[node];
     if (isPlainObject(obj)) {
-      Object.entries(obj).forEach(([k,v]) => pushField(k, v));
+      Object.entries(obj).forEach(([k, v]) => pushField(k, v));
     }
   });
 
-  const dedup = new Map<string, { key:string; label:string; value:string }>();
+  const dedup = new Map<string, { key: string; label: string; value: string }>();
   for (const p of pairs) if (!dedup.has(p.key)) dedup.set(p.key, p);
   const list = Array.from(dedup.values());
 
-  list.sort((a,b) => {
+  list.sort((a, b) => {
     const ia = PREFERRED_ORDER.indexOf(a.key);
     const ib = PREFERRED_ORDER.indexOf(b.key);
     if (ia === -1 && ib === -1) return a.label.localeCompare(b.label, 'pl');
@@ -189,15 +292,11 @@ export default function ListingDetails() {
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<ListingImage[]>([]);
 
-
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
-
-
-  // stan edycji
   const [editMode, setEditMode] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -205,8 +304,6 @@ export default function ListingDetails() {
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
-
-  
 
   useEffect(() => {
     if (!id) return;
@@ -219,16 +316,16 @@ export default function ListingDetails() {
           },
           credentials: 'include',
         });
-  
+
         if (res.status === 404) {
           navigate('/listings');
           return;
         }
         if (!res.ok) throw new Error(await res.text());
-  
+
         const details = await res.json();
         setData(details);
-  
+
         const toSrc = (val: any): string | null => {
           if (!val) return null;
           if (typeof val === 'string') {
@@ -239,19 +336,22 @@ export default function ListingDetails() {
             if (val.dataUrl) return val.dataUrl as string;
             if (val.url) {
               const u = val.url as string;
-              return u.startsWith('http') || u.startsWith('data:') ? u : `${API_BASE}${u}`;
+              return u.startsWith('http') || u.startsWith('data:')
+                ? u
+                : `${API_BASE}${u}`;
             }
             if (val.path) {
               const p = val.path as string;
-              return p.startsWith('http') || p.startsWith('data:') ? p : `${API_BASE}${p}`;
+              return p.startsWith('http') || p.startsWith('data:')
+                ? p
+                : `${API_BASE}${p}`;
             }
           }
           return null;
         };
-  
+
         let imagesList: ListingImage[] = [];
-  
-        // 1) Spróbuj pobrać z /:id/images
+
         try {
           const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
             headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
@@ -266,14 +366,15 @@ export default function ListingDetails() {
                     if (!src) return null;
                     return { id: it.id, src };
                   })
-                  .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
+                  .filter(
+                    (x: ListingImage | null): x is ListingImage => Boolean(x),
+                  )
               : [];
           }
         } catch (e) {
           console.error('Błąd pobierania zdjęć:', e);
         }
-  
-        // 2) Fallback – jeśli nic nie przyszło z /images, użyj details.images (jeśli są)
+
         if (!imagesList.length && Array.isArray(details?.images)) {
           imagesList = details.images
             .map((it: any, idx: number) => {
@@ -281,9 +382,11 @@ export default function ListingDetails() {
               if (!src) return null;
               return { id: idx, src };
             })
-            .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
+            .filter(
+              (x: ListingImage | null): x is ListingImage => Boolean(x),
+            );
         }
-  
+
         setImages(imagesList);
       } catch (e) {
         console.error(e);
@@ -292,10 +395,7 @@ export default function ListingDetails() {
       }
     })();
   }, [id, navigate]);
-  
 
-  
-  // sprawdzenie czy to ogłoszenie jest w ulubionych
   useEffect(() => {
     const checkFavorite = async () => {
       if (!user || !id) {
@@ -319,12 +419,12 @@ export default function ListingDetails() {
     checkFavorite();
   }, [user, id]);
 
-
   const canEdit = !!user && !!data && user.id === data.user_id;
   const infoPairs = collectPairs(data);
+  const infoPairsWithoutPrice = infoPairs.filter((p) => p.key !== 'price');
 
+  const pricePair = infoPairs.find((p) => p.key === 'price');
 
-  // kiedy wczytamy dane i mamy prawo edycji – ustaw wartości formularza
   useEffect(() => {
     if (data && canEdit) {
       setEditTitle(data.title || '');
@@ -335,7 +435,6 @@ export default function ListingDetails() {
       }
     }
   }, [data, canEdit, startInEdit]);
-
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -351,19 +450,17 @@ export default function ListingDetails() {
         credentials: 'include',
         headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
       });
-  
+
       if (!res.ok) {
         console.error('Błąd usuwania zdjęcia:', await res.text());
         return;
       }
-  
-    
+
       setImages((prev) => prev.filter((img) => img.id !== imageId));
     } catch (e) {
       console.error('Błąd usuwania zdjęcia:', e);
     }
   };
-  
 
   const handleSave = async () => {
     if (!id) return;
@@ -394,7 +491,6 @@ export default function ListingDetails() {
       setData(updated);
       setEditMode(false);
 
-      // --- JEŚLI WYBRANO NOWE ZDJĘCIA, WYŚLIJ JE ---
       if (newImages.length > 0) {
         const formData = new FormData();
         newImages.forEach((file) => {
@@ -425,18 +521,23 @@ export default function ListingDetails() {
                 const toSrc = (val: any): string | null => {
                   if (!val) return null;
                   if (typeof val === 'string') {
-                    if (val.startsWith('data:') || val.startsWith('http')) return val;
+                    if (val.startsWith('data:') || val.startsWith('http'))
+                      return val;
                     return `${API_BASE}${val}`;
                   }
                   if (typeof val === 'object') {
                     if (val.dataUrl) return val.dataUrl as string;
                     if (val.url) {
                       const u = val.url as string;
-                      return u.startsWith('http') || u.startsWith('data:') ? u : `${API_BASE}${u}`;
+                      return u.startsWith('http') || u.startsWith('data:')
+                        ? u
+                        : `${API_BASE}${u}`;
                     }
                     if (val.path) {
                       const p = val.path as string;
-                      return p.startsWith('http') || p.startsWith('data:') ? p : `${API_BASE}${p}`;
+                      return p.startsWith('http') || p.startsWith('data:')
+                        ? p
+                        : `${API_BASE}${p}`;
                     }
                   }
                   return null;
@@ -449,12 +550,13 @@ export default function ListingDetails() {
                         if (!src) return null;
                         return { id: it.id, src };
                       })
-                      .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
+                      .filter(
+                        (x: ListingImage | null): x is ListingImage => Boolean(x),
+                      )
                   : [];
 
                 setImages(normalized);
                 setNewImages([]);
-
               }
             } catch (e) {
               console.error('Błąd odświeżania zdjęć:', e);
@@ -469,8 +571,6 @@ export default function ListingDetails() {
       alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
     }
   };
-
-
 
   const handleToggleFavorite = async () => {
     if (!user || !id) {
@@ -500,7 +600,6 @@ export default function ListingDetails() {
     }
   };
 
-
   if (loading) {
     return (
       <div className="listing-details-container">
@@ -526,7 +625,6 @@ export default function ListingDetails() {
 
   return (
     <div className="listing-details-container">
-      {/* nagłówek z tytułem + serce */}
       <div className="listing-details-header">
         <div className="listing-details-title-row">
           <h1 className="listing-details-title">{data.title}</h1>
@@ -565,7 +663,6 @@ export default function ListingDetails() {
           <div className="listing-details-help-pill">{helpTypeLabel}</div>
         )}
 
-        {/* AUTOR – tuż pod tytułem */}
         <div className="listing-author-box">
           <div className="listing-author-left">
             <div className="listing-user-avatar">
@@ -616,19 +713,13 @@ export default function ListingDetails() {
               Zaloguj się, aby napisać
             </button>
           )}
-
         </div>
 
-
-
-        {/* data dodania */}
         <p className="listing-details-meta">
           Dodano: {new Date(data.created_at).toLocaleString()}
         </p>
       </div>
 
-
-      {/* KARTA OGŁOSZENIA – pod nagłówkiem */}
       <div className="listing-details-card">
         {images.length > 0 && (
           <div className="listing-details-gallery">
@@ -645,7 +736,6 @@ export default function ListingDetails() {
                   }}
                   style={{ cursor: 'pointer' }}
                 />
-
                 {canEdit && editMode && (
                   <button
                     type="button"
@@ -661,7 +751,7 @@ export default function ListingDetails() {
         )}
 
         <dl className="listing-details-dl">
-          {infoPairs.map(({ key, label, value }) => (
+          {infoPairsWithoutPrice.map(({ key, label, value }) => (
             <div key={key} className="listing-details-row">
               <dt>{label}</dt>
               <dd>{value}</dd>
@@ -670,14 +760,17 @@ export default function ListingDetails() {
         </dl>
       </div>
 
-      {/* SEKCJA EDYCJI */}
+      {pricePair && (
+        <div className="listing-price-highlight listing-price-highlight--bottom">
+          <span className="listing-price-label">Cena</span>
+          <span className="listing-price-value">{pricePair.value}</span>
+        </div>
+      )}
+
       {canEdit && (
         <div className="listing-details-edit-section">
           {!editMode ? (
-            <button
-              className="edit-button"
-              onClick={() => setEditMode(true)}
-            >
+            <button className="edit-button" onClick={() => setEditMode(true)}>
               Edytuj ogłoszenie
             </button>
           ) : (
@@ -746,13 +839,11 @@ export default function ListingDetails() {
         </div>
       )}
 
-      {/* LIGHTBOX – pełnoekranowy podgląd zdjęcia */}
       {lightboxOpen && lightboxImage && (
         <div
           className="lightbox-overlay"
           onClick={() => setLightboxOpen(false)}
         >
-          {/* strzałka w lewo */}
           {images.length > 1 && (
             <button
               className="lightbox-arrow lightbox-arrow-left"
@@ -760,8 +851,7 @@ export default function ListingDetails() {
                 e.stopPropagation();
                 setLightboxIndex((prev) => {
                   if (!images.length) return prev;
-                  const next =
-                    prev === 0 ? images.length - 1 : prev - 1;
+                  const next = prev === 0 ? images.length - 1 : prev - 1;
                   setLightboxImage(images[next].src);
                   return next;
                 });
@@ -778,7 +868,6 @@ export default function ListingDetails() {
             onClick={(e) => e.stopPropagation()}
           />
 
-          {/* strzałka w prawo */}
           {images.length > 1 && (
             <button
               className="lightbox-arrow lightbox-arrow-right"
