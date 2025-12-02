@@ -499,32 +499,56 @@ router.patch('/:id/featured', authRequired, async (req, res) => {
 
 
 router.delete('/:id', authRequired, async (req, res) => {
-  const listingId = req.params.id;
+  const listingId = Number(req.params.id);
 
   try {
+    if (!listingId) {
+      return res.status(400).json({ message: 'Nieprawidłowe ID ogłoszenia.' });
+    }
+
+    // 1. Usuń wszystkie wiadomości powiązane z ogłoszeniem
+    await pool.query(
+      'DELETE FROM message WHERE listing_id = $1',
+      [listingId]
+    );
+
+    // 2. Pobierz zdjęcia, żeby usunąć fizyczne pliki
     const { rows: images } = await pool.query(
       'SELECT path FROM listing_images WHERE listing_id = $1',
       [listingId]
     );
 
-    await pool.query('DELETE FROM listing_images WHERE listing_id = $1', [listingId]);
+    // 3. Usuń rekordy zdjęć
+    await pool.query(
+      'DELETE FROM listing_images WHERE listing_id = $1',
+      [listingId]
+    );
 
+    // 4. Usuń pliki zdjęć
     for (const img of images) {
       if (!img.path) continue;
       const filePath = path.join(process.cwd(), 'backend', img.path);
       if (fs.existsSync(filePath)) {
         fs.unlink(filePath, (err) => {
-          if (err) console.error('❌ Błąd przy usuwaniu pliku:', err);
+          if (err) console.error('Błąd przy usuwaniu pliku:', err);
         });
       }
     }
 
-    await pool.query('DELETE FROM listing WHERE id = $1', [listingId]);
+    // 5. Usuń ogłoszenie
+    await pool.query(
+      'DELETE FROM listing WHERE id = $1',
+      [listingId]
+    );
 
-    res.json({ message: 'Ogłoszenie i powiązane zdjęcia zostały usunięte.' });
+    res.json({
+      ok: true,
+      message: 'Ogłoszenie, zdjęcia oraz powiązane wiadomości zostały usunięte.'
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Błąd przy usuwaniu ogłoszenia.' });
+    console.error('Błąd przy usuwaniu ogłoszenia:', err);
+    res.status(500).json({ message: 'Błąd serwera przy usuwaniu ogłoszenia.' });
   }
 });
 
