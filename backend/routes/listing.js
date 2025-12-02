@@ -236,7 +236,7 @@ router.get('/', async (req, res) => {
       category,
       help_type,
       page,
-      limit,
+      limit
     } = req.query;
 
     const where = [];
@@ -302,7 +302,10 @@ router.get('/', async (req, res) => {
         l.*,
         u.username AS author_username,
         (
-          SELECT 'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          SELECT COALESCE(
+            li.path,
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          )
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY li.id ASC
@@ -370,7 +373,10 @@ router.get('/featured', async (req, res) => {
         l.*,
         u.username AS author_username,
         (
-          SELECT 'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          SELECT COALESCE(
+            li.path,
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          )
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY li.id ASC
@@ -611,14 +617,26 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/images', async (req, res) => {
   try {
     const listingId = Number(req.params.id);
-    if (!listingId) return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+    if (!listingId) {
+      return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+    }
 
     const { rows } = await pool.query(
-      "SELECT id, 'data:' || mime || ';base64,' || encode(data,'base64') AS data_url FROM listing_images WHERE listing_id = $1 ORDER BY id ASC",
+      `
+      SELECT
+        id,
+        COALESCE(
+          path,
+          'data:' || mime || ';base64,' || encode(data,'base64')
+        ) AS path
+      FROM listing_images
+      WHERE listing_id = $1
+      ORDER BY id ASC
+      `,
       [listingId]
     );
 
-    const images = rows.map(r => ({ id: r.id, dataUrl: r.data_url }));
+    const images = rows.map((r) => ({ id: r.id, path: r.path }));
     return res.json(images);
   } catch (err) {
     console.error('Błąd pobierania zdjęć ogłoszenia:', err.message);

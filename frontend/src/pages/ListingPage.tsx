@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import './ListingPage.css';
 import { useAuth } from '../auth/AuthContext';
@@ -6,18 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
 
-async function fetchFirstImageFor(listingId: number): Promise<string | null> {
-  try {
-    const r = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
-      credentials: 'include',
-    });
-    if (!r.ok) return null;
-    const imgs: { id: number; dataUrl: string }[] = await r.json();
-    return imgs.length ? imgs[0].dataUrl : null;
-  } catch {
-    return null;
-  }
-}
+
 
 type Category = { id: number; name: string };
 type Subcategory = { id: number; name: string };
@@ -31,7 +20,7 @@ interface Listing {
   user_id: number;
   author_username?: string;
   primary_image?: string | null;
-  is_featured?: boolean;
+  is_featured?: boolean;  
 }
 
 type FilterType = '' | 'work' | 'help' | 'sales';
@@ -48,8 +37,6 @@ const ListingPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   const [helpTypeFilter, setHelpTypeFilter] = useState<'all' | 'offer' | 'need'>('all');
-  const [imageIndex, setImageIndex] = useState<Record<number, number>>({});
-  const [listingImages, setListingImages] = useState<Record<number, string[]>>({});
 
   const params = new URLSearchParams(location.search);
   const urlType = params.get('type') as FilterType | null;
@@ -58,26 +45,11 @@ const ListingPage: React.FC = () => {
   const searchParam = (searchParamRaw ?? '').trim().toLowerCase();
 
   const [typeFilter, setTypeFilter] = useState<FilterType>(
-    urlType === 'work' || urlType === 'sales' || urlType === 'help' ? urlType : ''
+    urlType === 'work' || urlType === 'sales' || urlType === 'help'
+      ? urlType
+      : ''
   );
 
-  const showPrev = (listingId: number) => {
-    setImageIndex((prev) => {
-      const images = listingImages[listingId] || [];
-      const current = prev[listingId] || 0;
-      const next = current === 0 ? images.length - 1 : current - 1;
-      return { ...prev, [listingId]: next };
-    });
-  };
-
-  const showNext = (listingId: number) => {
-    setImageIndex((prev) => {
-      const images = listingImages[listingId] || [];
-      const current = prev[listingId] || 0;
-      const next = current === images.length - 1 ? 0 : current + 1;
-      return { ...prev, [listingId]: next };
-    });
-  };
 
   // Wczytanie ulubionych ogłoszeń (raz, po zalogowaniu)
   useEffect(() => {
@@ -101,6 +73,9 @@ const ListingPage: React.FC = () => {
     };
     fetchFavorites();
   }, [user]);
+
+
+
 
   // Pobieranie kategorii po zmianie typu
   useEffect(() => {
@@ -199,6 +174,7 @@ const ListingPage: React.FC = () => {
           : filled;
 
         setListings(filtered);
+        setLoading(false);
       })
       .catch((err) => {
         console.error('Błąd przy pobieraniu ogłoszeń: ', err);
@@ -206,48 +182,7 @@ const ListingPage: React.FC = () => {
       });
   }, [typeFilter, categoryFilter, subcategoryFilter, helpTypeFilter, location.search]);
 
-  // Pobieranie wszystkich zdjęć do karuzeli, po załadowaniu listy ogłoszeń
-  useEffect(() => {
-    if (!listings.length) {
-      setListingImages({});
-      setLoading(false);
-      return;
-    }
 
-    const loadImages = async () => {
-      const imgsMap: Record<number, string[]> = {};
-
-      await Promise.all(
-        listings.map(async (l) => {
-          try {
-            const res = await fetch(`${API_BASE}/api/listings/${l.id}/images`);
-            if (!res.ok) {
-              if (l.primary_image) {
-                imgsMap[l.id] = [l.primary_image];
-              }
-              return;
-            }
-
-            const imgs = await res.json();
-            if (Array.isArray(imgs) && imgs.length > 0) {
-              imgsMap[l.id] = imgs.map((i: any) => i.dataUrl);
-            } else if (l.primary_image) {
-              imgsMap[l.id] = [l.primary_image];
-            }
-          } catch {
-            if (l.primary_image) {
-              imgsMap[l.id] = [l.primary_image];
-            }
-          }
-        })
-      );
-
-      setListingImages(imgsMap);
-      setLoading(false);
-    };
-
-    loadImages();
-  }, [listings]);
 
   //Kliknięcie serduszka w kafelku
   const handleToggleFavorite = async (
@@ -255,8 +190,9 @@ const ListingPage: React.FC = () => {
     listingId: number,
     isCurrentlyFavorite: boolean
   ) => {
-    e.preventDefault();
+    e.preventDefault(); 
     e.stopPropagation();
+
 
     if (!user) {
       navigate('/auth');
@@ -266,6 +202,7 @@ const ListingPage: React.FC = () => {
     try {
       const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
       const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
+
         method,
         credentials: 'include',
         headers: {
@@ -273,6 +210,7 @@ const ListingPage: React.FC = () => {
           ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
         },
       });
+
 
       if (!res.ok) {
         console.error('Błąd zmiany ulubionych:', await res.text());
@@ -288,6 +226,7 @@ const ListingPage: React.FC = () => {
       console.error('Błąd podczas zmiany ulubionych:', err);
     }
   };
+
 
   return (
     <div className="listing-page">
@@ -334,7 +273,9 @@ const ListingPage: React.FC = () => {
               id="subcategoryFilter"
               className="filter-select"
               value={subcategoryFilter}
-              onChange={(e) => setSubcategoryFilter(Number(e.target.value) || '')}
+              onChange={(e) =>
+                setSubcategoryFilter(Number(e.target.value) || '')
+              }
             >
               <option value="">Wszystkie</option>
               {subcategories.map((s) => (
@@ -368,16 +309,23 @@ const ListingPage: React.FC = () => {
         </div>
       </div>
 
+
       {loading ? (
-        <p style={{ textAlign: 'center', marginTop: '20px' }}>
-          Ładowanie ogłoszeń...
-        </p>
-      ) : listings.length === 0 ? (
-        <p>Brak ogłoszeń.</p>
-      ) : (
+      <p style={{ textAlign: 'center', marginTop: '20px' }}>
+        Ładowanie ogłoszeń...
+      </p>
+    ) : listings.length === 0 ? (
+      <p>Brak ogłoszeń.</p>
+    ) : (
         <div className="listing-grid">
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
+            const imgSrc =
+              listing.primary_image
+                ? listing.primary_image.startsWith('data:')
+                  ? listing.primary_image
+                  : `${API_BASE}${listing.primary_image}`
+                : null;
             return (
               <div
                 key={listing.id}
@@ -393,7 +341,9 @@ const ListingPage: React.FC = () => {
                   aria-label={
                     isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'
                   }
-                  onClick={(e) => handleToggleFavorite(e, listing.id, isFav)}
+                  onClick={(e) =>
+                    handleToggleFavorite(e, listing.id, isFav)
+                  }
                 >
                   <svg
                     aria-hidden="true"
@@ -413,25 +363,25 @@ const ListingPage: React.FC = () => {
                   </svg>
                 </button>
 
-                {/* znaczek WYRÓŻNIONE */}
-                {listing.is_featured && (
-                  <div
-                    className="featured-badge"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="#FACC15"
+                  {/* znaczek WYRÓŻNIONE */}
+                  {listing.is_featured && (
+                    <div
+                      className="featured-badge"
+                      onClick={(e) => {
+                        e.stopPropagation();   
+                      }}
                     >
-                      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
-                    </svg>
-                  </div>
-                )}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="#FACC15"     
+                      >
+                        <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+                      </svg>
+                    </div>
+                  )}
 
                 <Link
                   to={`/listing/${listing.id}`}
@@ -440,45 +390,12 @@ const ListingPage: React.FC = () => {
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >
                   <div className="listing-thumb-wrapper">
-                    {listingImages[listing.id] &&
-                    listingImages[listing.id].length > 0 ? (
-                      <>
-                        <img
-                          className="listing-thumb"
-                          src={
-                            listingImages[listing.id][
-                              imageIndex[listing.id] ?? 0
-                            ]
-                          }
-                          alt={listing.title}
-                        />
-
-                        {listingImages[listing.id].length > 1 && (
-                          <>
-                            <button
-                              className="thumb-arrow left"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                showPrev(listing.id);
-                              }}
-                            >
-                              ←
-                            </button>
-
-                            <button
-                              className="thumb-arrow right"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                showNext(listing.id);
-                              }}
-                            >
-                              →
-                            </button>
-                          </>
-                        )}
-                      </>
+                    {imgSrc ? (
+                      <img
+                        className="listing-thumb"
+                        src={imgSrc}
+                        alt={listing.title}
+                      />
                     ) : (
                       <div className="listing-thumb-space">
                         <svg
@@ -493,6 +410,7 @@ const ListingPage: React.FC = () => {
                       </div>
                     )}
                   </div>
+
 
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
