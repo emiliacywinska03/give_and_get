@@ -24,6 +24,26 @@ const Breadcrumbs: React.FC = () => {
   // /listing/:id – szczegóły ogłoszenia
   if (pathname.startsWith('/listing/')) {
     items.push({ label: 'Przeglądaj ogłoszenia', to: '/listings' });
+
+    const categoryName = state?.categoryName;
+    const subcategoryName = state?.subcategoryName;
+
+    if (categoryName) {
+      items.push({
+        label: categoryName,
+        to: `/listings?category=${encodeURIComponent(categoryName)}`,
+      });
+    }
+
+    if (categoryName && subcategoryName) {
+      items.push({
+        label: subcategoryName,
+        to: `/listings?category=${encodeURIComponent(
+          categoryName
+        )}&subcategory=${encodeURIComponent(subcategoryName)}`,
+      });
+    }
+
     items.push({ label: state?.listingTitle || 'Szczegóły ogłoszenia' });
   }
 

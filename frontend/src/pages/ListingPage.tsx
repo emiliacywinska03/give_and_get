@@ -20,7 +20,9 @@ interface Listing {
   user_id: number;
   author_username?: string;
   primary_image?: string | null;
-  is_featured?: boolean;  
+  is_featured?: boolean;
+  category_name?: string;
+  subcategory_name?: string;
 }
 
 type FilterType = '' | 'work' | 'help' | 'sales';
@@ -330,7 +332,15 @@ const ListingPage: React.FC = () => {
               <div
                 key={listing.id}
                 className="listing-card"
-                onClick={() => navigate(`/listing/${listing.id}`)}
+                onClick={() =>
+                  navigate(`/listing/${listing.id}`, {
+                    state: {
+                      listingTitle: listing.title,
+                      categoryName: listing.category_name,
+                      subcategoryName: listing.subcategory_name,
+                    },
+                  })
+                }
                 style={{ cursor: 'pointer' }}
               >
                 {/* ikona serduszka w rogu kafelka */}
@@ -385,6 +395,11 @@ const ListingPage: React.FC = () => {
 
                 <Link
                   to={`/listing/${listing.id}`}
+                  state={{
+                    listingTitle: listing.title,
+                    categoryName: listing.category_name,
+                    subcategoryName: listing.subcategory_name,
+                  }}
                   className="listing-link"
                   aria-label={`Zobacz ogłoszenie: ${listing.title}`}
                   style={{ textDecoration: 'none', color: 'inherit' }}

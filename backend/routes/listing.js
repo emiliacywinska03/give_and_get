@@ -68,6 +68,16 @@ router.post('/', authRequired, async (req, res) => {
     isFree,
     negotiable,
     condition,
+
+    // pola związane z ogłoszeniami o pracę
+    salary,
+    employmentType,
+    employment_type,
+    jobMode,
+    job_mode,
+    jobCategory,
+    job_category,
+    requirements,
   } = req.body;
 
   const catId =
@@ -132,6 +142,19 @@ router.post('/', authRequired, async (req, res) => {
     negotiableValue = !!negotiable;
   }
 
+  // Normalizacja pól dla ogłoszeń o pracę
+  const salaryValue =
+    salary === null || typeof salary === 'undefined' || salary === ''
+      ? null
+      : Number.isNaN(Number(salary))
+      ? null
+      : Number(salary);
+
+  const employmentTypeValue = employment_type || employmentType || null;
+  const workModeValue = job_mode || jobMode || null;
+  const jobCategoryValue = job_category || jobCategory || null;
+  const requirementsValue = requirements || null;
+
   try {
     const result = await pool.query(
       `INSERT INTO listing (
@@ -147,9 +170,14 @@ router.post('/', authRequired, async (req, res) => {
           price,
           item_condition,
           is_free,
-          negotiable
+          negotiable,
+          salary,
+          employment_type,
+          work_mode,
+          job_category,
+          requirements
         )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING *`,
       [
         title,
@@ -165,6 +193,11 @@ router.post('/', authRequired, async (req, res) => {
         itemCondition,
         isFreeValue,
         negotiableValue,
+        salaryValue,
+        employmentTypeValue,
+        workModeValue,
+        jobCategoryValue,
+        requirementsValue,
       ]
     );
 

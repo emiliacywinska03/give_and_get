@@ -69,6 +69,10 @@ const ALIASES: Record<string, string> = {
   isFree: 'is_free',
 
   item_condition: 'condition',
+  jobMode: 'work_mode',
+  job_mode: 'work_mode',
+  jobCategory: 'job_category',
+  job_category: 'job_category',
 };
 
 const LABELS: Record<string, string> = {
@@ -89,6 +93,7 @@ const LABELS: Record<string, string> = {
   salary_max: 'Wynagrodzenie do',
   employment_type: 'Forma zatrudnienia',
   work_mode: 'Tryb pracy',
+  job_category: 'Kategoria stanowiska',
   requirements: 'Wymagania',
   responsibilities: 'Obowiązki',
   benefits: 'Benefity',
@@ -115,6 +120,7 @@ const PREFERRED_ORDER = [
   'salary_max',
   'employment_type',
   'work_mode',
+  'job_category',
   'requirements',
   'responsibilities',
   'benefits',
@@ -421,9 +427,24 @@ export default function ListingDetails() {
 
   const canEdit = !!user && !!data && user.id === data.user_id;
   const infoPairs = collectPairs(data);
-  const infoPairsWithoutPrice = infoPairs.filter((p) => p.key !== 'price');
+  const infoPairsWithoutPrice = infoPairs.filter(
+  (p) =>
+    p.key !== 'price' &&
+    p.key !== 'title' &&
+    p.key !== 'category_name' &&
+    p.key !== 'subcategory_name' &&
+    p.key !== 'description' &&
+    p.key !== 'negotiable' &&
+    p.key !== 'requirements'
+);
 
   const pricePair = infoPairs.find((p) => p.key === 'price');
+  const negotiablePair = infoPairs.find((p) => p.key === 'negotiable');
+  const isNegotiable =
+    negotiablePair && typeof negotiablePair.value === 'string'
+      ? negotiablePair.value.toLowerCase().startsWith('t')
+      : false;
+  const requirementsPair = infoPairs.find((p) => p.key === 'requirements');
 
   useEffect(() => {
     if (data && canEdit) {
@@ -750,19 +771,48 @@ export default function ListingDetails() {
           </div>
         )}
 
-        <dl className="listing-details-dl">
-          {infoPairsWithoutPrice.map(({ key, label, value }) => (
-            <div key={key} className="listing-details-row">
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <section className="listing-section">
+  <h3 className="listing-section-title">Szczegóły ogłoszenia</h3>
+  <div className="listing-attributes">
+    {infoPairsWithoutPrice.map(({ key, label, value }) => (
+      <div key={key} className="listing-attribute">
+        <span className="listing-attribute-label">{label}</span>
+        <span className="listing-attribute-value">{value}</span>
+      </div>
+    ))}
+  </div>
+</section>
+
+        {data.description && (
+          <section className="listing-section listing-section-description">
+            <h3 className="listing-section-title">Opis ogłoszenia</h3>
+            <p className="listing-description-text">
+              {data.description}
+            </p>
+          </section>
+        )}
+
+        {requirementsPair && (
+          <section className="listing-section listing-section-description">
+            <h3 className="listing-section-title">Wymagania</h3>
+            <ul className="listing-description-text listing-requirements-list">
+              {String(requirementsPair.value)
+                .split('\n')
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+                .map((line, idx) => (
+                  <li key={idx}>{line}</li>
+                ))}
+            </ul>
+          </section>
+        )}
       </div>
 
       {pricePair && (
         <div className="listing-price-highlight listing-price-highlight--bottom">
-          <span className="listing-price-label">Cena</span>
+          <span className="listing-price-label">
+            {isNegotiable ? 'Cena do negocjacji' : 'Cena'}
+          </span>
           <span className="listing-price-value">{pricePair.value}</span>
         </div>
       )}

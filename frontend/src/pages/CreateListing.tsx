@@ -317,7 +317,13 @@ const CreateListing: React.FC = () => {
                     {type === 'work' &&(
                         <>
                             <input type="text" placeholder="Wynagrodzenie (PLN)" value={salary} onChange={(e)=> setSalary(e.target.value)}required/>
-                            <input type="text" placeholder="Wymagania" value={requirements} onChange={(e)=>setRequirements(e.target.value)} required/>
+                            <textarea
+                                placeholder="Wymagania (każdy punkt w nowej linii)"
+                                value={requirements}
+                                onChange={(e) => setRequirements(e.target.value)}
+                                rows={4}
+                                required
+                            />
                             <select value={jobMode} onChange={(e)=> setJobMode(e.target.value)} required>
                             <option value="">Tryb pracy</option>
                             <option value="zdalna">Zdalna</option>
