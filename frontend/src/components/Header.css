@@ -381,3 +381,37 @@ body.dark-mode .search-suggestion-item:hover {
   line-height: 1;
   box-shadow: 0 0 0 2px #ffffff; 
 }
+
+.menu-button {
+  display: none;             
+  border: none;
+  background: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+@media (max-width: 1000px) {
+  .menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .right {
+    display: none;
+  }
+
+  .header-content {
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .left {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
