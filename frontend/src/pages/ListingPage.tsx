@@ -27,6 +27,19 @@ interface Listing {
 
 type FilterType = '' | 'work' | 'help' | 'sales';
 
+const getDefaultIconForType = (typeId?: number) => {
+  if (typeId === 3) {
+    // PRACA
+    return "/icons/work-case-filled-svgrepo-com.svg";
+  }
+  if (typeId === 2) {
+    // POMOC
+    return "/icons/hands-holding-heart-svgrepo-com.svg";
+  }
+  return null;
+};
+
+
 const ListingPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -405,26 +418,35 @@ const ListingPage: React.FC = () => {
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >
                   <div className="listing-thumb-wrapper">
-                    {imgSrc ? (
+                  {imgSrc ? (
+                    <img
+                      className="listing-thumb"
+                      src={imgSrc}
+                      alt={listing.title}
+                    />
+                  ) : getDefaultIconForType(listing.type_id) ? (
+                    <div className="listing-thumb-space">
                       <img
                         className="listing-thumb"
-                        src={imgSrc}
-                        alt={listing.title}
+                        src={getDefaultIconForType(listing.type_id)!}
+                        alt="Ikona ogłoszenia"
+                        style={{ objectFit: "contain", padding: "12px" }}
                       />
-                    ) : (
-                      <div className="listing-thumb-space">
-                        <svg
-                          className="listing-thumb-placeholder-icon"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <rect x="4" y="4" width="16" height="16" rx="3" />
-                          <path d="M9 9l6 6M15 9l-6 6" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="listing-thumb-space">
+                      <svg
+                        className="listing-thumb-placeholder-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <rect x="4" y="4" width="16" height="16" rx="3" />
+                        <path d="M9 9l6 6M15 9l-6 6" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
 
 
                   <h3 className="listing-title">{listing.title}</h3>

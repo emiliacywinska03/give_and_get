@@ -726,3 +726,36 @@ body.dark-mode .filter-select:focus {
 
   padding-right: 36px;
 }
+
+
+.listing-thumb-space {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06); 
+  border-radius: 12px;                 
+}
+
+
+body.dark-mode .listing-thumb-space {
+    background-color: #020617 !important;
+  border-color: #374151;
+}
+
+
+body.dark-mode .listing-thumb-space img {
+  filter: invert(1);
+}
+
+.listing-thumb-space img.listing-thumb {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+
+body.dark-mode .listing-thumb-space img.listing-thumb {
+  filter: invert(1);
+}
