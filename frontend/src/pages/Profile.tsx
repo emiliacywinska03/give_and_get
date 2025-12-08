@@ -26,12 +26,25 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
       headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
     });
     if (!r.ok) return null;
-    const imgs: { id: number; dataUrl: string }[] = await r.json();
-    return imgs.length ? imgs[0].dataUrl : null;
-  } catch {
+
+    const imgs: { id: number; dataUrl?: string; path?: string }[] = await r.json();
+    if (!Array.isArray(imgs) || imgs.length === 0) return null;
+
+    const first = imgs[0];
+    const raw = first.dataUrl || first.path;
+    if (!raw) return null;
+
+    if (raw.startsWith('http') || raw.startsWith('data:')) {
+      return raw;
+    }
+    
+    return `${API_BASE}${raw}`;
+  } catch (e) {
+    console.error('Błąd pobierania pierwszego zdjęcia:', e);
     return null;
   }
 }
+
 
 const Profile: React.FC = () => {
   const { user, loading, logout, setUser } = useAuth();
@@ -286,11 +299,8 @@ const Profile: React.FC = () => {
                   }
                   style={{ cursor: 'pointer', position: 'relative' }}
                 >
-                  {isSold && (
-                    <div className="listing-card-sold-banner">
-                      SPRZEDANO
-                    </div>
-                  )}
+                  
+
 
                     {imgSrc ? (
                       <div className="listing-thumb">
@@ -338,32 +348,38 @@ const Profile: React.FC = () => {
                   </div>
 
                   <div className="listing-actions">
-                    {!isSold && (
-                      <button
-                        className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
-                        onClick={() => handleToggleFeatured(l.id)}
-                      >
-                        {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
+                    {isSold ? (
+                      <button className="sold-button" disabled>
+                        SPRZEDANO
                       </button>
+                    ) : (
+                      <>
+                        <button
+                          className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
+                          onClick={() => handleToggleFeatured(l.id)}
+                        >
+                          {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
+                        </button>
+
+                        <button
+                          className="delete-button"
+                          onClick={() => handleDelete(l.id)}
+                        >
+                          Usuń
+                        </button>
+
+                        <button
+                          className="edit-button"
+                          onClick={() =>
+                            navigate(`/listing/${l.id}`, {
+                              state: { fromProfile: true, editMode: true },
+                            })
+                          }
+                        >
+                          Edytuj
+                        </button>
+                      </>
                     )}
-
-                    <button
-                      className="delete-button"
-                      onClick={() => handleDelete(l.id)}
-                    >
-                      Usuń
-                    </button>
-
-                    <button
-                      className="edit-button"
-                      onClick={() =>
-                        navigate(`/listing/${l.id}`, {
-                          state: { fromProfile: true, editMode: true },
-                        })
-                      }
-                    >
-                      Edytuj
-                    </button>
                   </div>
 
 
