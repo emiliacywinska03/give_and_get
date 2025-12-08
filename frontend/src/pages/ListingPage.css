@@ -759,3 +759,58 @@ body.dark-mode .listing-thumb-space img {
 body.dark-mode .listing-thumb-space img.listing-thumb {
   filter: invert(1);
 }
+
+.buy-now-button {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.listing-purchased-label {
+  margin-top: 8px;
+  display: block;
+  font-size: 14px;
+  color: #2f855a;
+}
+
+.blik-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.blik-modal {
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  max-width: 380px;
+  width: 100%;
+}
+
+.blik-input {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.blik-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.blik-error {
+  margin-top: 8px;
+  color: red;
+  font-size: 14px;
+}

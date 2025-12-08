@@ -627,3 +627,24 @@ body.dark-mode .listing-actions .edit-button {
 body.dark-mode .listing-actions .edit-button:hover {
   background-color: #6b7280;
 }
+
+/* karta sprzedanego ogłoszenia */
+.listing-card--sold {
+  opacity: 0.6;
+  position: relative;
+}
+
+/* badge SPRZEDANO w prawym górnym rogu zdjęcia/karty */
+.listing-card-sold-banner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #4a5568;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  z-index: 2;
+}

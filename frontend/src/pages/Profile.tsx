@@ -12,6 +12,8 @@ interface Listing {
   images?: any[];
   primary_image?: string | null;
   is_featured?: boolean; 
+  status_id?: number | null;   
+  type_id?: number | null; 
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
@@ -266,20 +268,30 @@ const Profile: React.FC = () => {
           <p>Nie masz jeszcze żadnych ogłoszeń.</p>
         ) : (
           <div className="listing-grid">
-            {listings.map((l) => {
-              const imgSrc = l.primary_image || null;
+          {listings.map((l) => {
+            const imgSrc = l.primary_image || null;
+            const isSold = l.status_id === 3; // 3 = sprzedane 
 
-              return (
-                <div key={l.id} className="listing-card">
-                  <div
-                    className="listing-main"
-                    onClick={() =>
-                      navigate(`/listing/${l.id}`, {
-                        state: { fromProfile: true },
-                      })
-                    }
-                    style={{ cursor: 'pointer' }}
-                  >
+            return (
+              <div
+                key={l.id}
+                className={`listing-card ${isSold ? 'listing-card--sold' : ''}`}
+              >
+                <div
+                  className="listing-main"
+                  onClick={() =>
+                    navigate(`/listing/${l.id}`, {
+                      state: { fromProfile: true },
+                    })
+                  }
+                  style={{ cursor: 'pointer', position: 'relative' }}
+                >
+                  {isSold && (
+                    <div className="listing-card-sold-banner">
+                      SPRZEDANO
+                    </div>
+                  )}
+
                     {imgSrc ? (
                       <div className="listing-thumb">
                         <img src={imgSrc} alt={l.title} />
@@ -326,12 +338,14 @@ const Profile: React.FC = () => {
                   </div>
 
                   <div className="listing-actions">
-                    <button
-                      className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
-                      onClick={() => handleToggleFeatured(l.id)}
-                    >
-                      {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
-                    </button>
+                    {!isSold && (
+                      <button
+                        className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
+                        onClick={() => handleToggleFeatured(l.id)}
+                      >
+                        {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
+                      </button>
+                    )}
 
                     <button
                       className="delete-button"
@@ -339,6 +353,7 @@ const Profile: React.FC = () => {
                     >
                       Usuń
                     </button>
+
                     <button
                       className="edit-button"
                       onClick={() =>
@@ -350,6 +365,7 @@ const Profile: React.FC = () => {
                       Edytuj
                     </button>
                   </div>
+
 
                 </div>
               );

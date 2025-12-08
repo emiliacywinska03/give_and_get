@@ -12,6 +12,8 @@ try {
   console.warn('[listing.js] Multer not available yet. Image upload route will be disabled until installed.');
 }
 
+const SOLD_STATUS_ID = 3;
+
 function authRequired(req, res, next) {
   try {
     const token = req.cookies?.gg_token;
@@ -316,6 +318,9 @@ router.get('/', async (req, res) => {
       );
     }
 
+    // Ukrywamy ogłoszenia sprzedane z głównej listy
+    where.push(`(l.status_id IS NULL OR l.status_id <> ${SOLD_STATUS_ID})`);
+
     // paginacja – domyślnie 20 ogłoszeń na stronę
     let pageNum = Number(page) || 1;
     let limitNum = Number(limit) || 20;
@@ -418,6 +423,7 @@ router.get('/featured', async (req, res) => {
       FROM listing l
       JOIN "user" u ON u.id = l.user_id
       WHERE l.is_featured = TRUE
+        AND (l.status_id IS NULL OR l.status_id <> 3)
       ORDER BY l.created_at DESC
       LIMIT 50
       `
@@ -617,6 +623,62 @@ router.put('/:id', authRequired, async (req, res) => {
     res.status(500).json({ error: 'Błąd wewnętrzny', details: err.message });
   }
 });
+
+
+// Symulacja zakupu ogłoszenia (BLIK)
+router.post('/:id/purchase', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  const { blikCode } = req.body || {};
+
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+  }
+
+  if (!blikCode || !/^\d{6}$/.test(String(blikCode))) {
+    return res.status(400).json({ error: 'Kod BLIK musi mieć dokładnie 6 cyfr' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, type_id, user_id, is_free FROM listing WHERE id = $1',
+      [listingId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Ogłoszenie nie istnieje' });
+    }
+
+    const listing = rows[0];
+
+    if (listing.user_id === req.user.id) {
+      return res.status(400).json({ error: 'Nie możesz kupić własnego ogłoszenia' });
+    }
+
+    if (listing.type_id !== 1) {
+      return res.status(400).json({ error: 'To ogłoszenie nie jest ofertą sprzedaży' });
+    }
+
+    if (listing.is_free) {
+      return res.status(400).json({ error: 'Ogłoszenie jest darmowe – nie wymaga płatności' });
+    }
+
+      // Ustawiamy status na "sprzedane"
+      await pool.query(
+         'UPDATE listing SET status_id = $1 WHERE id = $2',
+        [SOLD_STATUS_ID, listingId]
+      );
+    
+      return res.json({
+        ok: true,
+        message: 'Zakup udany'
+      });    
+  } catch (err) {
+    console.error('Błąd przy symulacji zakupu:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera podczas zakupu' });
+  }
+});
+
+
 
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);

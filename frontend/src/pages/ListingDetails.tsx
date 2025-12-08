@@ -18,6 +18,11 @@ type ListingDetails = {
   subcategory_name?: string;
   images?: string[];
   help_type?: 'offer' | 'need' | null;
+  type_id?: number;          
+  price?: number | null;
+  is_free?: boolean;
+  negotiable?: boolean;
+  status_id?: number | null;
 };
 
 type ListingImage = {
@@ -310,6 +315,12 @@ export default function ListingDetails() {
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
+
+  const [showPayment, setShowPayment] = useState(false);
+  const [blikCode, setBlikCode] = useState('');
+  const [blikError, setBlikError] = useState('');
+  const [isPurchased, setIsPurchased] = useState(false);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -621,6 +632,67 @@ export default function ListingDetails() {
     }
   };
 
+
+  const handleBuyNowClick = () => {
+    if (!user) {
+      // niezalogowany kupujący – przekieruj do logowania
+      navigate('/auth');
+      return;
+    }
+    if (user.id === data?.user_id) {
+      alert('Nie możesz kupić własnego ogłoszenia');
+      return;
+    }
+    setShowPayment(true);
+  };
+
+  const handleConfirmBlik = async () => {
+    if (!id) return;
+
+    if (!/^\d{6}$/.test(blikCode)) {
+      setBlikError('Kod BLIK musi mieć dokładnie 6 cyfr.');
+      return;
+    }
+
+    try {
+      setPurchaseLoading(true);
+      setBlikError('');
+
+      const res = await fetch(`${API_BASE}/api/listings/${id}/purchase`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({ blikCode }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        setBlikError(err?.error || 'Błąd podczas symulacji płatności.');
+        return;
+      }
+
+      // ustawiamy lokalnie status na "sprzedane" (3 – jak w backendzie)
+      setData((prev) =>
+        prev ? { ...prev, status_id: 3 } : prev
+      );
+      setIsPurchased(true);
+      setShowPayment(false);
+      setBlikCode('');
+      alert('Zakup udany');
+      
+    } catch (e) {
+      console.error('Błąd płatności:', e);
+      setBlikError('Wystąpił błąd podczas płatności.');
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+
+
+
   if (loading) {
     return (
       <div className="listing-details-container">
@@ -814,8 +886,28 @@ export default function ListingDetails() {
             {isNegotiable ? 'Cena do negocjacji' : 'Cena'}
           </span>
           <span className="listing-price-value">{pricePair.value}</span>
+
+          {/* Jeśli ogłoszenie sprzedane – zamiast przycisku tylko label */}
+          {data.status_id === 3 || isPurchased ? (
+            <span className="listing-purchased-label">
+              SPRZEDANO
+            </span>
+          ) : (
+            data.type_id === 1 &&
+            !data.is_free && (
+              <button
+                className="buy-now-button"
+                type="button"
+                onClick={handleBuyNowClick}
+              >
+                Kup teraz
+              </button>
+            )
+          )}
         </div>
       )}
+
+
 
       {canEdit && (
         <div className="listing-details-edit-section">
@@ -888,6 +980,53 @@ export default function ListingDetails() {
           )}
         </div>
       )}
+
+{showPayment && (
+        <div
+          className="blik-modal-backdrop"
+          onClick={() => setShowPayment(false)}
+        >
+          <div
+            className="blik-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Płatność BLIK</h2>
+            <p>Wpisz 6-cyfrowy kod BLIK, aby zakupić towar.</p>
+
+            <input
+              type="text"
+              maxLength={6}
+              value={blikCode}
+              onChange={(e) =>
+                setBlikCode(e.target.value.replace(/\D/g, ''))
+              }
+              className="blik-input"
+              placeholder="••••••"
+            />
+
+            {blikError && (
+              <div className="blik-error">{blikError}</div>
+            )}
+
+            <div className="blik-actions">
+              <button
+                type="button"
+                onClick={() => setShowPayment(false)}
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBlik}
+                disabled={purchaseLoading}
+              >
+                {purchaseLoading ? 'Przetwarzanie…' : 'Zapłać BLIK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {lightboxOpen && lightboxImage && (
         <div
