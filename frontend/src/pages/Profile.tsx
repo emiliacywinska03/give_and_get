@@ -54,45 +54,81 @@ const Profile: React.FC = () => {
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const navigate = useNavigate();
 
+    // 1 = sprzedaż, 2 = praca, 3 = pomoc
+    const renderThumb = (item: Listing) => {
+      const imgSrc = item.primary_image || null;
+  
+      // 1) jeśli mamy normalne zdjęcie
+      if (imgSrc) {
+        return (
+          <div className="listing-thumb">
+            <img src={imgSrc} alt={item.title} />
+          </div>
+        );
+      }
+  
+      // 2) PRACA – teczka
+      if (item.type_id === 2) {
+        return (
+          <div className="listing-thumb-space listing-thumb-space--icon">
+            <img
+              src="/icons/work-case-filled-svgrepo-com.svg"
+              alt="Ogłoszenie pracy"
+              className="listing-thumb-icon"
+            />
+          </div>
+        );
+      }
+  
+      // 3) POMOC – dłonie z sercem
+      if (item.type_id === 3) {
+        return (
+          <div className="listing-thumb-space listing-thumb-space--icon">
+            <img
+              src="/icons/hands-holding-heart-svgrepo-com.svg"
+              alt="Ogłoszenie pomocy"
+              className="listing-thumb-icon"
+            />
+          </div>
+        );
+      }
+  
+      // 4) domyślny placeholder X
+      return (
+        <div className="listing-thumb-space">
+          <svg
+            className="listing-thumb-placeholder-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="3"
+              ry="3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M7 7l10 10M17 7L7 17"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      );
+    };
+  
 
   useEffect(() => {
     if (!user) return;
 
-    // ---------- Twoje ogłoszenia ----------
-    const fetchListings = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/listings/my`, {
-          credentials: 'include',
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-        });
-        const data = await res.json();
-
-        if (!res.ok || !Array.isArray(data)) {
-          console.error('Niepoprawna odpowiedź API (my):', data);
-          return;
-        }
-
-        const withImages: Listing[] = await Promise.all(
-          data.map(async (item: any) => {
-            // Spróbuj pobrać pierwsze zdjęcie z osobnego endpointu
-            const primary =
-              (item.primary_image as string | null) ??
-              (await fetchFirstImageFor(item.id));
-
-            return {
-              ...item,
-              primary_image: primary ?? null,
-            };
-          })
-        );
-
-        setListings(withImages);
-      } catch (err) {
-        console.error('Błąd pobierania ogłoszeń:', err);
-      } finally {
-        setLoadingListings(false);
-      }
-    };
+    
 
     // ---------- Ulubione ----------
     const fetchFavorites = async () => {
@@ -129,7 +165,6 @@ const Profile: React.FC = () => {
       }
     };
 
-    fetchListings();
     fetchFavorites();
   }, [user]);
 
@@ -187,6 +222,8 @@ const Profile: React.FC = () => {
       alert('Wystąpił błąd po stronie klienta.');
     }
   };
+
+  
 
 
 
@@ -271,7 +308,6 @@ const Profile: React.FC = () => {
         </div>
 
 
-
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
 
@@ -281,59 +317,26 @@ const Profile: React.FC = () => {
           <p>Nie masz jeszcze żadnych ogłoszeń.</p>
         ) : (
           <div className="listing-grid">
-          {listings.map((l) => {
-            const imgSrc = l.primary_image || null;
-            const isSold = l.status_id === 3; // 3 = sprzedane 
+            {listings.map((l) => {
+              const isSold = l.status_id === 3; // 3 = sprzedane
 
-            return (
-              <div
-                key={l.id}
-                className={`listing-card ${isSold ? 'listing-card--sold' : ''}`}
-              >
+              return (
                 <div
-                  className="listing-main"
-                  onClick={() =>
-                    navigate(`/listing/${l.id}`, {
-                      state: { fromProfile: true },
-                    })
-                  }
-                  style={{ cursor: 'pointer', position: 'relative' }}
+                  key={l.id}
+                  className={`listing-card ${
+                    isSold ? 'listing-card--sold' : ''
+                  }`}
                 >
-                  
-
-
-                    {imgSrc ? (
-                      <div className="listing-thumb">
-                        <img src={imgSrc} alt={l.title} />
-                      </div>
-                    ) : (
-                      <div className="listing-thumb-space">
-                        <svg
-                          className="listing-thumb-placeholder-icon"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <rect
-                            x="3"
-                            y="3"
-                            width="18"
-                            height="18"
-                            rx="3"
-                            ry="3"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                          />
-                          <path
-                            d="M7 7l10 10M17 7L7 17"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </div>
-                    )}
+                  <div
+                    className="listing-main"
+                    onClick={() =>
+                      navigate(`/listing/${l.id}`, {
+                        state: { fromProfile: true },
+                      })
+                    }
+                    style={{ cursor: 'pointer', position: 'relative' }}
+                  >
+                    {renderThumb(l)}
 
                     <div className="listing-content">
                       <h4 className="listing-title">{l.title}</h4>
@@ -355,7 +358,9 @@ const Profile: React.FC = () => {
                     ) : (
                       <>
                         <button
-                          className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
+                          className={`feature-button ${
+                            l.is_featured ? 'feature-button--active' : ''
+                          }`}
                           onClick={() => handleToggleFeatured(l.id)}
                         >
                           {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
@@ -381,13 +386,12 @@ const Profile: React.FC = () => {
                       </>
                     )}
                   </div>
-
-
                 </div>
               );
             })}
           </div>
         )}
+
 
         {/* ---------------- Ulubione ---------------- */}
         <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
@@ -398,8 +402,6 @@ const Profile: React.FC = () => {
         ) : (
           <div className="listing-grid">
             {favorites.map((f) => {
-              const imgSrc = f.primary_image || null;
-
               return (
                 <div key={f.id} className="listing-card">
                   <div
@@ -407,38 +409,7 @@ const Profile: React.FC = () => {
                     onClick={() => navigate(`/listing/${f.id}`)}
                     style={{ cursor: 'pointer' }}
                   >
-                    {imgSrc ? (
-                      <div className="listing-thumb">
-                        <img src={imgSrc} alt={f.title} />
-                      </div>
-                    ) : (
-                      <div className="listing-thumb-space">
-                        <svg
-                          className="listing-thumb-placeholder-icon"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <rect
-                            x="3"
-                            y="3"
-                            width="18"
-                            height="18"
-                            rx="3"
-                            ry="3"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                          />
-                          <path
-                            d="M7 7l10 10M17 7L7 17"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      </div>
-                    )}
+                    {renderThumb(f)}
 
                     <div className="listing-content">
                       <h4 className="listing-title">{f.title}</h4>
@@ -451,6 +422,7 @@ const Profile: React.FC = () => {
                 </div>
               );
             })}
+
           </div>
         )}
 
