@@ -702,3 +702,17 @@ body.dark-mode .listing-message-success {
 body.dark-mode .message-info-self {
   color: #9ca3af;
 }
+
+
+
+/* SPRZEDANE – wyszarzona belka z ceną */
+.listing-price-highlight.listing-price-highlight--bottom.listing-price-highlight--sold {
+  background: #f3f5f8;        
+  border-color: #d0d5df;
+  box-shadow: none;
+}
+
+.listing-price-highlight.listing-price-highlight--bottom.listing-price-highlight--sold .listing-price-label,
+.listing-price-highlight.listing-price-highlight--bottom.listing-price-highlight--sold .listing-price-value {
+  color: #8a94a3;            
+}

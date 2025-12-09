@@ -436,7 +436,10 @@ export default function ListingDetails() {
     checkFavorite();
   }, [user, id]);
 
-  const canEdit = !!user && !!data && user.id === data.user_id;
+  const isSold = data?.status_id === 3;   
+  const canEdit =
+    !!user && !!data && user.id === data.user_id && !isSold;  
+
   const infoPairs = collectPairs(data);
   const infoPairsWithoutPrice = infoPairs.filter(
   (p) =>
@@ -674,7 +677,7 @@ export default function ListingDetails() {
         return;
       }
 
-      // ustawiamy lokalnie status na "sprzedane" (3 – jak w backendzie)
+      // ustawiamy lokalnie status na "sprzedane" 
       setData((prev) =>
         prev ? { ...prev, status_id: 3 } : prev
       );
@@ -881,14 +884,18 @@ export default function ListingDetails() {
       </div>
 
       {pricePair && (
-        <div className="listing-price-highlight listing-price-highlight--bottom">
+        <div
+          className={
+            `listing-price-highlight listing-price-highlight--bottom` +
+            (isSold || isPurchased ? ' listing-price-highlight--sold' : '')
+          }
+        >
           <span className="listing-price-label">
             {isNegotiable ? 'Cena do negocjacji' : 'Cena'}
           </span>
           <span className="listing-price-value">{pricePair.value}</span>
 
-          {/* Jeśli ogłoszenie sprzedane – zamiast przycisku tylko label */}
-          {data.status_id === 3 || isPurchased ? (
+          {isSold || isPurchased ? (
             <span className="listing-purchased-label">
               SPRZEDANO
             </span>
@@ -906,6 +913,7 @@ export default function ListingDetails() {
           )}
         </div>
       )}
+
 
 
 
