@@ -26,6 +26,38 @@ type ConversationItem = {
   incoming: boolean; // czy ostatnia wiadomość jest odebrana (true) czy wysłana (false)
 };
 
+type ListingPreview = {
+  id: number;
+  title?: string;
+  thumbnailUrl?: string | null;
+  imageUrl?: string | null;
+  typeId?: number | null;
+};
+
+const toSrc = (val: any): string | null => {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    if (val.startsWith('data:') || val.startsWith('http')) return val;
+    return `${API_BASE}${val}`;
+  }
+  if (typeof val === 'object') {
+    if (val.dataUrl) return toSrc(val.dataUrl);
+    if (val.url) return toSrc(val.url);
+    if (val.path) return toSrc(val.path);
+  }
+  return null;
+};
+
+const getTypeIconSrc = (typeId?: number | null): string | null => {
+  if (typeId === 3) {
+    return '/icons/work-case-filled-svgrepo-com.svg';
+  }
+  if (typeId === 2) {
+    return '/icons/hands-holding-heart-svgrepo-com.svg';
+  }
+  return null;
+};
+
 const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -33,6 +65,7 @@ const MessagesPage: React.FC = () => {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [listingInfos, setListingInfos] = useState<Record<number, ListingPreview>>({});
 
   useEffect(() => {
     if (!user) {
@@ -71,6 +104,109 @@ const MessagesPage: React.FC = () => {
 
     fetchMessages();
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (!messages.length) return;
+
+    const uniqueListingIds = Array.from(
+      new Set(messages.map((m) => m.listing_id)),
+    );
+    const idsToFetch = uniqueListingIds.filter(
+      (id) => listingInfos[id] === undefined,
+    );
+    if (!idsToFetch.length) return;
+
+    const fetchListing = async (listingId: number) => {
+      try {
+        const res = await fetch(`${API_BASE}/api/listings/${listingId}`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) return;
+
+        const l = data.listing ?? data.data ?? data;
+        if (!l) return;
+
+        let resolvedThumb: string | null = null;
+        try {
+          const ri = await fetch(
+            `${API_BASE}/api/listings/${listingId}/images`,
+            {
+              headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+              credentials: 'include',
+            },
+          );
+          if (ri.ok) {
+            const imgs = await ri.json();
+            if (Array.isArray(imgs) && imgs.length > 0) {
+              const first = imgs[0];
+              const src = toSrc(
+                (first && (first.dataUrl || first.url || first.path)) || first,
+              );
+              if (src) {
+                resolvedThumb = src;
+              }
+            }
+          }
+        } catch (e) {
+          console.error(
+            'Błąd pobierania zdjęć ogłoszenia (inbox preview):',
+            e,
+          );
+        }
+
+        if (!resolvedThumb && Array.isArray(l.images) && l.images.length > 0) {
+          const src = toSrc(l.images[0]);
+          if (src) {
+            resolvedThumb = src;
+          }
+        }
+
+        if (!resolvedThumb) {
+          const rawThumb =
+            l.thumbnailUrl ||
+            l.thumbnail_url ||
+            l.mainPhotoUrl ||
+            l.main_photo_url ||
+            l.photoUrl ||
+            l.photo_url ||
+            null;
+          const src = toSrc(rawThumb);
+          if (src) {
+            resolvedThumb = src;
+          }
+        }
+
+        const preview: ListingPreview = {
+          id: l.id,
+          title: l.title || l.name || '',
+          thumbnailUrl: resolvedThumb,
+          imageUrl: resolvedThumb,
+          typeId:
+            typeof l.type_id === 'number'
+              ? l.type_id
+              : typeof l.typeId === 'number'
+              ? l.typeId
+              : null,
+        };
+
+        setListingInfos((prev) => ({
+          ...prev,
+          [listingId]: preview,
+        }));
+      } catch (e) {
+        console.error('Błąd pobierania ogłoszenia do inbox:', e);
+      }
+    };
+
+    idsToFetch.forEach((id) => {
+      fetchListing(id);
+    });
+  }, [messages, listingInfos]);
 
   const formatDate = (value: string) => {
     try {
@@ -134,6 +270,8 @@ const MessagesPage: React.FC = () => {
         <div className="messages-list">
           {conversations.map((c) => {
             const { last, peerId, peerName, incoming } = c;
+            const listingInfo = listingInfos[last.listing_id];
+            const typeIcon = getTypeIconSrc(listingInfo?.typeId);
 
             return (
               <div
@@ -154,18 +292,37 @@ const MessagesPage: React.FC = () => {
                 </div>
 
                 <div className="messages-item-middle">
+                  <div className="messages-listing">
+                    {listingInfo && (listingInfo.thumbnailUrl || typeIcon) && (
+                      <span className="messages-listing-thumb-wrapper">
+                        {listingInfo.thumbnailUrl ? (
+                          <img
+                            src={listingInfo.thumbnailUrl}
+                            alt={listingInfo.title || 'Miniaturka ogłoszenia'}
+                            className="messages-listing-thumb"
+                          />
+                        ) : typeIcon ? (
+                          <img
+                            src={typeIcon}
+                            alt="Ikona typu ogłoszenia"
+                            className="messages-listing-thumb"
+                          />
+                        ) : null}
+                      </span>
+                    )}
+                    <div className="messages-listing-text">
+                      <span className="messages-listing-label">Ogłoszenie:</span>
+                      <span className="messages-listing-link">
+                        {listingInfo?.title || last.listing_title}
+                      </span>
+                    </div>
+                  </div>
+
                   <div className="messages-peer">
                     <span className="messages-peer-label">
                       {incoming ? 'Od:' : 'Do:'}
                     </span>
                     <span className="messages-peer-name">{peerName}</span>
-                  </div>
-
-                  <div className="messages-listing">
-                    <span className="messages-listing-label">Ogłoszenie:</span>
-                    <span className="messages-listing-link">
-                      {last.listing_title}
-                    </span>
                   </div>
                 </div>
 

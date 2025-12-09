@@ -69,9 +69,27 @@ router.post('/', authRequired, async (req, res) => {
       [senderId, finalReceiverId, listingId, content.trim()]
     );
 
+    const savedMessage = insert.rows[0];
+
+    const io = req.app && req.app.get && req.app.get('io');
+    if (io) {
+      const payload = {
+        id: savedMessage.id,
+        sender_id: savedMessage.sender_id,
+        receiver_id: savedMessage.receiver_id,
+        listing_id: savedMessage.listing_id,
+        content: savedMessage.content,
+        created_at: savedMessage.created_at,
+        is_read: savedMessage.is_read,
+      };
+
+      io.to(`user_${senderId}`).emit('chat:new-message', payload);
+      io.to(`user_${finalReceiverId}`).emit('chat:new-message', payload);
+    }
+
     return res.status(201).json({
       ok: true,
-      message: insert.rows[0],
+      message: savedMessage,
     });
   } catch (err) {
     console.error('Błąd podczas wysyłania wiadomości:', err);

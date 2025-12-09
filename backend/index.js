@@ -49,7 +49,46 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/messages', messagesRouter);
 
+const http = require('http');
+const server = http.createServer(app);
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend działa na porcie: ${PORT}`);
+const { Server } = require('socket.io');
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    credentials: true,
+  }
+});
+
+
+app.set('io', io);
+
+
+io.on('connection', (socket) => {
+  console.log('Socket połączony:', socket.id);
+
+
+  socket.on('auth:join', (userId) => {
+    if (!userId) return;
+    socket.join(`user_${userId}`);
+    console.log(`Socket ${socket.id} joined room user_${userId}`);
+  });
+
+
+  socket.on('chat:typing', ({ fromUserId, toUserId, listingId }) => {
+    if (!toUserId) return;
+    io.to(`user_${toUserId}`).emit('chat:typing', {
+      fromUserId,
+      listingId,
+    });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected:', socket.id);
+  });
+});
+
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Backend (Express + Socket.io) działa na porcie: ${PORT}`);
 });
