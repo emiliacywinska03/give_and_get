@@ -55,3 +55,24 @@
     cursor: pointer;
 }
 
+
+body.dark-mode .mobile-sidebar {
+    background-color: #0f172a;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.6);
+}
+
+body.dark-mode .sidebar-logo {
+    color: #f8fafc;
+}
+
+body.dark-mode .sidebar-links a {
+    color: #e2e8f0;
+}
+
+body.dark-mode .sidebar-links a:hover {
+    background-color: #1e293b;
+}
+
+body.dark-mode .close-button {
+    color: #e2e8f0;
+}
