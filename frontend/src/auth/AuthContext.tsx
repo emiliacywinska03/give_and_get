@@ -7,7 +7,8 @@ type User = {
   first_name?: string;
   last_name?: string;
   created_at?: string;
-  points: number; 
+  points: number;
+  avatar_url?: string | null;   
 };
 
 type AuthContextType = {

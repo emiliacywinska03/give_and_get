@@ -90,16 +90,12 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `SELECT id, username, email, password_hash
+      `SELECT id, username, email, password_hash, avatar_url
        FROM "user"
        WHERE username = $1 OR email = $1
        LIMIT 1`,
       [login]
     );
-
-    if (rows.length === 0) {
-      return res.status(400).json({ ok: false, errors: [{ message: 'Nieprawidłowy login lub hasło' }] });
-    }
 
     const user = rows[0];
     const ok = await bcrypt.compare(password, user.password_hash);
@@ -107,11 +103,19 @@ router.post('/login', validate(loginSchema), async (req, res) => {
       return res.status(400).json({ ok: false, errors: [{ message: 'Nieprawidłowy login lub hasło' }] });
     }
 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const avatarUrl = user.avatar_url ? baseUrl + user.avatar_url : null;
+
     if (!process.env.JWT_SECRET) {
       console.warn('Brak JWT_SECRET w .env – token nie zostanie ustawiony');
       return res.json({
         ok: true,
-        user: { id: user.id, username: user.username, email: user.email },
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          avatar_url: avatarUrl,
+        },
         note: 'Brak JWT_SECRET – ustaw w .env, aby włączyć sesje przez cookie.',
       });
     }
@@ -124,7 +128,15 @@ router.post('/login', validate(loginSchema), async (req, res) => {
       path: '/',
     });
 
-    return res.json({ ok: true, user: { id: user.id, username: user.username, email: user.email } });
+    return res.json({
+      ok: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        avatar_url: avatarUrl,
+      },
+    });
   } catch (err) {
     console.error('Błąd logowania:', err);
     return res.status(500).json({ ok: false, message: 'Błąd serwera przy logowaniu' });
@@ -135,7 +147,7 @@ router.post('/login', validate(loginSchema), async (req, res) => {
 router.get('/me', authRequired, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, username, email, first_name, last_name, created_at, points
+      `SELECT id, username, email, first_name, last_name, created_at, points, avatar_url
        FROM "user"
        WHERE id = $1`,
       [req.user.id]
@@ -145,12 +157,17 @@ router.get('/me', authRequired, async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Nie znaleziono użytkownika' });
     }
 
+    const userRow = rows[0];
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const avatarUrl = userRow.avatar_url ? baseUrl + userRow.avatar_url : null;
+
     return res.json({
       ok: true,
       user: {
-        ...rows[0],
-        points: rows[0].points ?? 0,   
-      }
+        ...userRow,
+        points: userRow.points ?? 0,
+        avatar_url: avatarUrl,
+      },
     });
 
   } catch (err) {

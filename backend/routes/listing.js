@@ -367,13 +367,32 @@ router.get('/', async (req, res) => {
 router.get('/my', authRequired, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT l.*, u.username AS author_username
-       FROM listing l
-       JOIN "user" u ON u.id = l.user_id
-       WHERE l.user_id = $1
-       ORDER BY l.created_at DESC`,
+      `
+      SELECT 
+        l.*,
+        u.username AS author_username,
+        c.name AS category_name,
+        s.name AS subcategory_name,
+        (
+          SELECT COALESCE(
+            li.path,
+            'data:' || li.mime || ';base64,' || encode(li.data, 'base64')
+          )
+          FROM listing_images li
+          WHERE li.listing_id = l.id
+          ORDER BY li.id ASC
+          LIMIT 1
+        ) AS primary_image
+      FROM listing l
+      JOIN "user" u ON u.id = l.user_id
+      LEFT JOIN category c ON c.id = l.category_id
+      LEFT JOIN subcategory s ON s.id = l.subcategory_id
+      WHERE l.user_id = $1
+      ORDER BY l.created_at DESC
+      `,
       [req.user.id]
     );
+
     res.json(rows);
   } catch (err) {
     console.error('Blad podczas pobierania moich ogloszen:', err.message);

@@ -8,6 +8,7 @@ const listingRoutes = require('./routes/listing');
 const authRoutes = require('./routes/auth');
 const rewardsRouter = require('./routes/rewards');
 const messagesRouter = require('./routes/messages');
+const usersRouter = require('./routes/users');   // 👈
 
 const path = require('path');
 
@@ -22,16 +23,19 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); 
-    return allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'));
+    if (!origin) return cb(null, true);
+    return allowedOrigins.includes(origin)
+      ? cb(null, true)
+      : cb(new Error('CORS blocked'));
   },
   credentials: true,
 }));
 
-
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(cookieParser());
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/healthz', async (req, res) => {
   try {
@@ -43,11 +47,11 @@ app.get('/healthz', async (req, res) => {
   }
 });
 
-
 app.use('/api/listings', listingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/messages', messagesRouter);
+app.use('/api/users', usersRouter);   
 
 const http = require('http');
 const server = http.createServer(app);
@@ -60,20 +64,16 @@ const io = new Server(server, {
   }
 });
 
-
 app.set('io', io);
-
 
 io.on('connection', (socket) => {
   console.log('Socket połączony:', socket.id);
-
 
   socket.on('auth:join', (userId) => {
     if (!userId) return;
     socket.join(`user_${userId}`);
     console.log(`Socket ${socket.id} joined room user_${userId}`);
   });
-
 
   socket.on('chat:typing', ({ fromUserId, toUserId, listingId }) => {
     if (!toUserId) return;
@@ -87,7 +87,6 @@ io.on('connection', (socket) => {
     console.log('Socket disconnected:', socket.id);
   });
 });
-
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend (Express + Socket.io) działa na porcie: ${PORT}`);

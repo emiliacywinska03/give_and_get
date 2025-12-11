@@ -11,9 +11,9 @@ interface Listing {
   created_at: string;
   images?: any[];
   primary_image?: string | null;
-  is_featured?: boolean; 
-  status_id?: number | null;   
-  type_id?: number | null; 
+  is_featured?: boolean;
+  status_id?: number | null;
+  type_id?: number | null;
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
@@ -37,7 +37,7 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
     if (raw.startsWith('http') || raw.startsWith('data:')) {
       return raw;
     }
-    
+
     return `${API_BASE}${raw}`;
   } catch (e) {
     console.error('Błąd pobierania pierwszego zdjęcia:', e);
@@ -45,97 +45,190 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
   }
 }
 
-
 const Profile: React.FC = () => {
   const { user, loading, logout, setUser } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const navigate = useNavigate();
 
-    // 1 = sprzedaż, 2 = praca, 3 = pomoc
-    const renderThumb = (item: Listing) => {
-      const imgSrc = item.primary_image || null;
-  
-      // 1) jeśli mamy normalne zdjęcie
-      if (imgSrc) {
-        return (
-          <div className="listing-thumb">
-            <img src={imgSrc} alt={item.title} />
-          </div>
-        );
-      }
-  
-      // 2) PRACA – teczka
-      if (item.type_id === 2) {
-        return (
-          <div className="listing-thumb-space listing-thumb-space--icon">
-            <img
-              src="/icons/work-case-filled-svgrepo-com.svg"
-              alt="Ogłoszenie pracy"
-              className="listing-thumb-icon"
-            />
-          </div>
-        );
-      }
-  
-      // 3) POMOC – dłonie z sercem
-      if (item.type_id === 3) {
-        return (
-          <div className="listing-thumb-space listing-thumb-space--icon">
-            <img
-              src="/icons/hands-holding-heart-svgrepo-com.svg"
-              alt="Ogłoszenie pomocy"
-              className="listing-thumb-icon"
-            />
-          </div>
-        );
-      }
-  
-      // 4) domyślny placeholder X
+  const avatarUrl = (user as any)?.avatar_url as string | undefined;
+
+  // 1 = sprzedaż, 2 = praca, 3 = pomoc
+  const renderThumb = (item: Listing) => {
+    const imgSrc = item.primary_image || null;
+
+    // 1) jeśli mamy normalne zdjęcie
+    if (imgSrc) {
       return (
-        <div className="listing-thumb-space">
-          <svg
-            className="listing-thumb-placeholder-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <rect
-              x="3"
-              y="3"
-              width="18"
-              height="18"
-              rx="3"
-              ry="3"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M7 7l10 10M17 7L7 17"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+        <div className="listing-thumb">
+          <img src={imgSrc} alt={item.title} />
         </div>
       );
-    };
-  
+    }
+
+    // 2) PRACA – teczka
+    if (item.type_id === 2) {
+      return (
+        <div className="listing-thumb-space listing-thumb-space--icon">
+          <img
+            src="/icons/work-case-filled-svgrepo-com.svg"
+            alt="Ogłoszenie pracy"
+            className="listing-thumb-icon"
+          />
+        </div>
+      );
+    }
+
+    // 3) POMOC – dłonie z sercem
+    if (item.type_id === 3) {
+      return (
+        <div className="listing-thumb-space listing-thumb-space--icon">
+          <img
+            src="/icons/hands-holding-heart-svgrepo-com.svg"
+            alt="Ogłoszenie pomocy"
+            className="listing-thumb-icon"
+          />
+        </div>
+      );
+    }
+
+    // 4) domyślny placeholder X
+    return (
+      <div className="listing-thumb-space">
+        <svg
+          className="listing-thumb-placeholder-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="3"
+            ry="3"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M7 7l10 10M17 7L7 17"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
+    );
+  };
+
+  const handleAvatarChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Możesz wgrać tylko pliki graficzne.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Maksymalny rozmiar zdjęcia to 5 MB.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    setUploadingAvatar(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/users/avatar`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('Błąd przy zapisie avatara:', data);
+        alert(data.error || data.message || 'Nie udało się zaktualizować zdjęcia profilowego.');
+        return;
+      }
+
+      const newAvatarUrl: string | undefined =
+        data.avatarUrl || data.avatar_url;
+
+      if (newAvatarUrl) {
+        setAvatarPreview(newAvatarUrl);
+        setUser((prev: any) =>
+          prev ? { ...prev, avatar_url: newAvatarUrl } : prev
+        );
+      }
+    } catch (err) {
+      console.error('Błąd podczas zmiany avatara:', err);
+      alert('Wystąpił błąd podczas zmiany zdjęcia profilowego.');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
 
-    
+    // ---------- Twoje ogłoszenia ----------
+    const fetchMyListings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/listings/my`, {
+          credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !Array.isArray(data)) {
+          console.error('Niepoprawna odpowiedź API (my listings):', data);
+          return;
+        }
+
+        const withImages: Listing[] = await Promise.all(
+          data.map(async (item: any) => {
+            const primary =
+              (item.primary_image as string | null) ??
+              (await fetchFirstImageFor(item.id));
+
+            return {
+              ...item,
+              primary_image: primary ?? null,
+            };
+          })
+        );
+
+        setListings(withImages);
+      } catch (err) {
+        console.error('Błąd pobierania moich ogłoszeń:', err);
+      } finally {
+        setLoadingListings(false);
+      }
+    };
 
     // ---------- Ulubione ----------
     const fetchFavorites = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/listings/favorites`, {
-          credentials: 'include',
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
         });
         const data = await res.json();
 
@@ -165,6 +258,7 @@ const Profile: React.FC = () => {
       }
     };
 
+    fetchMyListings();
     fetchFavorites();
   }, [user]);
 
@@ -183,14 +277,13 @@ const Profile: React.FC = () => {
         setListings((prev) => prev.filter((item) => item.id !== id));
       } else {
         const error = await res.json();
-        alert(`Błąd: ${error.error}`);
+        alert(`Błąd: ${error.error || error.message || 'Nieznany błąd'}`);
       }
     } catch (err) {
       console.error('Błąd podczas usuwania ogłoszenia:', err);
       alert('Wystąpił błąd podczas usuwania ogłoszenia.');
     }
   };
-
 
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
@@ -212,8 +305,8 @@ const Profile: React.FC = () => {
 
       const data = await res.json();
 
-      setListings(prev =>
-        prev.map(l =>
+      setListings((prev) =>
+        prev.map((l) =>
           l.id === id ? { ...l, is_featured: data.is_featured } : l
         )
       );
@@ -223,36 +316,49 @@ const Profile: React.FC = () => {
     }
   };
 
-  
-
-
-
   return (
     <div className="profile-page">
       <div className="profile-card">
         <h2 className="profile-title">Profil użytkownika</h2>
 
-
         <div className="profile-top">
           {/* LEWA STRONA — avatar + dane */}
           <div className="profile-left">
             <div className="profile-avatar">
-              <svg
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="80"
-                height="80"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 8a7 7 0 1 1 14 0H5Z"
+              {avatarPreview || avatarUrl ? (
+                <img
+                  src={avatarPreview || avatarUrl}
+                  alt="Zdjęcie profilowe użytkownika"
+                  className="profile-avatar-img"
                 />
-              </svg>
+              ) : (
+                <svg
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="80"
+                  height="80"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 8a7 7 0 1 1 14 0H5Z"
+                  />
+                </svg>
+              )}
+
+              <label className="profile-avatar-upload">
+                <span>{uploadingAvatar ? 'Zapisywanie...' : 'Zmień zdjęcie'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  disabled={uploadingAvatar}
+                />
+              </label>
             </div>
 
             <div className="profile-user-data">
@@ -300,13 +406,12 @@ const Profile: React.FC = () => {
 
             <button
               className="profile-add-listing-button"
-              onClick={() => navigate('/listings/create')}   
+              onClick={() => navigate('/listings/create')}
             >
               Dodaj ogłoszenie
             </button>
           </div>
         </div>
-
 
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
@@ -392,7 +497,6 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-
         {/* ---------------- Ulubione ---------------- */}
         <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
         {loadingFavorites ? (
@@ -422,11 +526,8 @@ const Profile: React.FC = () => {
                 </div>
               );
             })}
-
           </div>
         )}
-
-
       </div>
     </div>
   );
