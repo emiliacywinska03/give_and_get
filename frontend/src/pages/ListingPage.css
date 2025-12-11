@@ -328,12 +328,16 @@ body.dark-mode .cancel-button {
   line-height: 1.2;
 }
 
-.listing-author,
-.listing-location{
-  display: block;
+.listing-author {
+  display: flex;
+  align-items: center;   
   margin-bottom: 0.35rem;
 }
 
+.listing-location {
+  display: block;
+  margin-bottom: 0.35rem;
+}
 
 body.dark-mode .listing-thumb{
   background-color: #111827;
@@ -509,20 +513,26 @@ body.dark-mode .favorite-toggle--active {
 }
 
 .mini-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  color: #111827;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 9999px;
-  background: #eef2ff;
-  color: #3730a3;
-  font-weight: 700;
-  font-size: .8rem;
-  margin-right: .4rem;
-  border: 1px solid #e5e7eb;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-right: 0.4rem;
+  overflow: hidden;      
 }
 
+.mini-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 .listing-thumb-wrapper {
   position: relative;

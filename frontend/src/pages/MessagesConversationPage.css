@@ -45,15 +45,24 @@
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  color: #fff;
-  display: flex;
+  background-color: #e5e7eb;
+  color: #111827;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 0.9rem;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
   flex-shrink: 0;
+  overflow: hidden; /* avatar-img w środku przycięty do kółka */
+}
+
+.messages-conv-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
 }
 
 .messages-conv-user-text {
@@ -292,6 +301,12 @@ body.dark-mode .messages-conv-peer-line {
 body.dark-mode .messages-conv-peer-line .messages-conv-peer-name {
   color: #ffffff;
   font-weight: 600;
+}
+
+body.dark-mode .messages-conv-avatar {
+  background-color: #020617;
+  color: #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
 }
 
 body.dark-mode .messages-conv-info {

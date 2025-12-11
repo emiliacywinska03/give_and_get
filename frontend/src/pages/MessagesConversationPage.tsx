@@ -25,6 +25,8 @@ type ListingPreview = {
   thumbnailUrl?: string | null;
   imageUrl?: string | null;
   typeId?: number | null;
+  authorUsername?: string;
+  authorAvatarUrl?: string | null;
 };
 
 const getInitials = (name: string) => {
@@ -214,7 +216,14 @@ const MessagesConversationPage: React.FC = () => {
           title: l.title || l.name || '',
           thumbnailUrl: resolvedThumb,
           imageUrl: resolvedThumb,
-          typeId: typeof l.type_id === 'number' ? l.type_id : typeof l.typeId === 'number' ? l.typeId : null,
+          typeId:
+            typeof l.type_id === 'number'
+              ? l.type_id
+              : typeof l.typeId === 'number'
+              ? l.typeId
+              : null,
+          authorUsername: l.author_username || l.authorUsername || '',
+          authorAvatarUrl: l.author_avatar_url || l.authorAvatarUrl || null,
         };
 
         setListingInfo(preview);
@@ -381,11 +390,19 @@ const MessagesConversationPage: React.FC = () => {
     }
   };
 
-  if (!listingId) {
-    return <p className="messages-conv-error">Nieprawidłowe ID ogłoszenia.</p>;
-  }
+if (!listingId) {
+  return <p className="messages-conv-error">Nieprawidłowe ID ogłoszenia.</p>;
+}
 
-  const typeIcon = getTypeIconSrc(listingInfo?.typeId);
+const peerAvatarSrc =
+  listingInfo && listingInfo.authorAvatarUrl
+    ? (listingInfo.authorAvatarUrl.startsWith('http') ||
+      listingInfo.authorAvatarUrl.startsWith('data:'))
+      ? listingInfo.authorAvatarUrl
+      : `${API_BASE}${listingInfo.authorAvatarUrl}`
+    : null;
+
+const typeIcon = getTypeIconSrc(listingInfo?.typeId);
   return (
     <div className="messages-conv-page">
       <div className="messages-conv-header">
@@ -394,7 +411,17 @@ const MessagesConversationPage: React.FC = () => {
         <div className="messages-conv-header-row">
           <div className="messages-conv-user-block">
             <div className="messages-conv-avatar">
-              {peerName ? getInitials(peerName) : '?'}
+              {peerAvatarSrc ? (
+                <img
+                  src={peerAvatarSrc}
+                  alt={`Avatar użytkownika ${peerName || ''}`}
+                  className="messages-conv-avatar-img"
+                />
+              ) : peerName ? (
+                getInitials(peerName)
+              ) : (
+                '?'
+              )}
             </div>
             <div className="messages-conv-user-text">
               <span className="messages-conv-peer-line">

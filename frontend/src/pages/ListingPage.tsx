@@ -19,6 +19,7 @@ interface Listing {
   type_id: number;
   user_id: number;
   author_username?: string;
+  author_avatar_url?: string | null;
   primary_image?: string | null;
   is_featured?: boolean;
   category_name?: string;
@@ -341,6 +342,14 @@ const ListingPage: React.FC = () => {
                   ? listing.primary_image
                   : `${API_BASE}${listing.primary_image}`
                 : null;
+
+            const authorAvatarSrc = listing.author_avatar_url
+              ? listing.author_avatar_url.startsWith('http') ||
+                listing.author_avatar_url.startsWith('data:')
+                ? listing.author_avatar_url
+                : `${API_BASE}${listing.author_avatar_url}`
+              : null;
+
             return (
               <div
                 key={listing.id}
@@ -452,7 +461,15 @@ const ListingPage: React.FC = () => {
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
                     <span className="mini-avatar">
-                      {(listing.author_username || 'U')[0].toUpperCase()}
+                      {authorAvatarSrc ? (
+                        <img
+                          src={authorAvatarSrc}
+                          alt={`Avatar użytkownika ${listing.author_username ?? ''}`}
+                          className="mini-avatar-img"
+                        />
+                      ) : (
+                        (listing.author_username || 'U')[0].toUpperCase()
+                      )}
                     </span>
                     Autor: {listing.author_username ?? 'nieznany'}
                   </p>

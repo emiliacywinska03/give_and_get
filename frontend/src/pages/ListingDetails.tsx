@@ -14,6 +14,7 @@ type ListingDetails = {
   created_at: string;
   user_id: number;
   author_username?: string;
+  author_avatar_url?: string | null; 
   category_name?: string;
   subcategory_name?: string;
   images?: string[];
@@ -719,6 +720,13 @@ export default function ListingDetails() {
       ? 'Szukam pomocy'
       : null;
 
+    const authorAvatarSrc = data.author_avatar_url
+    ? data.author_avatar_url.startsWith('http') ||
+      data.author_avatar_url.startsWith('data:')
+      ? data.author_avatar_url
+      : `${API_BASE}${data.author_avatar_url}`
+    : null;
+
   return (
     <div className="listing-details-container">
       <div className="listing-details-header">
@@ -759,9 +767,16 @@ export default function ListingDetails() {
           <div className="listing-details-help-pill">{helpTypeLabel}</div>
         )}
 
-        <div className="listing-author-box">
-          <div className="listing-author-left">
-            <div className="listing-user-avatar">
+              <div className="listing-author-box">
+        <div className="listing-author-left">
+          <div className="listing-user-avatar">
+            {authorAvatarSrc ? (
+              <img
+                src={authorAvatarSrc}
+                alt={`Avatar użytkownika ${data.author_username ?? ''}`}
+                className="listing-user-avatar-img"
+              />
+            ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="34"
@@ -776,13 +791,14 @@ export default function ListingDetails() {
                 <circle cx="12" cy="7" r="4" />
                 <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
               </svg>
-            </div>
-
-            <div className="listing-author-info">
-              <div className="listing-author-label">OGŁOSZENIE DODAŁ(A)</div>
-              <div className="listing-author-name">{data.author_username}</div>
-            </div>
+            )}
           </div>
+
+          <div className="listing-author-info">
+            <div className="listing-author-label">OGŁOSZENIE DODAŁ(A)</div>
+            <div className="listing-author-name">{data.author_username}</div>
+          </div>
+        </div>
 
           {user ? (
             user.id === data.user_id ? (

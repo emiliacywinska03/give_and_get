@@ -267,6 +267,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.listing-user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
 }
 
 .listing-author-label {
@@ -643,6 +652,7 @@ body.dark-mode .listing-user-avatar {
   background: #0b1120;
   border-color: #1d4ed8;
   color: #bfdbfe;
+  
 }
 
 body.dark-mode .listing-author-label {
