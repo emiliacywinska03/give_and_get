@@ -468,7 +468,17 @@ router.get('/favorites', authRequired, async (req, res) => {
       SELECT
         l.*,
         u.username AS author_username,
-        u.avatar_url AS author_avatar_url
+        u.avatar_url AS author_avatar_url,
+        (
+          SELECT COALESCE(
+            li.path,
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          )
+          FROM listing_images li
+          WHERE li.listing_id = l.id
+          ORDER BY li.id ASC
+          LIMIT 1
+        ) AS primary_image
       FROM favorite_listing f
       JOIN listing l ON l.id = f.listing_id
       JOIN "user"  u ON u.id = l.user_id

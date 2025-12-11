@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './Favorites.css';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_BASE =
+  (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
 const API_KEY = process.env.REACT_APP_API_KEY;
 
 type Listing = {
@@ -14,6 +15,9 @@ type Listing = {
   created_at: string;
   author_username?: string;
   primary_image?: string | null;
+  primaryImage?: string | null;
+  image_url?: string | null;
+  main_image?: string | null;
 };
 
 async function fetchFirstImageFor(listingId: number): Promise<string | null> {
@@ -22,8 +26,11 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
       credentials: 'include',
     });
     if (!r.ok) return null;
-    const imgs: { id: number; dataUrl: string }[] = await r.json();
-    return imgs.length ? imgs[0].dataUrl : null;
+    const imgs: any[] = await r.json();
+    if (!imgs.length) return null;
+
+    const first = imgs[0];
+    return first.path || null;
   } catch {
     return null;
   }
@@ -57,7 +64,16 @@ const Favorites: React.FC = () => {
 
         const withImages = await Promise.all(
           data.map(async (it: any) => {
-            if (it.primary_image) return it;
+            const existingPrimary =
+              it.primary_image ||
+              it.primaryImage ||
+              it.image_url ||
+              it.main_image;
+
+            if (existingPrimary) {
+              return { ...it, primary_image: existingPrimary };
+            }
+
             const first = await fetchFirstImageFor(it.id);
             return { ...it, primary_image: first };
           })
@@ -100,8 +116,9 @@ const Favorites: React.FC = () => {
                   <img
                     className="favorites-thumb"
                     src={
-                      (listing.primary_image || '').startsWith('data:')
-                        ? listing.primary_image!
+                      listing.primary_image.startsWith('data:') ||
+                      listing.primary_image.startsWith('http')
+                        ? listing.primary_image
                         : `${API_BASE}${listing.primary_image}`
                     }
                     alt={listing.title}

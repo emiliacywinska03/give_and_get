@@ -4,8 +4,10 @@ import { Link } from "react-router-dom";
 import zdjecie from '../assets/zdj.png';
 import "../pages/ListingPage.css"; 
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5050";
+const API_BASE =
+  (process.env.REACT_APP_API_URL || "http://localhost:5050").replace(/\/$/, "");
 const API_KEY = process.env.REACT_APP_API_KEY;
+
 
 interface Listing {
   id: number;
@@ -16,6 +18,22 @@ interface Listing {
   is_featured?: boolean;
 }
 
+async function fetchFirstImageFor(listingId: number): Promise<string | null> {
+  try {
+    const r = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
+      credentials: 'include',
+    });
+    if (!r.ok) return null;
+    const imgs: any[] = await r.json();
+    if (!imgs.length) return null;
+
+    const first = imgs[0];
+    return first.path || null;
+  } catch {
+    return null;
+  }
+}
+
 
 const Main: React.FC = () => {
     const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
@@ -23,21 +41,67 @@ const Main: React.FC = () => {
 
     // --- pobranie wszystkich wyróżnionych ogłoszeń  ---
     useEffect(() => {
-        const run = async () => {
+      const run = async () => {
         try {
-            const res = await fetch(`${API_BASE}/api/listings/featured`, {
+          // bierzemy zwykłą listę ogłoszeń (która na pewno ma primary_image)
+          const res = await fetch(`${API_BASE}/api/listings?limit=50&page=1`, {
             headers: { ...(API_KEY ? { "x-api-key": API_KEY } : {}) },
-            });
-            const data = await res.json();
-            if (!Array.isArray(data)) return;
-            setFeaturedListings(data);
+          });
+
+          if (!res.ok) {
+            console.error(
+              "Błąd odpowiedzi /listings:",
+              res.status,
+              res.statusText
+            );
+            setFeaturedListings([]);
+            return;
+          }
+
+          const data = await res.json();
+          if (!Array.isArray(data)) {
+            console.error("Nieprawidłowy format danych z /listings", data);
+            setFeaturedListings([]);
+            return;
+          }
+
+          const onlyFeatured = data.filter((it: any) => it.is_featured);
+
+          const normalized: Listing[] = await Promise.all(
+            onlyFeatured.map(async (it: any) => {
+              let primary =
+                it.primary_image ??
+                it.primaryImage ??
+                it.image_url ??
+                it.main_image ??
+                null;
+
+              if (!primary) {
+                const first = await fetchFirstImageFor(it.id);
+                primary = first;
+              }
+
+              return {
+                id: it.id,
+                title: it.title,
+                description: it.description,
+                location: it.location,
+                is_featured: it.is_featured,
+                primary_image: primary,
+              } as Listing;
+            })
+          );
+
+          setFeaturedListings(normalized);
         } catch (e) {
-            console.error("Błąd pobierania wyróżnionych:", e);
+          console.error("Błąd pobierania wyróżnionych:", e);
+          setFeaturedListings([]);
         } finally {
-            setLoadingFeatured(false);
+          setLoadingFeatured(false);
         }
-        };
-        run();
+      };
+
+      run();
     }, []);
 
 
@@ -97,7 +161,7 @@ const Main: React.FC = () => {
                 </div>
             </section>
 
-            {/* 👉 NOWA SEKCJA: WYRÓŻNIONE OGŁOSZENIA (wszyscy użytkownicy) */}
+            {/* WYRÓŻNIONE OGŁOSZENIA */}
             <section className="featured-section">
                 <h2 className="featured-title">Wyróżnione ogłoszenia</h2>
                 <p className="featured-description">
@@ -137,11 +201,16 @@ const Main: React.FC = () => {
                         >
                         <div className="listing-thumb-wrapper">
                             {listing.primary_image ? (
-                            <img
+                              <img
                                 className="listing-thumb"
-                                src={listing.primary_image}
+                                src={
+                                  listing.primary_image.startsWith("data:") ||
+                                  listing.primary_image.startsWith("http")
+                                    ? listing.primary_image
+                                    : `${API_BASE}${listing.primary_image}`
+                                }
                                 alt={listing.title}
-                            />
+                              />
                             ) : (
                                 <div className="listing-thumb-space">
                                 <svg

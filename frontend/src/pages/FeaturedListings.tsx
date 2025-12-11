@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import './ListingPage.css';
 import { useAuth } from '../auth/AuthContext';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_BASE =
+  (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
 const API_KEY = process.env.REACT_APP_API_KEY;
 
 interface Listing {
@@ -18,6 +19,22 @@ interface Listing {
   is_featured?: boolean;
 }
 
+async function fetchFirstImageFor(listingId: number): Promise<string | null> {
+  try {
+    const r = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
+      credentials: 'include',
+    });
+    if (!r.ok) return null;
+    const imgs: any[] = await r.json();
+    if (!imgs.length) return null;
+
+    const first = imgs[0];
+    return first.path || null;
+  } catch {
+    return null;
+  }
+}
+
 const FeaturedListings: React.FC = () => {
   const { user } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
@@ -26,20 +43,57 @@ const FeaturedListings: React.FC = () => {
   useEffect(() => {
     const run = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/listings/featured`, {
+        const res = await fetch(`${API_BASE}/api/listings?limit=50&page=1`, {
           headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
         });
+        if (!res.ok) {
+          console.error(
+            'Błąd odpowiedzi /listings:',
+            res.status,
+            res.statusText
+          );
+          setListings([]);
+          return;
+        }
+
         const data = await res.json();
-        if (!Array.isArray(data)) return;
+        if (!Array.isArray(data)) {
+          console.error('Nieprawidłowy format danych z /listings', data);
+          setListings([]);
+          return;
+        }
+        const onlyFeatured = data.filter((l: any) => l.is_featured);
 
         // jeśli użytkownik jest zalogowany – pokaż tylko jego wyróżnione
         const mine = user
-          ? data.filter((l: any) => l.user_id === user.id)
-          : data;
+          ? onlyFeatured.filter((l: any) => l.user_id === user.id)
+          : onlyFeatured;
 
-        setListings(mine);
+        const normalized: Listing[] = await Promise.all(
+          mine.map(async (it: any) => {
+            let primary =
+              it.primary_image ??
+              it.primaryImage ??
+              it.image_url ??
+              it.main_image ??
+              null;
+
+            if (!primary) {
+              const first = await fetchFirstImageFor(it.id);
+              primary = first;
+            }
+
+            return {
+              ...it,
+              primary_image: primary,
+            } as Listing;
+          })
+        );
+
+        setListings(normalized);
       } catch (e) {
         console.error('Błąd pobierania wyróżnionych:', e);
+        setListings([]);
       } finally {
         setLoading(false);
       }
@@ -87,7 +141,12 @@ const FeaturedListings: React.FC = () => {
                 {listing.primary_image ? (
                   <img
                     className="listing-thumb"
-                    src={listing.primary_image}
+                    src={
+                      listing.primary_image.startsWith('data:') ||
+                      listing.primary_image.startsWith('http')
+                        ? listing.primary_image
+                        : `${API_BASE}${listing.primary_image}`
+                    }
                     alt={listing.title}
                   />
                 ) : (
