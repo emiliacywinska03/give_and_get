@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './Favorites.css';
 
-const API_BASE =
-  (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
+const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
 const API_KEY = process.env.REACT_APP_API_KEY;
 
 type Listing = {
@@ -13,11 +12,18 @@ type Listing = {
   description: string;
   location: string | null;
   created_at: string;
+  type_id?: number;
   author_username?: string;
   primary_image?: string | null;
   primaryImage?: string | null;
   image_url?: string | null;
   main_image?: string | null;
+};
+
+const getDefaultIconForType = (typeId?: number) => {
+  if (typeId === 3) return '/icons/work-case-filled-svgrepo-com.svg';
+  if (typeId === 2) return '/icons/hands-holding-heart-svgrepo-com.svg';
+  return null;
 };
 
 async function fetchFirstImageFor(listingId: number): Promise<string | null> {
@@ -28,7 +34,6 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
     if (!r.ok) return null;
     const imgs: any[] = await r.json();
     if (!imgs.length) return null;
-
     const first = imgs[0];
     return first.path || null;
   } catch {
@@ -123,6 +128,14 @@ const Favorites: React.FC = () => {
                     }
                     alt={listing.title}
                   />
+                ) : getDefaultIconForType(listing.type_id) ? (
+                  <div className="favorites-thumb-placeholder">
+                    <img
+                      className="favorites-thumb favorites-thumb--icon"
+                      src={getDefaultIconForType(listing.type_id)!}
+                      alt="Ikona ogłoszenia"
+                    />
+                  </div>
                 ) : (
                   <div className="favorites-thumb-placeholder">
                     <svg
@@ -155,9 +168,7 @@ const Favorites: React.FC = () => {
 
               <div className="favorites-content">
                 <h3 className="favorites-title">{listing.title}</h3>
-                <p className="favorites-description">
-                  {listing.description}
-                </p>
+                <p className="favorites-description">{listing.description}</p>
                 <p className="favorites-meta">
                   <span>Autor: {listing.author_username ?? 'nieznany'}</span>
                   {listing.location && (
@@ -165,8 +176,7 @@ const Favorites: React.FC = () => {
                   )}
                   <span>
                     {' '}
-                    • Dodano:{' '}
-                    {new Date(listing.created_at).toLocaleDateString('pl-PL')}
+                    • Dodano: {new Date(listing.created_at).toLocaleDateString('pl-PL')}
                   </span>
                 </p>
               </div>

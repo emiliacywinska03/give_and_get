@@ -44,6 +44,7 @@ const HIDDEN_KEYS = new Set<string>([
   'deleted_at',
   '__v',
   'author_username',
+  'author_avatar_url',
 ]);
 
 const ALIASES: Record<string, string> = {
@@ -53,6 +54,8 @@ const ALIASES: Record<string, string> = {
   status_id: '__hide',
   statusId: '__hide',
   primary_image: '__hide',
+  author_avatar_url: '__hide',
+  authorAvatarUrl: '__hide',
   categoryId: '__hide',
   subcategoryId: '__hide',
 

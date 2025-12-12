@@ -713,6 +713,11 @@ body.dark-mode .message-info-self {
   color: #9ca3af;
 }
 
+body.dark-mode .buy-now-button {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 10px 26px rgba(59, 130, 246, 0.3);
+}
+
 
 
 /* SPRZEDANE – wyszarzona belka z ceną */
@@ -726,3 +731,42 @@ body.dark-mode .message-info-self {
 .listing-price-highlight.listing-price-highlight--bottom.listing-price-highlight--sold .listing-price-value {
   color: #8a94a3;            
 }
+
+.buy-now-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  margin: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.buy-now-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.38);
+  filter: brightness(1.05);
+}
+
+.buy-now-button:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
+}
+
+.listing-price-highlight.listing-price-highlight--bottom .buy-now-button {
+  align-self: center;
+}
+
+

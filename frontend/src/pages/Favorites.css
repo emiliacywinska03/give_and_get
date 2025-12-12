@@ -1,129 +1,66 @@
 .favorites-page {
-    max-width: 1100px;
-    margin: 40px auto;
-    padding: 0 20px 40px;
-    font-family: 'Inter', sans-serif;
-  }
-  
-  .favorites-page h2 {
-    font-size: 26px;
-    font-weight: 700;
-    margin-bottom: 24px;
-  }
-  
-  /* Lista jako kolumna */
-  .favorites-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  
-  /* Jeden ulubiony listing – wygląda jak w profilu */
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px 40px;
+  font-family: 'Inter', sans-serif;
+}
+
+.favorites-page h2 {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.favorites-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .favorites-item {
-    display: flex;
-    gap: 20px;
-    text-decoration: none;
-    color: inherit;
-  
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 18px 22px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-    border: 1px solid #e5e7eb;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-    cursor: pointer;
-  }
+  display: flex;
+  gap: 20px;
+  text-decoration: none;
+  color: inherit;
 
-  .favorites-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
-    border-color: #3b82f6;
-  }
-  
-  /* prawa część – tekst */
-  .favorites-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-  
-  .favorites-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-  
-  .favorites-description {
-    font-size: 14px;
-    color: #4b5563;
-    margin-bottom: 6px;
-  }
-  
-  .favorites-meta {
-    font-size: 13px;
-    color: #6b7280;
-  }
-  
-  /* responsywność */
-  @media (max-width: 768px) {
-    .favorites-item {
-      flex-direction: column;
-    }
-  
-    .favorites-thumb-wrapper {
-      flex: 0 0 auto;
-      max-width: 100%;
-    }
-  
-    .favorites-thumb,
-    .favorites-thumb-placeholder {
-      height: 200px;
-    }
-  }
-  
-  /* === Dark mode – Ulubione === */
-  body.dark-mode .favorites-page {
-    color: #e5e7eb;
-  }
-  
-  body.dark-mode .favorites-page h2 {
-    color: #f9fafb;
-  }
-  
-  body.dark-mode .favorites-item {
-    background: #020617;
-    border-color: #1f2937;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85);
-  }
-  
-  body.dark-mode .favorites-item:hover {
-    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.95);
-    border-color: #3b82f6;
-  }
-  
-  body.dark-mode .favorites-title {
-    color: #f9fafb;
-  }
-  
-  body.dark-mode .favorites-description {
-    color: #d1d5db;
-  }
-  
-  body.dark-mode .favorites-meta {
-    color: #9ca3af;
-  }
-  
-  body.dark-mode .favorites-thumb {
-    background: #020617;
-    border-color: #111827;
-  }
-  
-  body.dark-mode .favorites-thumb-placeholder {
-    background: #020617;
-    border-color: #374151;
-  }
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px 22px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  cursor: pointer;
+}
 
+.favorites-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  border-color: #3b82f6;
+}
+
+.favorites-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.favorites-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.favorites-description {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.favorites-meta {
+  font-size: 13px;
+  color: #6b7280;
+}
 
 .favorites-thumb-wrapper,
 .favorites-thumb-placeholder {
@@ -131,11 +68,13 @@
   height: 140px;
   border-radius: 12px;
   background-color: #f9fafb;
-  border: 1px dashed #d1d5db;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .favorites-thumb {
@@ -143,36 +82,87 @@
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
+  background-color: transparent !important;
 }
 
-.favorites-thumb-placeholder-icon {
-  width: 40px;
-  height: 40px;
+.favorites-thumb-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 18px;
+  display: block;
+  background-color: transparent !important;
+}
+
+img.favorites-thumb[src$=".svg"],
+img.favorites-thumb[src*="placeholder"] {
+  object-fit: contain;
+  padding: 18px;
+  background-color: transparent !important;
+}
+
+.favorites-thumb-placeholder img,
+.favorites-thumb img {
+  border: none;
+  box-shadow: none;
+}
+
+@media (max-width: 768px) {
+  .favorites-item {
+    flex-direction: column;
+  }
+
+  .favorites-thumb-wrapper {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+
+  .favorites-thumb,
+  .favorites-thumb-placeholder {
+    height: 200px;
+  }
+}
+
+body.dark-mode .favorites-page {
+  color: #e5e7eb;
+}
+
+body.dark-mode .favorites-page h2 {
+  color: #f9fafb;
+}
+
+body.dark-mode .favorites-item {
+  background: #020617;
+  border-color: #1f2937;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85);
+}
+
+body.dark-mode .favorites-item:hover {
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.95);
+  border-color: #3b82f6;
+}
+
+body.dark-mode .favorites-title {
+  color: #f9fafb;
+}
+
+body.dark-mode .favorites-description {
+  color: #d1d5db;
+}
+
+body.dark-mode .favorites-meta {
   color: #9ca3af;
 }
 
-.listing-thumb-space {
-  width: 100%;
-  height: 220px;
-  border-radius: 8px;
-  background-color: #f9fafb;
-  border: 1px dashed #d1d5db;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+body.dark-mode .favorites-thumb-wrapper,
+body.dark-mode .favorites-thumb-placeholder {
+  background-color: #020617 !important;
+  border-color: #374151 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.listing-thumb-placeholder-icon {
-  width: 64px;
-  height: 64px;
-  color: #9ca3af;  
-  stroke: #9ca3af;
-  stroke-width: 1.8;
-}
-
-.listing-thumb {
-  width: 100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
-  border-radius: 8px;
+body.dark-mode .favorites-thumb-placeholder img,
+body.dark-mode img.favorites-thumb[src$=".svg"],
+body.dark-mode img.favorites-thumb[src*="placeholder"] {
+  filter: invert(1);
 }

@@ -8,7 +8,8 @@ const listingRoutes = require('./routes/listing');
 const authRoutes = require('./routes/auth');
 const rewardsRouter = require('./routes/rewards');
 const messagesRouter = require('./routes/messages');
-const usersRouter = require('./routes/users');   // 👈
+let usersRouter = require('./routes/users');
+usersRouter = usersRouter?.router || usersRouter?.default || usersRouter;
 
 const path = require('path');
 
@@ -51,7 +52,10 @@ app.use('/api/listings', listingRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/messages', messagesRouter);
-app.use('/api/users', usersRouter);   
+if (typeof usersRouter !== 'function') {
+  throw new TypeError("routes/users must export an Express router (module.exports = router)");
+}
+app.use('/api/users', usersRouter);
 
 const http = require('http');
 const server = http.createServer(app);
