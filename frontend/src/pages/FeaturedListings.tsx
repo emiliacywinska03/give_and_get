@@ -14,6 +14,7 @@ interface Listing {
   location: string;
   created_at: string;
   user_id: number;
+  type_id?: number;
   author_username?: string;
   primary_image?: string | null;
   is_featured?: boolean;
@@ -34,6 +35,19 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
     return null;
   }
 }
+
+const getDefaultIconForType = (typeId?: number) => {
+  if (typeId === 3) return "/icons/work-case-filled-svgrepo-com.svg";
+  if (typeId === 2) return "/icons/hands-holding-heart-svgrepo-com.svg";
+  return null;
+};
+
+const resolveImgSrc = (primary?: string | null) => {
+  if (!primary) return null;
+  if (primary.startsWith('data:')) return primary;
+  if (primary.startsWith('http')) return primary;
+  return `${API_BASE}${primary}`;
+};
 
 const FeaturedListings: React.FC = () => {
   const { user } = useAuth();
@@ -85,6 +99,7 @@ const FeaturedListings: React.FC = () => {
 
             return {
               ...it,
+              type_id: it.type_id,
               primary_image: primary,
             } as Listing;
           })
@@ -114,7 +129,6 @@ const FeaturedListings: React.FC = () => {
           {listings.map((listing) => (
             <div key={listing.id} className="listing-card">
 
-            {/* Wyróżnienie — gwiazdka */}
             {listing.is_featured && (
               <div
                 className="featured-badge"
@@ -138,17 +152,21 @@ const FeaturedListings: React.FC = () => {
               style={{ textDecoration: 'none', color: 'inherit' }}
             >
               <div className="listing-thumb-wrapper">
-                {listing.primary_image ? (
+                {resolveImgSrc(listing.primary_image) ? (
                   <img
                     className="listing-thumb"
-                    src={
-                      listing.primary_image.startsWith('data:') ||
-                      listing.primary_image.startsWith('http')
-                        ? listing.primary_image
-                        : `${API_BASE}${listing.primary_image}`
-                    }
+                    src={resolveImgSrc(listing.primary_image)!}
                     alt={listing.title}
                   />
+                ) : getDefaultIconForType(listing.type_id) ? (
+                  <div className="listing-thumb-space">
+                    <img
+                      className="listing-thumb"
+                      src={getDefaultIconForType(listing.type_id)!}
+                      alt="Ikona ogłoszenia"
+                      style={{ objectFit: 'contain', padding: '12px' }}
+                    />
+                  </div>
                 ) : (
                   <div className="listing-thumb-space">
                     <svg
@@ -176,7 +194,6 @@ const FeaturedListings: React.FC = () => {
                       />
                     </svg>
                   </div>
-
                 )}
               </div>
           

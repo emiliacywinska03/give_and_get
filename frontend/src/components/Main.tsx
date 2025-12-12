@@ -14,6 +14,7 @@ interface Listing {
   title: string;
   description: string;
   location: string;
+  type_id?: number;
   primary_image?: string | null;
   is_featured?: boolean;
 }
@@ -34,6 +35,18 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
   }
 }
 
+const getDefaultIconForType = (typeId?: number) => {
+  if (typeId === 3) return "/icons/work-case-filled-svgrepo-com.svg";
+  if (typeId === 2) return "/icons/hands-holding-heart-svgrepo-com.svg";
+  return null;
+};
+
+const resolveImgSrc = (primary?: string | null) => {
+  if (!primary) return null;
+  if (primary.startsWith("data:")) return primary;
+  if (primary.startsWith("http")) return primary;
+  return `${API_BASE}${primary}`;
+};
 
 const Main: React.FC = () => {
     const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
@@ -86,6 +99,7 @@ const Main: React.FC = () => {
                 title: it.title,
                 description: it.description,
                 location: it.location,
+                type_id: it.type_id,
                 is_featured: it.is_featured,
                 primary_image: primary,
               } as Listing;
@@ -161,7 +175,6 @@ const Main: React.FC = () => {
                 </div>
             </section>
 
-            {/* WYRÓŻNIONE OGŁOSZENIA */}
             <section className="featured-section">
                 <h2 className="featured-title">Wyróżnione ogłoszenia</h2>
                 <p className="featured-description">
@@ -175,80 +188,81 @@ const Main: React.FC = () => {
                 ) : (
                 <div className="listing-grid">
                     {featuredListings.map((listing) => (
-                    <div key={listing.id} className="listing-card">
-                        {/* gwiazdka w lewym górnym rogu */}
-                        {listing.is_featured && (
-                        <div
-                            className="featured-badge"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="#FACC15"
-                            >
-                            <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
-                            </svg>
-                        </div>
-                        )}
+<div key={listing.id} className="listing-card">
+  {listing.is_featured && (
+    <div className="featured-badge" onClick={(e) => e.stopPropagation()}>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="#FACC15"
+      >
+        <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+      </svg>
+    </div>
+  )}
 
-                        <Link
-                        to={`/listing/${listing.id}`}
-                        className="listing-link"
-                        style={{ textDecoration: "none", color: "inherit" }}
-                        >
-                        <div className="listing-thumb-wrapper">
-                            {listing.primary_image ? (
-                              <img
-                                className="listing-thumb"
-                                src={
-                                  listing.primary_image.startsWith("data:") ||
-                                  listing.primary_image.startsWith("http")
-                                    ? listing.primary_image
-                                    : `${API_BASE}${listing.primary_image}`
-                                }
-                                alt={listing.title}
-                              />
-                            ) : (
-                                <div className="listing-thumb-space">
-                                <svg
-                                  className="listing-thumb-placeholder-icon"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                >
-                                  <rect
-                                    x="4"
-                                    y="4"
-                                    width="16"
-                                    height="16"
-                                    rx="3"
-                                    ry="3"
-                                  />
-                                  <path
-                                    d="M9 9l6 6M15 9l-6 6"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              </div>
-                            )}
-                        </div>
+  <Link
+    to={`/listing/${listing.id}`}
+    className="listing-link"
+    style={{ textDecoration: "none", color: "inherit" }}
+  >
+    <div className="listing-thumb-wrapper">
+      {resolveImgSrc(listing.primary_image) ? (
+        <img
+          className="listing-thumb"
+          src={resolveImgSrc(listing.primary_image)!}
+          alt={listing.title}
+        />
+      ) : getDefaultIconForType(listing.type_id) ? (
+        <div className="listing-thumb-space">
+          <img
+            className="listing-thumb"
+            src={getDefaultIconForType(listing.type_id)!}
+            alt="Ikona ogłoszenia"
+            style={{ objectFit: "contain", padding: "12px" }}
+          />
+        </div>
+      ) : (
+        <div className="listing-thumb-space">
+          <svg
+            className="listing-thumb-placeholder-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="3"
+              ry="3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M7 7l10 10M17 7L7 17"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      )}
+    </div>
 
-                        <h3 className="listing-title">{listing.title}</h3>
-                        <p className="listing-location">
-                            Lokalizacja: {listing.location}
-                        </p>
-                        </Link>
-                    </div>
+    <h3 className="listing-title">{listing.title}</h3>
+    <p className="listing-location">Lokalizacja: {listing.location}</p>
+  </Link>
+</div>
                     ))}
                 </div>
                 )}
             </section>
 
-            {/* OBRAZEK NA DOLE */}
             <div className="full-bleed">
                 <img src={zdjecie} alt="Give&Get" className="hero-img" />
             </div>
