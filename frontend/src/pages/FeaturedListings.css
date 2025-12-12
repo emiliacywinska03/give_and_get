@@ -35,7 +35,6 @@
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   display: flex;
   flex-direction: column;
-  position: relative;
 }
 
 .favorites-card:hover {
@@ -43,6 +42,7 @@
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
   border-color: #3b82f6;
 }
+
 
 .favorites-thumb-space {
   width: 100%;
@@ -69,11 +69,13 @@
   box-shadow: none;
 }
 
+
 .favorites-thumb--icon {
   object-fit: contain;
   padding: 16px;
   background-color: transparent;
 }
+
 
 .favorites-thumb-fallback {
   width: 100%;
@@ -89,6 +91,7 @@
   color: #9ca3af;
 }
 
+/* === Teksty === */
 .favorites-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -169,6 +172,7 @@
   flex-wrap: wrap;
 }
 
+
 @media (max-width: 480px) {
   .favorites-grid {
     gap: 1rem;
@@ -224,74 +228,4 @@ body.dark-mode .favorites-thumb-space img.favorites-thumb--icon {
 
 body.dark-mode .favorites-thumb-fallback-icon {
   color: #e5e7eb;
-}
-
-.favorite-toggle {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 3;
-
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-  color: #6b7280;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.15);
-
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-
-  transition: transform 0.1s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.favorite-toggle:hover {
-  transform: translateY(-1px);
-  background: #f9fafb;
-}
-
-.favorite-toggle svg path {
-  fill: none;
-  stroke: currentColor;
-  transition: fill 0.15s ease, stroke 0.15s ease;
-}
-
-.favorite-toggle--active {
-  color: #e11d48;
-  background: #ffe4e6;
-  border-color: #fecdd3;
-}
-
-.favorite-toggle--active svg path {
-  fill: currentColor;
-}
-
-.favorites-card:hover .favorite-toggle {
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-body.dark-mode .favorite-toggle {
-  background: #020617;
-  border-color: #374151;
-  color: #e5e7eb;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
-}
-
-body.dark-mode .favorite-toggle:hover {
-  background: #0f172a;
-}
-
-body.dark-mode .favorite-toggle--active {
-  background: #4b1220;
-  border-color: #7f1d1d;
-  color: #fecaca;
 }
