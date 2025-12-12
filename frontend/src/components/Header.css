@@ -34,23 +34,50 @@ header{
     color: black;
 }
 
+.icon-btn,
+.featured-nav,
 .button-theme-toggle {
   background: transparent;
-  border: none;
-  outline: none;
-  border-radius: 8px;
-  padding: 0.4rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.button-theme-toggle:hover {
-  background-color: #f1f5f9;
-}
-
-.button-theme-toggle:focus {
-  outline: none;
+  border: 0;
   box-shadow: none;
+  padding: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.icon-btn svg,
+.featured-nav svg,
+.button-theme-toggle svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  color: #0b1220;
+  stroke: currentColor;
+  fill: transparent;
+  transition: fill 0.15s ease, color 0.15s ease, stroke 0.15s ease;
+}
+
+.icon-btn:hover svg,
+.featured-nav:hover svg,
+.button-theme-toggle:hover svg {
+  fill: currentColor;
+}
+
+body.dark-mode .icon-btn svg,
+body.dark-mode .featured-nav svg,
+body.dark-mode .button-theme-toggle svg {
+  color: #e5e7eb;
+}
+
+body.dark-mode .icon-btn:hover svg,
+body.dark-mode .featured-nav:hover svg,
+body.dark-mode .button-theme-toggle:hover svg {
+  fill: currentColor;
 }
 
 .search-bar input{
@@ -124,10 +151,6 @@ body.dark-mode header{
 
 body.dark-mode .logo{
   color: #f5f7fb;
-}
-
-body.dark-mode .button-theme-toggle:hover{
-  background-color: #1f2430;           
 }
 
 body.dark-mode .menu-button:hover{
@@ -292,44 +315,21 @@ body.dark-mode .menu-button:hover {
 
 /* Wspólna baza dla ikonek w headerze */
 .icon-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.35rem;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border-radius: 999px;
   cursor: pointer;
 }
 
 /* Płynna animacja koloru */
 .icon-btn svg {
+  width: 24px;
+  height: 24px;
   transition: stroke 0.2s ease, fill 0.2s ease;
-}
-
-/* Po najechaniu ikonki stają się szare */
-.icon-btn:hover svg {
-  stroke: #4b5563;
-  fill: #4b5563;
-}
-
-
-.featured-nav {
-  margin: 0 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32      px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.featured-nav svg {
-  display: block;
-}
-
-.featured-nav:hover svg {
-  stroke: #4b5563;
-  fill: #4b5563;
 }
 
 

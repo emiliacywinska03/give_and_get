@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import './Main.css'
 import { Link } from "react-router-dom";
-import zdjecie from '../assets/zdj.png';
 import "../pages/ListingPage.css"; 
 
 const API_BASE =
@@ -263,9 +262,52 @@ const Main: React.FC = () => {
                 )}
             </section>
 
-            <div className="full-bleed">
-                <img src={zdjecie} alt="Give&Get" className="hero-img" />
-            </div>
+            <section className="why-section">
+              <h2 className="why-title">Dlaczego Give&Get?</h2>
+              <p className="why-subtitle">
+                Prościej, lokalnie i w jednym miejscu — ogłoszenia, praca i pomoc sąsiedzka.
+              </p>
+
+              <div className="why-grid">
+  <div className="why-card">
+    <div className="why-icon">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    </div>
+    <h3 className="why-card-title">Bezpiecznie</h3>
+    <p className="why-card-text">
+      Konto użytkownika i stały dostęp do Twoich ogłoszeń w profilu.
+    </p>
+  </div>
+
+  <div className="why-card">
+    <div className="why-icon">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+      </svg>
+    </div>
+    <h3 className="why-card-title">Szybko</h3>
+    <p className="why-card-text">
+      Wyszukuj i filtruj oferty po typie oraz podkategorii.
+    </p>
+  </div>
+
+  <div className="why-card">
+    <div className="why-icon">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </svg>
+    </div>
+    <h3 className="why-card-title">Lokalnie</h3>
+    <p className="why-card-text">
+      Łatwiej znaleźć coś w okolicy — wystarczy lokalizacja w ogłoszeniu.
+    </p>
+  </div>
+</div>
+            </section>
             </main>
         );         
     

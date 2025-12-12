@@ -201,21 +201,18 @@ const Header: React.FC = () => {
                     >
 
                       <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path
-                            d="M12 2l2.39 4.84 5.34.78-3.87 3.77.91 5.31L12 14.77l-4.77 2.51.91-5.31L4.27 7.62l5.34-.78L12 2z"
-                        />
-
-                      </svg>
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2.5l2.9 5.88 6.5.95-4.7 4.58 1.1 6.47L12 17.7l-5.8 3.05 1.1-6.47-4.7-4.58 6.5-.95L12 2.5z" />
+                    </svg>
                     </div>
 
 
