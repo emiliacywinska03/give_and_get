@@ -43,11 +43,17 @@ const getDefaultIconForType = (typeId?: number) => {
   return null;
 };
 
+
 const resolveImgSrc = (primary?: string | null) => {
   if (!primary) return null;
   if (primary.startsWith('data:')) return primary;
   if (primary.startsWith('http')) return primary;
   return `${API_BASE}${primary}`;
+};
+
+const truncateDescription = (text?: string, max = 120) => {
+  if (!text) return '';
+  return text.length > max ? text.slice(0, max) + '…' : text;
 };
 
 const FeaturedListings: React.FC = () => {
@@ -209,6 +215,9 @@ const FeaturedListings: React.FC = () => {
                 </div>
             
                 <h3 className="listing-title">{listing.title}</h3>
+                <p className="listing-description">
+                  {truncateDescription(listing.description, 120)}
+                </p>
                 <p className="listing-author">
                   <span className="mini-avatar">
                     {authorAvatarSrc ? (

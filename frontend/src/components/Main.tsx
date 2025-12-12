@@ -262,6 +262,70 @@ const Main: React.FC = () => {
                 )}
             </section>
 
+            <section className="how-section">
+              <h2 className="how-title">Jak to działa?</h2>
+              <p className="how-subtitle">
+                Trzy proste kroki — szybko, lokalnie i bez zbędnych formalności.
+              </p>
+
+              <div className="how-grid">
+                <div className="how-card">
+                  <div className="how-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5v14" />
+                      <path d="M5 12h14" />
+                      <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
+                    </svg>
+                  </div>
+                  <h3 className="how-card-title">Dodaj ogłoszenie</h3>
+                  <p className="how-card-text">Opisz krótko, dodaj zdjęcie i lokalizację — gotowe.</p>
+                </div>
+
+                <div className="how-card">
+                  <div className="how-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 11.5a7.5 7.5 0 0 1-7.5 7.5H8l-5 3 1.5-5.5A7.5 7.5 0 1 1 21 11.5z" />
+                      <path d="M8.5 11.5h.01" />
+                      <path d="M12 11.5h.01" />
+                      <path d="M15.5 11.5h.01" />
+                    </svg>
+                  </div>
+                  <h3 className="how-card-title">Dogadaj się na czacie</h3>
+                  <p className="how-card-text">Napisz wiadomość i ustal szczegóły bezpośrednio.</p>
+                </div>
+
+                <div className="how-card">
+                  <div className="how-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+                      <path d="M9.5 10.5l1.8 1.8 3.8-3.8" />
+                    </svg>
+                  </div>
+                  <h3 className="how-card-title">Odbierz / pomóż lokalnie</h3>
+                  <p className="how-card-text">Spotkajcie się w okolicy i załatwcie sprawę po ludzku.</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="stats-section">
+              <div className="stats-shell">
+                <div className="stats-item">
+                  <div className="stats-number">1 240+</div>
+                  <div className="stats-label">ogłoszeń</div>
+                </div>
+                <div className="stats-divider" />
+                <div className="stats-item">
+                  <div className="stats-number">380+</div>
+                  <div className="stats-label">użytkowników</div>
+                </div>
+                <div className="stats-divider" />
+                <div className="stats-item">
+                  <div className="stats-number">560+</div>
+                  <div className="stats-label">pomocy udzielonych</div>
+                </div>
+              </div>
+            </section>
+
             <section className="why-section">
               <h2 className="why-title">Dlaczego Give&Get?</h2>
               <p className="why-subtitle">
