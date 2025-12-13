@@ -305,7 +305,7 @@ const MessagesPage: React.FC = () => {
                           <img
                             src={typeIcon}
                             alt="Ikona typu ogłoszenia"
-                            className="messages-listing-thumb"
+                            className="messages-listing-thumb messages-thumb--icon"
                           />
                         ) : null}
                       </span>

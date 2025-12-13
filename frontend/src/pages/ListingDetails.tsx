@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './ListingDetails.css';
@@ -30,6 +30,10 @@ type ListingImage = {
   id: number;
   src: string;
 };
+
+type UiImageItem =
+  | { kind: 'existing'; id: number; src: string }
+  | { kind: 'new'; tempId: string; src: string; file: File };
 
 const HIDDEN_KEYS = new Set<string>([
   'id',
@@ -306,6 +310,8 @@ export default function ListingDetails() {
   const [data, setData] = useState<ListingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<ListingImage[]>([]);
+  const [uiImages, setUiImages] = useState<UiImageItem[]>([]);
+  const [orderDirty, setOrderDirty] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -316,6 +322,8 @@ export default function ListingDetails() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [editCondition, setEditCondition] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -409,6 +417,8 @@ export default function ListingDetails() {
         }
 
         setImages(imagesList);
+        setUiImages(imagesList.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+        setOrderDirty(false);
       } catch (e) {
         console.error(e);
       } finally {
@@ -469,6 +479,7 @@ export default function ListingDetails() {
       setEditTitle(data.title || '');
       setEditDescription(data.description || '');
       setEditLocation(data.location || '');
+      setEditCondition(((data as any).condition ?? '') as string);
       if (startInEdit) {
         setEditMode(true);
       }
@@ -478,7 +489,25 @@ export default function ListingDetails() {
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const filesArray = Array.from(e.target.files);
-    setNewImages(filesArray);
+
+    setNewImages((prev) => [...prev, ...filesArray]);
+
+    const newItems: UiImageItem[] = filesArray.map((file) => ({
+      kind: 'new',
+      tempId: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      src: URL.createObjectURL(file),
+      file,
+    }));
+
+    setUiImages((prev) => {
+      const merged = [...prev, ...newItems];
+      return merged;
+    });
+
+    setOrderDirty(true);
+
+
+    e.target.value = '';
   };
 
   const handleDeleteImage = async (imageId: number) => {
@@ -496,120 +525,183 @@ export default function ListingDetails() {
       }
 
       setImages((prev) => prev.filter((img) => img.id !== imageId));
+      setUiImages((prev) => prev.filter((img) => !(img.kind === 'existing' && img.id === imageId)));
+      setOrderDirty(true);
     } catch (e) {
       console.error('Błąd usuwania zdjęcia:', e);
     }
   };
 
-  const handleSave = async () => {
-    if (!id) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
+  const removeNewImage = (tempId: string) => {
+    setUiImages((prev) => prev.filter((it) => !(it.kind === 'new' && it.tempId === tempId)));
+    setNewImages((prev) => prev.filter((f) => {
+      return true;
+    }));
+    setOrderDirty(true);
+  };
+
+  const moveUiImage = (fromIndex: number, toIndex: number) => {
+    setUiImages((prev) => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const [moved] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, moved);
+      return copy;
+    });
+    setOrderDirty(true);
+  };
+
+  
+
+const handleSave = async () => {
+  if (!id) return;
+
+  const desiredExistingIds = uiImages
+    .filter((it): it is { kind: 'existing'; id: number; src: string } => it.kind === 'existing')
+    .map((it) => it.id);
+
+  const desiredNewFiles = uiImages
+    .filter((it): it is { kind: 'new'; tempId: string; src: string; file: File } => it.kind === 'new')
+    .map((it) => it.file);
+
+  const desiredSequence = uiImages.map((it) =>
+    it.kind === 'existing'
+      ? ({ kind: 'existing' as const, id: it.id })
+      : ({ kind: 'new' as const })
+  );
+
+  try {
+    const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        title: editTitle,
+        description: editDescription,
+        location: editLocation,
+        condition: editCondition,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      alert(`Błąd zapisu: ${err?.error || res.statusText}`);
+      return;
+    }
+
+    const body = await res.json();
+    const updated = body.updated ?? body;
+    setData(updated);
+
+    if (desiredNewFiles.length > 0) {
+      const formData = new FormData();
+      desiredNewFiles.forEach((file) => formData.append('images', file));
+
+      const imgRes = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+        method: 'POST',
         credentials: 'include',
-        body: JSON.stringify({
-          title: editTitle,
-          description: editDescription,
-          location: editLocation,
-        }),
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        body: formData,
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        alert(`Błąd zapisu: ${err?.error || res.statusText}`);
-        return;
+      if (!imgRes.ok) {
+        console.error('Błąd zapisu zdjęć:', await imgRes.text());
       }
+    }
 
-      const body = await res.json();
-      const updated = body.updated ?? body;
-
-      setData(updated);
-      setEditMode(false);
-
-      if (newImages.length > 0) {
-        const formData = new FormData();
-        newImages.forEach((file) => {
-          formData.append('images', file);
-        });
-
-        try {
-          const imgRes = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-              ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-            },
-            body: formData,
-          });
-
-          if (!imgRes.ok) {
-            console.error('Błąd zapisu zdjęć:', await imgRes.text());
-          } else {
-            try {
-              const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-                credentials: 'include',
-                headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-              });
-              if (ri.ok) {
-                const imgs = await ri.json();
-
-                const toSrc = (val: any): string | null => {
-                  if (!val) return null;
-                  if (typeof val === 'string') {
-                    if (val.startsWith('data:') || val.startsWith('http'))
-                      return val;
-                    return `${API_BASE}${val}`;
-                  }
-                  if (typeof val === 'object') {
-                    if (val.dataUrl) return val.dataUrl as string;
-                    if (val.url) {
-                      const u = val.url as string;
-                      return u.startsWith('http') || u.startsWith('data:')
-                        ? u
-                        : `${API_BASE}${u}`;
-                    }
-                    if (val.path) {
-                      const p = val.path as string;
-                      return p.startsWith('http') || p.startsWith('data:')
-                        ? p
-                        : `${API_BASE}${p}`;
-                    }
-                  }
-                  return null;
-                };
-
-                const normalized: ListingImage[] = Array.isArray(imgs)
-                  ? imgs
-                      .map((it: any) => {
-                        const src = toSrc(it.dataUrl || it.url || it.path || null);
-                        if (!src) return null;
-                        return { id: it.id, src };
-                      })
-                      .filter(
-                        (x: ListingImage | null): x is ListingImage => Boolean(x),
-                      )
-                  : [];
-
-                setImages(normalized);
-                setNewImages([]);
-              }
-            } catch (e) {
-              console.error('Błąd odświeżania zdjęć:', e);
-            }
-          }
-        } catch (e) {
-          console.error('Błąd przy wysyłaniu zdjęć:', e);
+    const toSrc = (val: any): string | null => {
+      if (!val) return null;
+      if (typeof val === 'string') {
+        if (val.startsWith('data:') || val.startsWith('http')) return val;
+        return `${API_BASE}${val}`;
+      }
+      if (typeof val === 'object') {
+        if (val.dataUrl) return val.dataUrl as string;
+        if (val.url) {
+          const u = val.url as string;
+          return u.startsWith('http') || u.startsWith('data:') ? u : `${API_BASE}${u}`;
+        }
+        if (val.path) {
+          const p = val.path as string;
+          return p.startsWith('http') || p.startsWith('data:') ? p : `${API_BASE}${p}`;
         }
       }
+      return null;
+    };
+
+    let normalized: ListingImage[] = [];
+    try {
+      const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+
+      if (ri.ok) {
+        const imgs = await ri.json();
+        normalized = Array.isArray(imgs)
+          ? imgs
+              .map((it: any) => {
+                const src = toSrc(it.dataUrl || it.url || it.path || null);
+                if (!src) return null;
+                return { id: it.id, src };
+              })
+              .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
+          : [];
+      }
     } catch (e) {
-      console.error('Błąd podczas zapisu ogłoszenia', e);
-      alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
+      console.error('Błąd odświeżania zdjęć:', e);
     }
-  };
+
+    const fetchedIds = normalized.map((x) => x.id);
+    const newFetchedIds = fetchedIds.filter((x) => !desiredExistingIds.includes(x));
+
+    const finalOrderedIds: number[] = [];
+    let newPtr = 0;
+
+    for (const item of desiredSequence) {
+      if (item.kind === 'existing') {
+        finalOrderedIds.push(item.id);
+      } else {
+        const idForNew = newFetchedIds[newPtr++];
+        if (typeof idForNew === 'number') finalOrderedIds.push(idForNew);
+      }
+    }
+
+
+    if (finalOrderedIds.length > 0) {
+      try {
+        const ro = await fetch(`${API_BASE}/api/listings/${id}/images/reorder`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+          body: JSON.stringify({ orderedImageIds: finalOrderedIds }),
+        });
+
+        if (!ro.ok) {
+          console.warn('Nie udało się zapisać kolejności zdjęć:', await ro.text());
+        }
+      } catch (e) {
+        console.error('Błąd zapisu kolejności zdjęć:', e);
+      }
+    }
+
+    setImages(normalized);
+    setUiImages(normalized.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+    setOrderDirty(false);
+    setNewImages([]);
+    setEditMode(false);
+    setEditCondition(((updated as any)?.condition ?? editCondition) as string);
+  } catch (e) {
+    console.error('Błąd podczas zapisu ogłoszenia', e);
+    alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
+  }
+};
 
   const handleToggleFavorite = async () => {
     if (!user || !id) {
@@ -734,7 +826,16 @@ export default function ListingDetails() {
     <div className="listing-details-container">
       <div className="listing-details-header">
         <div className="listing-details-title-row">
-          <h1 className="listing-details-title">{data.title}</h1>
+          {!editMode ? (
+            <h1 className="listing-details-title">{data.title}</h1>
+          ) : (
+            <input
+              className="inline-edit-input inline-edit-title"
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+            />
+          )}
 
           {user && (
             <button
@@ -836,56 +937,195 @@ export default function ListingDetails() {
       </div>
 
       <div className="listing-details-card">
-        {images.length > 0 && (
-          <div className="listing-details-gallery">
-            {images.map((img, i) => (
-              <div key={img.id} className="listing-details-thumb">
-                <img
-                  src={img.src}
-                  alt={`Zdjęcie ${i + 1}`}
-                  className="listing-details-image"
-                  onClick={() => {
-                    setLightboxIndex(i);
-                    setLightboxImage(img.src);
-                    setLightboxOpen(true);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                />
-                {canEdit && editMode && (
-                  <button
-                    type="button"
-                    className="image-delete-btn"
-                    onClick={() => handleDeleteImage(img.id)}
-                  >
-                    Usuń
-                  </button>
-                )}
-              </div>
-            ))}
+        {canEdit && (
+        <div className="inline-edit-toolbar">
+          {!editMode ? (
+            <button
+              type="button"
+              className="edit-button inline-edit-button"
+              onClick={() => setEditMode(true)}
+            >
+              <span className="inline-edit-icon" aria-hidden="true">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+              </span>
+              <span className="inline-edit-text">Edytuj</span>
+            </button>
+          ) : (
+            <div className="inline-edit-actions">
+              <button
+                type="button"
+                className="action-button save-button"
+                onClick={handleSave}
+              >
+                Zapisz zmiany
+              </button>
+
+              <button
+                type="button"
+                className="action-button cancel-button"
+                onClick={() => {
+                  setEditMode(false);
+                  if (data) {
+                    setEditTitle(data.title || '');
+                    setEditDescription(data.description || '');
+                    setEditLocation(data.location || '');
+                    setEditCondition(((data as any).condition ?? '') as string);
+                  }
+                  setUiImages(images.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+                  setOrderDirty(false);
+                  setNewImages([]);
+                }}
+              >
+                Anuluj
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+       {(uiImages.length > 0 || (canEdit && editMode)) && (
+        <div className="listing-details-gallery">
+          {canEdit && editMode && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImagesChange}
+                className="inline-file-input"
+              />
+              <button
+                type="button"
+                className="add-photo-tile"
+                onClick={() => fileInputRef.current?.click()}
+                title="Dodaj zdjęcia"
+              >
+                <span className="add-photo-plus">＋</span>
+                <span className="add-photo-text">Dodaj zdjęcia</span>
+              </button>
+            </>
+          )}
+            {uiImages.map((img, i) => {
+              const key = img.kind === 'existing' ? `ex-${img.id}` : `new-${img.tempId}`;
+              const src = img.src;
+
+              return (
+                <div key={key} className="listing-details-thumb">
+                  <img
+                    src={src}
+                    alt={`Zdjęcie ${i + 1}`}
+                    className="listing-details-image"
+                    onClick={() => {
+                      setLightboxIndex(i);
+                      setLightboxImage(src);
+                      setLightboxOpen(true);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+
+                  {canEdit && editMode && (
+                    <>
+                      <button
+                        type="button"
+                        className="image-delete-x"
+                        onClick={() =>
+                          img.kind === 'existing'
+                            ? handleDeleteImage(img.id)
+                            : removeNewImage(img.tempId)
+                        }
+                        aria-label="Usuń zdjęcie"
+                        title="Usuń zdjęcie"
+                      >
+                        ✕
+                      </button>
+
+                      <div className="image-actions">
+                        <button
+                          type="button"
+                          className="image-move-btn"
+                          onClick={() => moveUiImage(i, i - 1)}
+                          disabled={i === 0}
+                          title="Przesuń w lewo"
+                        >
+                          ◀
+                        </button>
+                        <button
+                          type="button"
+                          className="image-move-btn"
+                          onClick={() => moveUiImage(i, i + 1)}
+                          disabled={i === uiImages.length - 1}
+                          title="Przesuń w prawo"
+                        >
+                          ▶
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
         <section className="listing-section">
   <h3 className="listing-section-title">Szczegóły ogłoszenia</h3>
   <div className="listing-attributes">
-    {infoPairsWithoutPrice.map(({ key, label, value }) => (
-      <div key={key} className="listing-attribute">
-        <span className="listing-attribute-label">{label}</span>
-        <span className="listing-attribute-value">{value}</span>
-      </div>
-    ))}
+   {infoPairsWithoutPrice.map(({ key, label, value }) => (
+  <div key={key} className="listing-attribute">
+    <span className="listing-attribute-label">{label}</span>
+
+    {editMode && canEdit && key === 'location' ? (
+      <input
+        className="inline-edit-input"
+        type="text"
+        value={editLocation}
+        onChange={(e) => setEditLocation(e.target.value)}
+        placeholder="Wpisz lokalizację"
+      />
+    ) : editMode && canEdit && key === 'condition' ? (
+      <input
+        className="inline-edit-input"
+        type="text"
+        value={editCondition}
+        onChange={(e) => setEditCondition(e.target.value)}
+        placeholder="Np. Nowy / Bardzo dobry"
+      />
+    ) : (
+      <span className="listing-attribute-value">{value}</span>
+    )}
+  </div>
+))}
   </div>
 </section>
 
-        {data.description && (
-          <section className="listing-section listing-section-description">
-            <h3 className="listing-section-title">Opis ogłoszenia</h3>
-            <p className="listing-description-text">
-              {data.description}
-            </p>
-          </section>
-        )}
-
+        {(data.description || (canEdit && editMode)) && (
+  <section className="listing-section listing-section-description">
+    <h3 className="listing-section-title">Opis ogłoszenia</h3>
+    {!editMode ? (
+      <p className="listing-description-text">{data.description}</p>
+    ) : (
+      <textarea
+        className="inline-edit-textarea"
+        value={editDescription}
+        onChange={(e) => setEditDescription(e.target.value)}
+        rows={8}
+      />
+    )}
+  </section>
+)}
         {requirementsPair && (
           <section className="listing-section listing-section-description">
             <h3 className="listing-section-title">Wymagania</h3>
@@ -929,81 +1169,6 @@ export default function ListingDetails() {
                 Kup teraz
               </button>
             )
-          )}
-        </div>
-      )}
-
-
-
-
-      {canEdit && (
-        <div className="listing-details-edit-section">
-          {!editMode ? (
-            <button className="edit-button" onClick={() => setEditMode(true)}>
-              Edytuj ogłoszenie
-            </button>
-          ) : (
-            <div className="edit-form">
-              <h2>Edytuj ogłoszenie</h2>
-              <label>
-                Tytuł
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                />
-              </label>
-
-              <label>
-                Opis
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  rows={5}
-                />
-              </label>
-
-              <label>
-                Lokalizacja
-                <input
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                />
-              </label>
-
-              <label>
-                Zdjęcia
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImagesChange}
-                />
-              </label>
-
-              <div className="edit-form-buttons">
-                <button
-                  className="action-button save-button"
-                  onClick={handleSave}
-                >
-                  Zapisz
-                </button>
-                <button
-                  className="action-button cancel-button"
-                  onClick={() => {
-                    setEditMode(false);
-                    if (data) {
-                      setEditTitle(data.title || '');
-                      setEditDescription(data.description || '');
-                      setEditLocation(data.location || '');
-                    }
-                  }}
-                >
-                  Anuluj
-                </button>
-              </div>
-            </div>
           )}
         </div>
       )}
@@ -1060,15 +1225,15 @@ export default function ListingDetails() {
           className="lightbox-overlay"
           onClick={() => setLightboxOpen(false)}
         >
-          {images.length > 1 && (
+          {uiImages.length > 1 && (
             <button
               className="lightbox-arrow lightbox-arrow-left"
               onClick={(e) => {
                 e.stopPropagation();
                 setLightboxIndex((prev) => {
-                  if (!images.length) return prev;
-                  const next = prev === 0 ? images.length - 1 : prev - 1;
-                  setLightboxImage(images[next].src);
+                  if (!uiImages.length) return prev;
+                  const next = prev === 0 ? uiImages.length - 1 : prev - 1;
+                  setLightboxImage(uiImages[next].src);
                   return next;
                 });
               }}
@@ -1084,16 +1249,15 @@ export default function ListingDetails() {
             onClick={(e) => e.stopPropagation()}
           />
 
-          {images.length > 1 && (
+          {uiImages.length > 1 && (
             <button
               className="lightbox-arrow lightbox-arrow-right"
               onClick={(e) => {
                 e.stopPropagation();
                 setLightboxIndex((prev) => {
-                  if (!images.length) return prev;
-                  const next =
-                    prev === images.length - 1 ? 0 : prev + 1;
-                  setLightboxImage(images[next].src);
+                  if (!uiImages.length) return prev;
+                  const next = prev === uiImages.length - 1 ? 0 : prev + 1;
+                  setLightboxImage(uiImages[next].src);
                   return next;
                 });
               }}

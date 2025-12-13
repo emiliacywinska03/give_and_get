@@ -220,16 +220,16 @@ router.post('/', authRequired, async (req, res) => {
         const mime = match[1];
         const b64 = match[2];
         const buf = Buffer.from(b64, 'base64');
-        values.push(created.id, mime, buf.length, buf);
-        const base = i * 4;
+        values.push(created.id, mime, buf.length, buf, i);
+        const base = i * 5;
         placeholders.push(
-          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`
         );
       });
 
       if (placeholders.length) {
         await pool.query(
-          `INSERT INTO listing_images (listing_id, mime, size, data) VALUES ${placeholders.join(
+          `INSERT INTO listing_images (listing_id, mime, size, data, sort_order) VALUES ${placeholders.join(
             ','
           )}`,
           values
@@ -347,7 +347,7 @@ router.get('/', async (req, res) => {
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
-          ORDER BY li.id ASC
+          ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
           LIMIT 1
         ) AS primary_image
       FROM listing l
@@ -382,7 +382,7 @@ router.get('/my', authRequired, async (req, res) => {
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
-          ORDER BY li.id ASC
+          ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
           LIMIT 1
         ) AS primary_image
       FROM listing l
@@ -439,7 +439,7 @@ router.get('/featured', async (req, res) => {
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
-          ORDER BY li.id ASC
+          ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
           LIMIT 1
         ) AS primary_image
       FROM listing l
@@ -476,7 +476,7 @@ router.get('/favorites', authRequired, async (req, res) => {
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
-          ORDER BY li.id ASC
+          ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
           LIMIT 1
         ) AS primary_image
       FROM favorite_listing f
@@ -631,25 +631,57 @@ router.delete('/:id', authRequired, async (req, res) => {
 });
 
 router.put('/:id', authRequired, async (req, res) => {
-  const { id } = req.params;
-  const { title, description, location, category_id, subcategory_id } = req.body;
+  const listingId = Number(req.params.id);
+  const { title, description, location, category_id, subcategory_id, condition } = req.body;
+
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+  }
+
+  const catId =
+    category_id === null || category_id === '' || typeof category_id === 'undefined'
+      ? null
+      : Number(category_id);
+
+  const subId =
+    subcategory_id === null || subcategory_id === '' || typeof subcategory_id === 'undefined'
+      ? null
+      : Number(subcategory_id);
+
+  if (catId !== null && Number.isNaN(catId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe category_id' });
+  }
+  if (subId !== null && Number.isNaN(subId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe subcategory_id' });
+  }
 
   try {
     const result = await pool.query(
-      `UPDATE listing 
-       SET title = $1,
-           description = $2,
-           location = $3,
-           category_id = COALESCE($4, category_id),
-           subcategory_id = COALESCE($6, subcategory_id)
-       WHERE id = $5 AND user_id = $7
-       RETURNING *`,
-      [title, description, location, category_id || null, id, subcategory_id || null, req.user.id]
+      `UPDATE listing
+      SET title = $1,
+          description = $2,
+          location = $3,
+          item_condition = COALESCE($4, item_condition),
+          category_id = COALESCE($5, category_id),
+          subcategory_id = COALESCE($6, subcategory_id)
+      WHERE id = $7 AND user_id = $8
+      RETURNING *`,
+      [
+        title,
+        description,
+        location,
+        typeof condition === 'undefined' || condition === '' ? null : condition,
+        catId,
+        subId,
+        listingId,
+        req.user.id,
+      ]
     );
 
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Ogłoszenie nie istnieje lub nie jest Twoje' });
     }
+
     res.json({ message: 'Ogłoszenie zaktualizowane', updated: result.rows[0] });
   } catch (err) {
     console.error('Błąd podczas edycji ogłoszenia', err.message);
@@ -760,7 +792,7 @@ router.get('/:id/images', async (req, res) => {
         ) AS path
       FROM listing_images
       WHERE listing_id = $1
-      ORDER BY id ASC
+      ORDER BY COALESCE(sort_order, id) ASC, id ASC
       `,
       [listingId]
     );
@@ -770,6 +802,98 @@ router.get('/:id/images', async (req, res) => {
   } catch (err) {
     console.error('Błąd pobierania zdjęć ogłoszenia:', err.message);
     return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+router.patch('/:id/images/reorder', authRequired, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const listingId = Number(req.params.id);
+    const { orderedImageIds } = req.body || {};
+
+    if (Number.isNaN(listingId)) {
+      return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+    }
+
+    if (!Array.isArray(orderedImageIds) || orderedImageIds.length === 0) {
+      return res.status(400).json({ error: 'orderedImageIds musi być niepustą tablicą ID zdjęć' });
+    }
+
+    // usuń duplikaty i znormalizuj do int
+    const uniqueIds = Array.from(new Set(orderedImageIds.map((x) => Number(x)))).filter(
+      (x) => Number.isFinite(x)
+    );
+
+    if (uniqueIds.length === 0) {
+      return res.status(400).json({ error: 'orderedImageIds nie zawiera poprawnych ID' });
+    }
+
+    // czy ogłoszenie jest użytkownika
+    const check = await client.query(
+      'SELECT id FROM listing WHERE id = $1 AND user_id = $2',
+      [listingId, req.user.id]
+    );
+
+    if (check.rowCount === 0) {
+      return res.status(404).json({ error: 'Ogłoszenie nie istnieje lub nie jest Twoje' });
+    }
+
+    // pobierz wszystkie zdjęcia tego ogłoszenia
+    const all = await client.query(
+      'SELECT id FROM listing_images WHERE listing_id = $1 ORDER BY COALESCE(sort_order, id) ASC, id ASC',
+      [listingId]
+    );
+
+    const allIds = all.rows.map((r) => r.id);
+
+    // sprawdź, czy przekazane ID należą do ogłoszenia
+    const allowed = new Set(allIds);
+    for (const id of uniqueIds) {
+      if (!allowed.has(id)) {
+        return res.status(400).json({ error: 'Lista zawiera zdjęcia, które nie należą do tego ogłoszenia' });
+      }
+    }
+
+    // final: najpierw te z payload, potem reszta (żeby zawsze mieć unikalne sort_order)
+    const rest = allIds.filter((id) => !uniqueIds.includes(id));
+    const finalIds = [...uniqueIds, ...rest];
+
+    await client.query('BEGIN');
+
+    // FAZA 1: ustaw tymczasowe, UNIKALNE sort_order (żeby nie było kolizji na UNIQUE(listing_id, sort_order)
+    // nawet jeśli w bazie już istnieją duplikaty).
+    await client.query(
+      `WITH ordered AS (
+         SELECT id,
+                ROW_NUMBER() OVER (ORDER BY COALESCE(sort_order, id) ASC, id ASC) AS rn
+         FROM listing_images
+         WHERE listing_id = $1
+       )
+       UPDATE listing_images li
+       SET sort_order = 100000 + o.rn
+       FROM ordered o
+       WHERE li.id = o.id AND li.listing_id = $1`,
+      [listingId]
+    );
+
+    // FAZA 2: ustaw docelowe 0..n-1
+    for (let i = 0; i < finalIds.length; i++) {
+      await client.query(
+        'UPDATE listing_images SET sort_order = $1 WHERE listing_id = $2 AND id = $3',
+        [i, listingId, finalIds[i]]
+      );
+    }
+
+    await client.query('COMMIT');
+    return res.json({ ok: true });
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (_) {}
+    console.error('Błąd reorder zdjęć:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera', details: err.message });
+  } finally {
+    client.release();
   }
 });
 
@@ -860,18 +984,29 @@ if (upload) {
       const files = req.files || [];
       if (files.length === 0) return res.status(400).json({ error: 'Nie przesłano żadnych plików' });
 
+      // ustawiamy sort_order tak, aby nowe zdjęcia trafiały na koniec
+      const { rows: maxRows } = await pool.query(
+        'SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM listing_images WHERE listing_id = $1',
+        [listingId]
+      );
+      const startOrder = Number(maxRows?.[0]?.max_order ?? -1) + 1;
+
       const values = [];
       const placeholders = [];
       files.forEach((f, i) => {
         const relPath = `/uploads/${path.basename(f.path)}`;
         const fileBuf = fs.readFileSync(f.path);
-        values.push(listingId, relPath, f.mimetype, f.size, fileBuf);
-        const base = i * 5;
-        placeholders.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`);
+        const sortOrder = startOrder + i;
+
+        values.push(listingId, relPath, f.mimetype, f.size, fileBuf, sortOrder);
+        const base = i * 6;
+        placeholders.push(
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
+        );
       });
 
       await pool.query(
-        `INSERT INTO listing_images (listing_id, path, mime, size, data) VALUES ${placeholders.join(',')}`,
+        `INSERT INTO listing_images (listing_id, path, mime, size, data, sort_order) VALUES ${placeholders.join(',')}`,
         values
       );
 
@@ -891,54 +1026,6 @@ if (upload) {
   });
 }
 
-router.delete('/:id/images/:imageId', authRequired, async (req, res) => {
-  try {
-    const listingId = Number(req.params.id);
-    const imageId = Number(req.params.imageId);
-
-    if (!listingId || !imageId) {
-      return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia lub zdjęcia' });
-    }
-
-    // Czy ogłoszenie jest tego użytkownika?
-    const check = await pool.query(
-      'SELECT id FROM listing WHERE id = $1 AND user_id = $2',
-      [listingId, req.user.id]
-    );
-    if (check.rowCount === 0) {
-      return res.status(404).json({ error: 'Ogłoszenie nie istnieje lub nie jest Twoje' });
-    }
-
-    // Pobierz ścieżkę do pliku (jeśli jest)
-    const { rows } = await pool.query(
-      'SELECT path FROM listing_images WHERE id = $1 AND listing_id = $2',
-      [imageId, listingId]
-    );
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Zdjęcie nie istnieje' });
-    }
-
-    const img = rows[0];
-
-    // Usuń rekord z bazy
-    await pool.query('DELETE FROM listing_images WHERE id = $1', [imageId]);
-
-    // Usuń plik z dysku, jeśli ma path
-    if (img.path) {
-      const filePath = path.join(process.cwd(), 'backend', img.path);
-      if (fs.existsSync(filePath)) {
-        fs.unlink(filePath, (err) => {
-          if (err) console.error('❌ Błąd przy usuwaniu pliku:', err);
-        });
-      }
-    }
-
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error('Błąd usuwania zdjęcia:', err.message);
-    return res.status(500).json({ error: 'Błąd serwera', details: err.message });
-  }
-});
 
 
 module.exports = router;
