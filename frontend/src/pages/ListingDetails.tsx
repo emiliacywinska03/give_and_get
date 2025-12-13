@@ -323,6 +323,9 @@ export default function ListingDetails() {
   const [editDescription, setEditDescription] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editCondition, setEditCondition] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editIsFree, setEditIsFree] = useState(false);
+  const [editNegotiable, setEditNegotiable] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -480,6 +483,13 @@ export default function ListingDetails() {
       setEditDescription(data.description || '');
       setEditLocation(data.location || '');
       setEditCondition(((data as any).condition ?? '') as string);
+      const isSale = (data as any)?.type_id === 1;
+      if (isSale) {
+        const rawPrice = (data as any)?.price;
+        setEditPrice(rawPrice === null || typeof rawPrice === 'undefined' ? '' : String(rawPrice));
+        setEditIsFree(Boolean((data as any)?.is_free));
+        setEditNegotiable(Boolean((data as any)?.negotiable));
+      }
       if (startInEdit) {
         setEditMode(true);
       }
@@ -579,11 +589,23 @@ const handleSave = async () => {
       },
       credentials: 'include',
       body: JSON.stringify({
-        title: editTitle,
-        description: editDescription,
-        location: editLocation,
-        condition: editCondition,
-      }),
+      title: editTitle,
+      description: editDescription,
+      location: editLocation,
+      condition: editCondition,
+
+
+      price:
+        (data as any)?.type_id === 1
+          ? editIsFree
+            ? 0
+            : editPrice.trim() === ''
+            ? null
+            : Number(editPrice)
+          : undefined,
+      isFree: (data as any)?.type_id === 1 ? editIsFree : undefined,
+      negotiable: (data as any)?.type_id === 1 ? editNegotiable : undefined,
+    }),
     });
 
     if (!res.ok) {
@@ -697,6 +719,7 @@ const handleSave = async () => {
     setNewImages([]);
     setEditMode(false);
     setEditCondition(((updated as any)?.condition ?? editCondition) as string);
+    window.location.reload();
   } catch (e) {
     console.error('Błąd podczas zapisu ogłoszenia', e);
     alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
@@ -1150,9 +1173,47 @@ const handleSave = async () => {
           }
         >
           <span className="listing-price-label">
-            {isNegotiable ? 'Cena do negocjacji' : 'Cena'}
-          </span>
+          {editMode && canEdit && data.type_id === 1
+            ? 'Cena'
+            : isNegotiable
+            ? 'Cena do negocjacji'
+            : 'Cena'}
+        </span>
+
+        {editMode && canEdit && data.type_id === 1 ? (
+          <div className="price-edit">
+            <input
+              className="price-edit-input"
+              type="text"
+              inputMode="decimal"
+              value={editIsFree ? '' : editPrice}
+              onChange={(e) => setEditPrice(e.target.value.replace(/[^0-9.,-]/g, ''))}
+              placeholder={editIsFree ? 'Darmowe' : 'Wpisz cenę'}
+              disabled={editIsFree}
+            />
+
+            <label className="price-edit-check">
+              <input
+                type="checkbox"
+                checked={editIsFree}
+                onChange={(e) => setEditIsFree(e.target.checked)}
+              />
+              Za darmo
+            </label>
+
+            <label className="price-edit-check">
+              <input
+                type="checkbox"
+                checked={editNegotiable}
+                onChange={(e) => setEditNegotiable(e.target.checked)}
+                disabled={editIsFree}
+              />
+              Do negocjacji
+            </label>
+          </div>
+        ) : (
           <span className="listing-price-value">{pricePair.value}</span>
+        )}
 
           {isSold || isPurchased ? (
             <span className="listing-purchased-label">

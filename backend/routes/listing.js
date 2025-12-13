@@ -632,7 +632,19 @@ router.delete('/:id', authRequired, async (req, res) => {
 
 router.put('/:id', authRequired, async (req, res) => {
   const listingId = Number(req.params.id);
-  const { title, description, location, category_id, subcategory_id, condition } = req.body;
+
+  const {
+    title,
+    description,
+    location,
+    category_id,
+    subcategory_id,
+    condition,
+    price,
+    isFree,
+    is_free,
+    negotiable,
+  } = req.body;
 
   if (Number.isNaN(listingId)) {
     return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
@@ -655,26 +667,59 @@ router.put('/:id', authRequired, async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowe subcategory_id' });
   }
 
+  const condValue =
+    typeof condition === 'undefined' || condition === null || String(condition).trim() === ''
+      ? null
+      : String(condition).trim();
+
+  const freeRaw = typeof is_free !== 'undefined' ? is_free : isFree;
+  const isFreeValue = typeof freeRaw === 'string' ? freeRaw === 'true' : Boolean(freeRaw);
+  const negotiableValue = typeof negotiable === 'string' ? negotiable === 'true' : Boolean(negotiable);
+
+
+  let priceValue = null;
+  if (isFreeValue) {
+    priceValue = 0;
+  } else if (typeof price !== 'undefined' && price !== null && String(price).trim() !== '') {
+    const num = Number(String(price).replace(',', '.'));
+    if (Number.isNaN(num)) {
+      return res.status(400).json({ error: 'Nieprawidłowa cena' });
+    }
+    priceValue = num;
+  }
+
   try {
     const result = await pool.query(
-      `UPDATE listing
-      SET title = $1,
-          description = $2,
-          location = $3,
-          item_condition = COALESCE($4, item_condition),
-          category_id = COALESCE($5, category_id),
-          subcategory_id = COALESCE($6, subcategory_id)
-      WHERE id = $7 AND user_id = $8
-      RETURNING *`,
+      `
+      UPDATE listing
+      SET
+        title          = COALESCE($1, title),
+        description    = COALESCE($2, description),
+        location       = COALESCE($3, location),
+        item_condition = COALESCE($4, item_condition),
+        category_id    = COALESCE($5, category_id),
+        subcategory_id = COALESCE($6, subcategory_id),
+
+        -- NOWE: edycja sprzedaży
+        price          = COALESCE($9, price),
+        is_free        = COALESCE($10, is_free),
+        negotiable     = COALESCE($11, negotiable)
+
+      WHERE id = $7::int AND user_id = $8::int
+      RETURNING *
+      `,
       [
-        title,
-        description,
-        location,
-        typeof condition === 'undefined' || condition === '' ? null : condition,
+        typeof title === 'undefined' ? null : title,
+        typeof description === 'undefined' ? null : description,
+        typeof location === 'undefined' ? null : location,
+        condValue,
         catId,
         subId,
         listingId,
         req.user.id,
+        priceValue,
+        isFreeValue,
+        negotiableValue,
       ]
     );
 

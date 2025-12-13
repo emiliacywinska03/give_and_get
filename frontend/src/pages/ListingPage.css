@@ -839,3 +839,38 @@ body.dark-mode .listing-thumb-space img.listing-thumb {
   color: red;
   font-size: 14px;
 }
+
+.price-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.price-edit-input {
+  min-width: 160px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  outline: none;
+}
+
+.price-edit-input:disabled {
+  opacity: 0.6;
+}
+
+.price-edit-check {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.95rem;
+  user-select: none;
+}
+
+.price-edit-check input {
+  width: 16px;
+  height: 16px;
+}
