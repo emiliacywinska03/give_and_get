@@ -231,9 +231,6 @@ function collectPairs(details: any): { key: string; label: string; value: string
       }
     }
 
-    if (mapped === 'price' && isFreeListing) {
-      return;
-    }
 
     const k = mapped;
 
@@ -482,12 +479,15 @@ export default function ListingDetails() {
       setEditTitle(data.title || '');
       setEditDescription(data.description || '');
       setEditLocation(data.location || '');
-      setEditCondition(((data as any).condition ?? '') as string);
+      setEditCondition(
+        String((data as any)?.item_condition ?? (data as any)?.condition ?? '')
+      );
       const isSale = (data as any)?.type_id === 1;
       if (isSale) {
+        const rawIsFree = Boolean((data as any)?.is_free);
         const rawPrice = (data as any)?.price;
-        setEditPrice(rawPrice === null || typeof rawPrice === 'undefined' ? '' : String(rawPrice));
-        setEditIsFree(Boolean((data as any)?.is_free));
+        setEditPrice(rawIsFree ? '' : (rawPrice === null || typeof rawPrice === 'undefined' ? '' : String(rawPrice)));
+        setEditIsFree(rawIsFree);
         setEditNegotiable(Boolean((data as any)?.negotiable));
       }
       if (startInEdit) {
@@ -1165,71 +1165,67 @@ const handleSave = async () => {
         )}
       </div>
 
-      {pricePair && (
-        <div
-          className={
-            `listing-price-highlight listing-price-highlight--bottom` +
-            (isSold || isPurchased ? ' listing-price-highlight--sold' : '')
-          }
-        >
+      {data.type_id === 1 && (
+        <div className="listing-price-highlight listing-price-highlight--bottom">
           <span className="listing-price-label">
-          {editMode && canEdit && data.type_id === 1
-            ? 'Cena'
-            : isNegotiable
-            ? 'Cena do negocjacji'
-            : 'Cena'}
-        </span>
+            {data.is_free
+              ? 'Za darmo'
+              : isNegotiable
+              ? 'Cena do negocjacji'
+              : 'Cena'}
+          </span>
 
-        {editMode && canEdit && data.type_id === 1 ? (
-          <div className="price-edit">
-            <input
-              className="price-edit-input"
-              type="text"
-              inputMode="decimal"
-              value={editIsFree ? '' : editPrice}
-              onChange={(e) => setEditPrice(e.target.value.replace(/[^0-9.,-]/g, ''))}
-              placeholder={editIsFree ? 'Darmowe' : 'Wpisz cenę'}
-              disabled={editIsFree}
-            />
-
-            <label className="price-edit-check">
+          {editMode && canEdit ? (
+            <div className="price-edit">
               <input
-                type="checkbox"
-                checked={editIsFree}
-                onChange={(e) => setEditIsFree(e.target.checked)}
-              />
-              Za darmo
-            </label>
-
-            <label className="price-edit-check">
-              <input
-                type="checkbox"
-                checked={editNegotiable}
-                onChange={(e) => setEditNegotiable(e.target.checked)}
+                className="price-edit-input"
+                type="text"
+                inputMode="decimal"
+                value={editIsFree ? '' : editPrice}
+                onChange={(e) =>
+                  setEditPrice(e.target.value.replace(/[^0-9.,-]/g, ''))
+                }
+                placeholder={editIsFree ? 'Darmowe' : 'Wpisz cenę'}
                 disabled={editIsFree}
               />
-              Do negocjacji
-            </label>
-          </div>
-        ) : (
-          <span className="listing-price-value">{pricePair.value}</span>
-        )}
 
-          {isSold || isPurchased ? (
-            <span className="listing-purchased-label">
-              SPRZEDANO
-            </span>
+              <label className="price-edit-check">
+                <input
+                  type="checkbox"
+                  checked={editIsFree}
+                  onChange={(e) => setEditIsFree(e.target.checked)}
+                />
+                Za darmo
+              </label>
+
+              <label className="price-edit-check">
+                <input
+                  type="checkbox"
+                  checked={editNegotiable}
+                  onChange={(e) => setEditNegotiable(e.target.checked)}
+                  disabled={editIsFree}
+                />
+                Do negocjacji
+              </label>
+            </div>
           ) : (
-            data.type_id === 1 &&
-            !data.is_free && (
-              <button
-                className="buy-now-button"
-                type="button"
-                onClick={handleBuyNowClick}
-              >
-                Kup teraz
-              </button>
-            )
+            <span className="listing-price-value">
+              {data.is_free ? formatVal('price', 0) : pricePair?.value ?? '—'}
+            </span>
+          )}
+
+          {!isSold && !isPurchased && data.type_id === 1 && !data.is_free && (
+            <button
+              className="buy-now-button"
+              type="button"
+              onClick={handleBuyNowClick}
+            >
+              <span>Kup teraz</span>
+            </button>
+          )}
+
+          {(isSold || isPurchased) && (
+            <span className="listing-purchased-label">SPRZEDANO</span>
           )}
         </div>
       )}

@@ -644,6 +644,7 @@ router.put('/:id', authRequired, async (req, res) => {
     isFree,
     is_free,
     negotiable,
+    type_id,
   } = req.body;
 
   if (Number.isNaN(listingId)) {
@@ -672,21 +673,55 @@ router.put('/:id', authRequired, async (req, res) => {
       ? null
       : String(condition).trim();
 
+  const hasPrice = Object.prototype.hasOwnProperty.call(req.body, 'price');
+  const hasIsFree =
+    Object.prototype.hasOwnProperty.call(req.body, 'isFree') ||
+    Object.prototype.hasOwnProperty.call(req.body, 'is_free');
+  const hasNegotiable = Object.prototype.hasOwnProperty.call(req.body, 'negotiable');
+
   const freeRaw = typeof is_free !== 'undefined' ? is_free : isFree;
   const isFreeValue = typeof freeRaw === 'string' ? freeRaw === 'true' : Boolean(freeRaw);
-  const negotiableValue = typeof negotiable === 'string' ? negotiable === 'true' : Boolean(negotiable);
 
+  const negotiableValueRaw = typeof negotiable === 'undefined' ? undefined : negotiable;
+  const negotiableValue =
+    typeof negotiableValueRaw === 'string'
+      ? negotiableValueRaw === 'true'
+      : Boolean(negotiableValueRaw);
+
+  let listingTypeId = Number(type_id);
+  if (!Number.isFinite(listingTypeId)) {
+    const { rows: tRows } = await pool.query(
+      'SELECT type_id FROM listing WHERE id = $1 AND user_id = $2',
+      [listingId, req.user.id]
+    );
+    if (!tRows.length) {
+      return res.status(404).json({ error: 'Ogłoszenie nie istnieje lub nie jest Twoje' });
+    }
+    listingTypeId = Number(tRows[0].type_id);
+  }
 
   let priceValue = null;
-  if (isFreeValue) {
-    priceValue = 0;
-  } else if (typeof price !== 'undefined' && price !== null && String(price).trim() !== '') {
-    const num = Number(String(price).replace(',', '.'));
-    if (Number.isNaN(num)) {
-      return res.status(400).json({ error: 'Nieprawidłowa cena' });
+  if (hasPrice) {
+    if (price === null || typeof price === 'undefined' || String(price).trim() === '') {
+      priceValue = null;
+    } else {
+      const num = Number(String(price).replace(',', '.'));
+      if (Number.isNaN(num)) {
+        return res.status(400).json({ error: 'Nieprawidłowa cena' });
+      }
+      priceValue = num;
     }
-    priceValue = num;
   }
+
+  const shouldForceFree = hasIsFree && isFreeValue === true;
+  const finalHasPrice = listingTypeId === 1 && (hasPrice || shouldForceFree);
+  const finalPriceValue = shouldForceFree ? 0 : priceValue;
+
+  const finalHasIsFree = listingTypeId === 1 && hasIsFree;
+  const finalIsFreeValue = isFreeValue;
+
+  const finalHasNegotiable = listingTypeId === 1 && (hasNegotiable || shouldForceFree);
+  const finalNegotiableValue = shouldForceFree ? false : negotiableValue;
 
   try {
     const result = await pool.query(
@@ -701,9 +736,9 @@ router.put('/:id', authRequired, async (req, res) => {
         subcategory_id = COALESCE($6, subcategory_id),
 
         -- NOWE: edycja sprzedaży
-        price          = COALESCE($9, price),
-        is_free        = COALESCE($10, is_free),
-        negotiable     = COALESCE($11, negotiable)
+        price          = CASE WHEN $9  THEN $10 ELSE price END,
+        is_free        = CASE WHEN $11 THEN $12 ELSE is_free END,
+        negotiable     = CASE WHEN $13 THEN $14 ELSE negotiable END
 
       WHERE id = $7::int AND user_id = $8::int
       RETURNING *
@@ -717,9 +752,12 @@ router.put('/:id', authRequired, async (req, res) => {
         subId,
         listingId,
         req.user.id,
-        priceValue,
-        isFreeValue,
-        negotiableValue,
+        finalHasPrice,
+        finalPriceValue,
+        finalHasIsFree,
+        finalIsFreeValue,
+        finalHasNegotiable,
+        finalNegotiableValue,
       ]
     );
 
