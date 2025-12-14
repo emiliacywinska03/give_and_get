@@ -369,6 +369,8 @@ const Profile: React.FC = () => {
 
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
+  const FEATURE_COST_POINTS = 5;
+
 
   const handleToggleFeatured = async (id: number) => {
     const listing = listings.find((x) => x.id === id);
@@ -446,8 +448,6 @@ const Profile: React.FC = () => {
   
 
   const SOLD_STATUS_ID = 3;
-
-  const FEATURE_COST_POINTS = 5;
 
   const refreshMe = async () => {
     try {
@@ -584,7 +584,30 @@ const Profile: React.FC = () => {
                     }
                     style={{ cursor: 'pointer', position: 'relative' }}
                   >
-                    {renderThumb(l)}
+                    <div className="thumb-wrap">
+                    {l.is_featured && (
+                      <button
+                        type="button"
+                        className="featured-star-badge"
+                        title="Usuń wyróżnienie"
+                        onClick={(e) => {
+                          e.stopPropagation();   
+                          handleToggleFeatured(l.id);
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                          <path
+                            fill="currentColor"
+                            d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z"
+                          />
+                        </svg>
+                      </button>
+                    )}
+
+
+                      {renderThumb(l)}
+                    </div>
+
 
                     <div className="listing-content">
                       <h4 className="listing-title">{l.title}</h4>
@@ -709,7 +732,21 @@ const Profile: React.FC = () => {
                 >
                   <span className="sold-badge-corner">SPRZEDANO</span>
 
-                  {renderThumb(l)}
+                  <div className="thumb-wrap">
+                    {l.is_featured && (
+                      <div className="featured-star-badge" title="Wyróżnione">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
+                          <path
+                            fill="currentColor"
+                            d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z"
+                          />
+                        </svg>
+                      </div>
+                    )}
+
+                    {renderThumb(l)}
+                  </div>
+
 
                   <div className="listing-content">
                     <h4 className="listing-title">{l.title}</h4>

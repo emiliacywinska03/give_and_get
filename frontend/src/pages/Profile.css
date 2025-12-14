@@ -750,3 +750,85 @@ body.dark-mode .profile-page .sold-badge-corner {
   border-color: rgba(2, 6, 23, 0.7);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
 }
+.thumb-wrap{
+  position: relative;
+  flex-shrink: 0; 
+}
+
+/* GWIAZDKA */
+.featured-star-badge{
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  top: -10px;
+  left: -10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+  display: grid;
+  place-items: center;
+  z-index: 10;
+  color: #facc15; 
+}
+
+body.dark-mode .featured-star-badge{
+  background: rgba(2,6,23,0.95);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.7);
+  color: #facc15;
+}
+.featured-star-badge svg {
+  width: 16px;
+  height: 16px;
+}
+
+.featured-star-badge {
+  cursor: pointer;
+}
+
+.featured-star-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+}
+
+
+/* SERDUSZKO */
+.profile-page .favorite-toggle{
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 32px;         
+  height: 32px;
+  border-radius: 999px;
+  background: #ffe4e6;  
+  border: 1px solid #fecdd3;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+  z-index: 20;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.profile-page .favorite-toggle:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+}
+
+.profile-page .favorite-toggle svg{
+  width: 18px;        
+  height: 18px;
+  stroke: #e11d48;   
+  fill: none;
+}
+.profile-page .favorite-toggle--active svg{
+  fill: #e11d48;
+  stroke: #e11d48;
+}
+
+body.dark-mode .profile-page .favorite-toggle{
+  background: rgba(190, 18, 60, 0.25);
+  border-color: rgba(244, 63, 94, 0.4);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.7);
+}
