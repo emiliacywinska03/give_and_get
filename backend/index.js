@@ -9,6 +9,8 @@ const authRoutes = require('./routes/auth');
 const rewardsRouter = require('./routes/rewards');
 const messagesRouter = require('./routes/messages');
 let usersRouter = require('./routes/users');
+
+
 usersRouter = usersRouter?.router || usersRouter?.default || usersRouter;
 
 const path = require('path');
@@ -48,7 +50,7 @@ app.get('/healthz', async (req, res) => {
   }
 });
 
-app.use('/api/listings', listingRoutes);
+app.use('/api/listings', require('./routes/listing'));
 app.use('/api/auth', authRoutes);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/messages', messagesRouter);

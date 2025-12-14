@@ -1,0 +1,19 @@
+.history-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 32px;
+  }
+  
+  /* karta sprzedanego/zakończonego ogłoszenia */
+.listing-card--sold {
+  opacity: 0.6;
+  position: relative;
+}
+
+.listing-card--sold,
+.listing-card--history {
+  opacity: 0.55;
+  filter: grayscale(100%);
+}

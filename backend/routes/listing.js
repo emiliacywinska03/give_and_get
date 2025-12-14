@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { pool } = require('../db');
 
+
 let multer, fs, path;
 try {
   multer = require('multer');
@@ -263,6 +264,10 @@ router.post('/', authRequired, async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
+
+  const SOLD_STATUS_ID = 3;
+  const HISTORY_STATUS_ID = 4;
+
   try {
     const {
       type_id,
@@ -319,7 +324,8 @@ router.get('/', async (req, res) => {
     }
 
     // Ukrywamy ogłoszenia sprzedane z głównej listy
-    where.push(`(l.status_id IS NULL OR l.status_id <> ${SOLD_STATUS_ID})`);
+    where.push(`(l.status_id IS NULL OR (l.status_id <> ${SOLD_STATUS_ID} AND l.status_id <> ${HISTORY_STATUS_ID}))`);
+
 
     // paginacja – domyślnie 20 ogłoszeń na stronę
     let pageNum = Number(page) || 1;
@@ -1109,6 +1115,102 @@ if (upload) {
   });
 }
 
+router.patch('/:id/history', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `UPDATE listing
+       SET status_id = 4
+       WHERE id = $1 AND user_id = $2
+       RETURNING *`,
+      [listingId, req.user.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Nie znaleziono lub brak dostępu.' });
+    }
+
+    res.json({ ok: true, listing: rows[0] });
+  } catch (err) {
+    console.error('Błąd przenoszenia do historii:', err.message);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+const HISTORY_STATUS_ID = 4;
+const RESUME_COST_POINTS = 5;
+
+// WZNÓW ogłoszenie z historii (koszt: 5 pkt)
+router.patch('/:id/resume', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1) sprawdź czy ogłoszenie jest Twoje i w historii
+    const lq = await client.query(
+      'SELECT id, user_id, status_id FROM listing WHERE id = $1 FOR UPDATE',
+      [listingId]
+    );
+
+    if (!lq.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Nie znaleziono ogłoszenia' });
+    }
+
+    const listing = lq.rows[0];
+    if (listing.user_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Brak dostępu' });
+    }
+
+    if (Number(listing.status_id) !== HISTORY_STATUS_ID) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'To ogłoszenie nie jest w historii' });
+    }
+
+    // 2) sprawdź punkty
+    const uq = await client.query(
+      'SELECT points FROM "user" WHERE id = $1 FOR UPDATE',
+      [req.user.id]
+    );
+
+    const points = Number(uq.rows[0]?.points ?? 0);
+    if (points < RESUME_COST_POINTS) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Masz za mało punktów' });
+    }
+
+    // 3) odejmij punkty
+    const up = await client.query(
+      'UPDATE "user" SET points = points - $1 WHERE id = $2 RETURNING points',
+      [RESUME_COST_POINTS, req.user.id]
+    );
+
+    // 4) ustaw ogłoszenie jako aktywne (dajemy NULL żeby było widoczne w /listings)
+    const updated = await client.query(
+      'UPDATE listing SET status_id = NULL WHERE id = $1 AND user_id = $2 RETURNING *',
+      [listingId, req.user.id]
+    );
+
+    await client.query('COMMIT');
+    return res.json({ ok: true, listing: updated.rows[0], points: up.rows[0].points });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    console.error('Błąd wznowienia ogłoszenia:', err);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  } finally {
+    client.release();
+  }
+});
 
 
 module.exports = router;

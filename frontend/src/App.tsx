@@ -15,6 +15,8 @@ import RewardsPage from './pages/RewardsPage';
 import FeaturedListings from './pages/FeaturedListings';
 import MessagesPage from './pages/MessagesPage';
 import MessagesConversationPage from './pages/MessagesConversationPage';
+import HistoryListingsPage from './pages/HistoryListingsPage';
+
 
 function App() {
   return (
@@ -69,6 +71,8 @@ function App() {
           <Route path="/listings/create" element={<CreateListing/>} />
           <Route path="/listings" element={<ListingPage/>} />
           <Route path="/listing/:id" element={<ListingDetails />} />
+          <Route path="/history" element={<HistoryListingsPage />} />
+
       </Routes>
       <Footer />
     </div>

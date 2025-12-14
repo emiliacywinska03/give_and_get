@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './Profile.css';
+
 
 interface Listing {
   id: number;
@@ -57,8 +58,8 @@ const Profile: React.FC = () => {
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
 
   const avatarUrl = (user as any)?.avatar_url as string | undefined;
+  const historyRef = useRef<HTMLHeadingElement | null>(null);
 
-  
 
   // 1 = sprzedaż, 2 = praca, 3 = pomoc
   const renderThumb = (item: Listing) => {
@@ -307,28 +308,88 @@ const Profile: React.FC = () => {
     fetchFavorites();
   }, [user]);
 
+
   const handleDelete = async (id: number) => {
-    const confirmed = window.confirm('Czy na pewno chcesz usunąć ogłoszenie?');
+    const confirmed = window.confirm(
+      'Czy na pewno chcesz usunąć ogłoszenie?'
+    );
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
-        method: 'DELETE',
+      const res = await fetch(`${API_BASE}/api/listings/${id}/history`, {
+        method: 'PATCH',
         headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
         credentials: 'include',
       });
 
-      if (res.ok) {
-        setListings((prev) => prev.filter((item) => item.id !== id));
-      } else {
-        const error = await res.json();
-        alert(`Błąd: ${error.error || error.message || 'Nieznany błąd'}`);
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(`Błąd: ${data?.error || 'Nie udało się przenieść do historii'}`);
+        return;
       }
+
+      // 🔹 NIE usuwamy z listy — tylko zmieniamy status
+      setListings((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, status_id: HISTORY_STATUS_ID }
+            : item
+        )
+      );
     } catch (err) {
-      console.error('Błąd podczas usuwania ogłoszenia:', err);
-      alert('Wystąpił błąd podczas usuwania ogłoszenia.');
+      console.error('Błąd podczas przenoszenia do historii:', err);
+      alert('Wystąpił błąd podczas przenoszenia do historii.');
     }
   };
+
+
+  const handleResume = async (id: number) => {
+    const userPoints = Number((user as any)?.points ?? 0);
+  
+    if (userPoints < RESUME_COST_POINTS) {
+      alert('Masz za mało punktów, aby wznowić ogłoszenie.');
+      return;
+    }
+  
+    const ok = window.confirm(`Wznowić ogłoszenie za ${RESUME_COST_POINTS} pkt?`);
+    if (!ok) return;
+  
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}/resume`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+  
+      const data = await res.json().catch(() => null);
+  
+      if (!res.ok) {
+        alert(data?.error || 'Nie udało się wznowić ogłoszenia.');
+        return;
+      }
+  
+      // aktualizacja punktów użytkownika
+      if (typeof data?.points === 'number') {
+        setUser((prev: any) => (prev ? { ...prev, points: data.points } : prev));
+      } else {
+        setUser((prev: any) =>
+          prev ? { ...prev, points: (prev.points ?? 0) - RESUME_COST_POINTS } : prev
+        );
+      }
+  
+      // ogłoszenie wraca do aktywnych
+      setListings((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status_id: null } : item
+        )
+      );
+    } catch (e) {
+      console.error(e);
+      alert('Wystąpił błąd podczas wznawiania ogłoszenia.');
+    }
+  };
+  
 
   const handleToggleFavorite = async (
     e: React.MouseEvent,
@@ -371,6 +432,7 @@ const Profile: React.FC = () => {
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
   const FEATURE_COST_POINTS = 5;
+  const RESUME_COST_POINTS = 5;
 
 
   const handleToggleFeatured = async (id: number) => {
@@ -449,6 +511,8 @@ const Profile: React.FC = () => {
   
 
   const SOLD_STATUS_ID = 3;
+  const HISTORY_STATUS_ID = 4;
+
 
   const refreshMe = async () => {
     try {
@@ -464,10 +528,15 @@ const Profile: React.FC = () => {
     }
   };
 
-
-  const activeListings = listings.filter((l) => l.status_id !== SOLD_STATUS_ID);
-  const finishedListings = listings.filter((l) => l.status_id === SOLD_STATUS_ID);
-
+  const activeListings = listings.filter(
+    (l) => l.status_id !== SOLD_STATUS_ID && l.status_id !== HISTORY_STATUS_ID
+  );
+  
+  
+  const historyListings = listings.filter(
+    (l) => l.status_id === HISTORY_STATUS_ID
+  );
+  
 
   return (
     <div className="profile-page">
@@ -555,6 +624,13 @@ const Profile: React.FC = () => {
               onClick={() => navigate('/rewards')}
             >
               Zobacz nagrody za punkty
+            </button>
+
+            <button
+              className="profile-history-button"
+              onClick={() => navigate('/history')}
+            >
+              Historia ogłoszeń
             </button>
 
             <button
@@ -712,57 +788,6 @@ const Profile: React.FC = () => {
 
           </div>
         )}
-
-        {/* ---------------- Zakończone ---------------- */}
-        <h3 className="profile-subtitle">Zakończone ogłoszenia</h3>
-
-        {loadingListings ? (
-          <p>Ładowanie ogłoszeń…</p>
-        ) : finishedListings.length === 0 ? (
-          <p>Nie masz zakończonych ogłoszeń.</p>
-        ) : (
-          <div className="listing-grid">
-            {finishedListings.map((l) => (
-              <div key={l.id} className="listing-card listing-card--sold">
-                
-
-                <div
-                  className="listing-main"
-                  onClick={() => navigate(`/listing/${l.id}`, { state: { fromProfile: true } })}
-                  style={{ cursor: 'pointer', position: 'relative' }}
-                >
-                  <span className="sold-badge-corner">SPRZEDANO</span>
-
-                  <div className="thumb-wrap">
-                    {l.is_featured && (
-                      <div className="featured-star-badge" title="Wyróżnione">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18">
-                          <path
-                            fill="currentColor"
-                            d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z"
-                          />
-                        </svg>
-                      </div>
-                    )}
-
-                    {renderThumb(l)}
-                  </div>
-
-
-                  <div className="listing-content">
-                    <h4 className="listing-title">{l.title}</h4>
-                    <p className="listing-desc">{l.description}</p>
-                    <small className="listing-date">
-                      Dodano: {new Date(l.created_at).toLocaleDateString()}
-                    </small>
-                  </div>
-                </div>
-
-              </div>
-            ))}
-          </div>
-        )}
-
 
 
       </div>

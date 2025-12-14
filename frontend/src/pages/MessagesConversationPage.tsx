@@ -251,8 +251,20 @@ const MessagesConversationPage: React.FC = () => {
 
     socket.on('chat:new-message', (msg: any) => {
       if (msg.listing_id !== listingId) return;
-      setMessages((prev) => [...prev, msg]);
+    
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+  
+        const enriched: ChatMessage = {
+          ...msg,
+          sender_username: msg.sender_username || (user?.username ?? 'Ty'),
+          receiver_username: msg.receiver_username || (peerName || 'Użytkownik'),
+        };
+    
+        return [...prev, enriched];
+      });
     });
+    
 
 
     socket.on('chat:typing', (payload: any) => {
@@ -351,7 +363,7 @@ const MessagesConversationPage: React.FC = () => {
         receiver_username: peerName || 'Użytkownik',
       };
 
-      setMessages((prev) => [...prev, newMsg]);
+      setMessages((prev) => (prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]));
       setContent('');
       setIsTyping(false);
     } catch (err) {
