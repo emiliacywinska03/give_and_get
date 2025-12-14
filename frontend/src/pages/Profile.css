@@ -722,3 +722,31 @@ body.dark-mode .listing-actions .edit-button:hover {
   line-height: 1.4;
   max-height: calc(1.4em * 2);
 }
+
+/* mały badge SPRZEDANO – lewy górny róg, lekko poza kartą */
+.profile-page .sold-badge-corner {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 10;
+
+  background: #9ca3af;
+  color: #fff;
+
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+
+  padding: 6px 10px;
+  border-radius: 10px;
+
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+body.dark-mode .profile-page .sold-badge-corner {
+  background: #6b7280;
+  border-color: rgba(2, 6, 23, 0.7);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6);
+}

@@ -636,11 +636,15 @@ const Profile: React.FC = () => {
           <div className="listing-grid">
             {finishedListings.map((l) => (
               <div key={l.id} className="listing-card listing-card--sold">
+                
+
                 <div
                   className="listing-main"
                   onClick={() => navigate(`/listing/${l.id}`, { state: { fromProfile: true } })}
                   style={{ cursor: 'pointer', position: 'relative' }}
                 >
+                  <span className="sold-badge-corner">SPRZEDANO</span>
+
                   {renderThumb(l)}
 
                   <div className="listing-content">
@@ -652,11 +656,6 @@ const Profile: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="listing-actions">
-                  <button className="sold-button" disabled>
-                    SPRZEDANO
-                  </button>
-                </div>
               </div>
             ))}
           </div>
