@@ -78,8 +78,8 @@ const Profile: React.FC = () => {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
-            src="/icons/work-case-filled-svgrepo-com.svg"
-            alt="Ogłoszenie pracy"
+            src="/icons/hands-holding-heart-svgrepo-com.svg"
+            alt="Ogłoszenie pomocy"
             className="listing-thumb-icon"
           />
         </div>
@@ -91,13 +91,14 @@ const Profile: React.FC = () => {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
-            src="/icons/hands-holding-heart-svgrepo-com.svg"
-            alt="Ogłoszenie pomocy"
+            src="/icons/work-case-filled-svgrepo-com.svg"
+            alt="Ogłoszenie pracy"
             className="listing-thumb-icon"
           />
-        </div>
+        </div>        
       );
     }
+
 
     // 4) domyślny placeholder X
     return (
