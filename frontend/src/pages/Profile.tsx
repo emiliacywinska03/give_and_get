@@ -371,34 +371,98 @@ const Profile: React.FC = () => {
   if (!user) return <p>Nie jesteś zalogowany.</p>;
 
   const handleToggleFeatured = async (id: number) => {
+    const listing = listings.find((x) => x.id === id);
+    if (!listing) return;
+  
+    const currentlyFeatured = Boolean(listing.is_featured);
+  
+    // usuwanie wyróżnienia — bez punktów i bez confirmu
+    if (currentlyFeatured) {
+      try {
+        const res = await fetch(`${API_BASE}/api/listings/${id}/featured`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        });
+  
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          alert(err?.error || 'Nie udało się usunąć wyróżnienia.');
+          return;
+        }
+  
+        const data = await res.json();
+        setListings((prev) =>
+          prev.map((l) => (l.id === id ? { ...l, is_featured: data.is_featured } : l))
+        );
+        return;
+      } catch (e) {
+        console.error(e);
+        alert('Wystąpił błąd podczas usuwania wyróżnienia.');
+        return;
+      }
+    }
+  
+    // dodawanie wyróżnienia — płatne punktami
+    const userPoints = Number((user as any)?.points ?? 0);
+  
+    if (userPoints < FEATURE_COST_POINTS) {
+      alert('Masz za mało punktów, aby wyróżnić ogłoszenie.');
+      return;
+    }
+  
+    const ok = window.confirm(`Czy chcesz wyróżnić ogłoszenie za ${FEATURE_COST_POINTS} pkt?`);
+    if (!ok) return;
+  
     try {
+      // 1) ustaw wyróżnienie 
       const res = await fetch(`${API_BASE}/api/listings/${id}/featured`, {
         method: 'PATCH',
         credentials: 'include',
         headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
       });
-
+  
       if (!res.ok) {
-        const err = await res.json();
-        console.error('Błąd wyróżniania ogłoszenia:', err);
-        alert(err.error || 'Nie udało się zmienić wyróżnienia.');
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Nie udało się wyróżnić ogłoszenia.');
         return;
       }
-
+  
       const data = await res.json();
-
+  
+      // 2) odejmij punkty lokalnie 
+      setUser((prev: any) => (prev ? { ...prev, points: (prev.points ?? 0) - FEATURE_COST_POINTS } : prev));
+  
+      // 3) zaktualizuj ogłoszenie w liście
       setListings((prev) =>
-        prev.map((l) =>
-          l.id === id ? { ...l, is_featured: data.is_featured } : l
-        )
+        prev.map((l) => (l.id === id ? { ...l, is_featured: data.is_featured } : l))
       );
+  
     } catch (e) {
-      console.error('Błąd żądania wyróżnienia:', e);
-      alert('Wystąpił błąd po stronie klienta.');
+      console.error(e);
+      alert('Wystąpił błąd podczas wyróżniania ogłoszenia.');
+    }
+  };
+  
+
+  const SOLD_STATUS_ID = 3;
+
+  const FEATURE_COST_POINTS = 5;
+
+  const refreshMe = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/me`, {
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+      if (!res.ok) return;
+      const me = await res.json();
+      setUser(me);
+    } catch (e) {
+      console.error('Nie udało się odświeżyć danych użytkownika', e);
     }
   };
 
-  const SOLD_STATUS_ID = 3;
 
   const activeListings = listings.filter((l) => l.status_id !== SOLD_STATUS_ID);
   const finishedListings = listings.filter((l) => l.status_id === SOLD_STATUS_ID);
