@@ -336,6 +336,7 @@ const ListingPage: React.FC = () => {
         <div className="listing-grid">
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
+            const isOwnListing = !!user && user.id === listing.user_id;
             const imgSrc =
               listing.primary_image
                 ? listing.primary_image.startsWith('data:')
@@ -366,34 +367,31 @@ const ListingPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 {/* ikona serduszka w rogu kafelka */}
-                <button
-                  className={`favorite-toggle ${
-                    isFav ? 'favorite-toggle--active' : ''
-                  }`}
-                  aria-label={
-                    isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'
-                  }
-                  onClick={(e) =>
-                    handleToggleFavorite(e, listing.id, isFav)
-                  }
-                >
-                  <svg
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="22"
-                    height="22"
-                    fill="none"
-                    viewBox="0 0 24 24"
+                {!isOwnListing && (
+                  <button
+                    className={`favorite-toggle ${isFav ? 'favorite-toggle--active' : ''}`}
+                    aria-label={isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                    onClick={(e) => handleToggleFavorite(e, listing.id, isFav)}
                   >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                      />
+                    </svg>
+                  </button>
+                )}
+
 
                   {/* znaczek WYRÓŻNIONE */}
                   {listing.is_featured && (

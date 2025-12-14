@@ -711,3 +711,14 @@ body.dark-mode .listing-actions .edit-button:hover {
   height: 22px;
   fill: #d11a2a; 
 }
+
+/* Opis w kartach na stronie Mój profil – max 2 linie */
+.profile-page .listing-desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;    
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  max-height: calc(1.4em * 2);
+}
