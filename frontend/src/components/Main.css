@@ -810,3 +810,11 @@ body.dark-mode .stats-label {
 body.dark-mode .stats-divider {
   background: rgba(148, 163, 184, 0.28);
 }
+
+.featured-section .featured-description {
+  width: 100% !important;
+  max-width: 720px !important;
+  margin: 0.6rem auto 1.6rem !important;
+  text-align: center !important;
+  align-self: center;
+}

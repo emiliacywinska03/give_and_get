@@ -149,6 +149,27 @@
 .messages-conv-error {
   font-size: 14px;
   color: #b91c1c;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.messages-conv-back {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #2563eb;
+  background: transparent;
+  color: #2563eb;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.messages-conv-back:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
 }
 
 .messages-conv-thread {
@@ -383,4 +404,15 @@ body.dark-mode .messages-conv-listing-thumb.placeholder {
 
 body.dark-mode .messages-conv-listing-title {
   color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-back {
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+body.dark-mode .messages-conv-back:hover {
+  background-color: #2563eb;
+  color: #f9fafb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.6);
 }
