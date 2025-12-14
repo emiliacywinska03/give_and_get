@@ -306,7 +306,7 @@ const ListingPage: React.FC = () => {
           {typeFilter === 'help' && (
             <div className="filter-group">
               <label className="filter-label" htmlFor="helpTypeFilter">
-                Rodzaj pomocy
+                Rodzaj ogłoszenia
               </label>
               <select
                 id="helpTypeFilter"
@@ -317,8 +317,8 @@ const ListingPage: React.FC = () => {
                 }
               >
                 <option value="all">Wszystkie</option>
-                <option value="offer">Oferuję pomoc</option>
-                <option value="need">Szukam pomocy</option>
+                <option value="offer">Pomoc oferowana</option>
+                <option value="need">Pomoc poszukiwana</option>
               </select>
             </div>
           )}
