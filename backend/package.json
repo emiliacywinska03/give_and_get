@@ -23,6 +23,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/socket.io": "^3.0.1",
     "nodemon": "^3.1.10"
   }
 }

@@ -54,8 +54,11 @@ const Profile: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const navigate = useNavigate();
+  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
 
   const avatarUrl = (user as any)?.avatar_url as string | undefined;
+
+  
 
   // 1 = sprzedaż, 2 = praca, 3 = pomoc
   const renderThumb = (item: Listing) => {
@@ -186,6 +189,7 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
+  
 
     // ---------- Twoje ogłoszenia ----------
     const fetchMyListings = async () => {
@@ -223,7 +227,47 @@ const Profile: React.FC = () => {
       }
     };
 
-    // ---------- Ulubione ----------
+    const handleToggleFavorite = async (
+      e: React.MouseEvent,
+      listingId: number,
+      isCurrentlyFavorite: boolean
+    ) => {
+      e.preventDefault();
+      e.stopPropagation();
+    
+      try {
+        const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
+    
+        const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
+          method,
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+        });
+    
+        if (!res.ok) {
+          console.error('Błąd zmiany ulubionych:', await res.text());
+          return;
+        }
+    
+        // aktualizacja serduszek
+        setFavoriteIds((prev) =>
+          isCurrentlyFavorite ? prev.filter((id) => id !== listingId) : [...prev, listingId]
+        );
+    
+        // jak odklikniesz — usuń z listy "Moje ulubione" w profilu
+        if (isCurrentlyFavorite) {
+          setFavorites((prev) => prev.filter((l) => l.id !== listingId));
+        }
+      } catch (err) {
+        console.error('Błąd podczas zmiany ulubionych:', err);
+      }
+    };
+    
+
+    // ---------- Ulubione ---------- //
     const fetchFavorites = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/listings/favorites`, {
@@ -249,8 +293,8 @@ const Profile: React.FC = () => {
             };
           })
         );
-
         setFavorites(withImages);
+        setFavoriteIds(withImages.map((x) => x.id));
       } catch (err) {
         console.error('Błąd pobierania ulubionych ogłoszeń:', err);
       } finally {
@@ -285,6 +329,44 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleToggleFavorite = async (
+    e: React.MouseEvent,
+    listingId: number,
+    isCurrentlyFavorite: boolean
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+  
+    try {
+      const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
+  
+      const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
+        method,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
+  
+      if (!res.ok) {
+        console.error('Błąd zmiany ulubionych:', await res.text());
+        return;
+      }
+  
+      setFavoriteIds((prev) =>
+        isCurrentlyFavorite ? prev.filter((id) => id !== listingId) : [...prev, listingId]
+      );
+  
+      if (isCurrentlyFavorite) {
+        setFavorites((prev) => prev.filter((l) => l.id !== listingId));
+      }
+    } catch (err) {
+      console.error('Błąd podczas zmiany ulubionych:', err);
+    }
+  };
+  
+
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
 
@@ -315,6 +397,12 @@ const Profile: React.FC = () => {
       alert('Wystąpił błąd po stronie klienta.');
     }
   };
+
+  const SOLD_STATUS_ID = 3;
+
+  const activeListings = listings.filter((l) => l.status_id !== SOLD_STATUS_ID);
+  const finishedListings = listings.filter((l) => l.status_id === SOLD_STATUS_ID);
+
 
   return (
     <div className="profile-page">
@@ -384,7 +472,7 @@ const Profile: React.FC = () => {
           <div className="profile-right">
             <div className="profile-counters">
               <div>
-                <strong>{listings.length}</strong>
+                <strong>{activeListings.length}</strong>
                 <span>ogłoszeń</span>
               </div>
               <div>
@@ -414,30 +502,21 @@ const Profile: React.FC = () => {
         </div>
 
         {/* ---------------- Twoje ogłoszenia ---------------- */}
-        <h3 className="profile-subtitle">Twoje ogłoszenia</h3>
+        <h3 className="profile-subtitle">Moje ogłoszenia</h3>
 
         {loadingListings ? (
           <p>Ładowanie ogłoszeń...</p>
-        ) : listings.length === 0 ? (
+        ) : activeListings.length === 0 ? (
           <p>Nie masz jeszcze żadnych ogłoszeń.</p>
         ) : (
           <div className="listing-grid">
-            {listings.map((l) => {
-              const isSold = l.status_id === 3; // 3 = sprzedane
-
+            {activeListings.map((l) => {
               return (
-                <div
-                  key={l.id}
-                  className={`listing-card ${
-                    isSold ? 'listing-card--sold' : ''
-                  }`}
-                >
+                <div key={l.id} className="listing-card">
                   <div
                     className="listing-main"
                     onClick={() =>
-                      navigate(`/listing/${l.id}`, {
-                        state: { fromProfile: true },
-                      })
+                      navigate(`/listing/${l.id}`, { state: { fromProfile: true } })
                     }
                     style={{ cursor: 'pointer', position: 'relative' }}
                   >
@@ -456,40 +535,27 @@ const Profile: React.FC = () => {
                   </div>
 
                   <div className="listing-actions">
-                    {isSold ? (
-                      <button className="sold-button" disabled>
-                        SPRZEDANO
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          className={`feature-button ${
-                            l.is_featured ? 'feature-button--active' : ''
-                          }`}
-                          onClick={() => handleToggleFeatured(l.id)}
-                        >
-                          {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
-                        </button>
+                    <button
+                      className={`feature-button ${l.is_featured ? 'feature-button--active' : ''}`}
+                      onClick={() => handleToggleFeatured(l.id)}
+                    >
+                      {l.is_featured ? 'Usuń wyróżnienie' : 'Wyróżnij'}
+                    </button>
 
-                        <button
-                          className="delete-button"
-                          onClick={() => handleDelete(l.id)}
-                        >
-                          Usuń
-                        </button>
+                    <button className="delete-button" onClick={() => handleDelete(l.id)}>
+                      Usuń
+                    </button>
 
-                        <button
-                          className="edit-button"
-                          onClick={() =>
-                            navigate(`/listing/${l.id}`, {
-                              state: { fromProfile: true, editMode: true },
-                            })
-                          }
-                        >
-                          Edytuj
-                        </button>
-                      </>
-                    )}
+                    <button
+                      className="edit-button"
+                      onClick={() =>
+                        navigate(`/listing/${l.id}`, {
+                          state: { fromProfile: true, editMode: true },
+                        })
+                      }
+                    >
+                      Edytuj
+                    </button>
                   </div>
                 </div>
               );
@@ -497,8 +563,10 @@ const Profile: React.FC = () => {
           </div>
         )}
 
+
         {/* ---------------- Ulubione ---------------- */}
         <h3 className="profile-subtitle">Moje ulubione ogłoszenia</h3>
+
         {loadingFavorites ? (
           <p>Ładowanie ulubionych…</p>
         ) : favorites.length === 0 ? (
@@ -506,28 +574,96 @@ const Profile: React.FC = () => {
         ) : (
           <div className="listing-grid">
             {favorites.map((f) => {
-              return (
-                <div key={f.id} className="listing-card">
-                  <div
-                    className="listing-main"
-                    onClick={() => navigate(`/listing/${f.id}`)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {renderThumb(f)}
+            const isFav = favoriteIds.includes(f.id);
 
-                    <div className="listing-content">
-                      <h4 className="listing-title">{f.title}</h4>
-                      <p className="listing-desc">{f.description}</p>
-                      <small className="listing-date">
-                        Dodano: {new Date(f.created_at).toLocaleDateString()}
-                      </small>
-                    </div>
+            return (
+              <div key={f.id} className="listing-card">
+                <div
+                  className="listing-main"
+                  onClick={() => navigate(`/listing/${f.id}`)}
+                  style={{ cursor: 'pointer', position: 'relative' }}
+                >
+                  {/* SERDUSZKO - TAKIE SAMO JAK W Favorites */}
+                  <button
+                    type="button"
+                    className={`favorite-toggle ${isFav ? 'favorite-toggle--active' : ''}`}
+                    aria-label={isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                    onClick={(e) => handleToggleFavorite(e, f.id, isFav)}
+                  >
+                    <svg
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                      />
+                    </svg>
+                  </button>
+
+                  {renderThumb(f)}
+
+                  <div className="listing-content">
+                    <h4 className="listing-title">{f.title}</h4>
+                    <p className="listing-desc">{f.description}</p>
+                    <small className="listing-date">
+                      Dodano: {new Date(f.created_at).toLocaleDateString()}
+                    </small>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
+
           </div>
         )}
+
+        {/* ---------------- Zakończone ---------------- */}
+        <h3 className="profile-subtitle">Zakończone ogłoszenia</h3>
+
+        {loadingListings ? (
+          <p>Ładowanie ogłoszeń…</p>
+        ) : finishedListings.length === 0 ? (
+          <p>Nie masz zakończonych ogłoszeń.</p>
+        ) : (
+          <div className="listing-grid">
+            {finishedListings.map((l) => (
+              <div key={l.id} className="listing-card listing-card--sold">
+                <div
+                  className="listing-main"
+                  onClick={() => navigate(`/listing/${l.id}`, { state: { fromProfile: true } })}
+                  style={{ cursor: 'pointer', position: 'relative' }}
+                >
+                  {renderThumb(l)}
+
+                  <div className="listing-content">
+                    <h4 className="listing-title">{l.title}</h4>
+                    <p className="listing-desc">{l.description}</p>
+                    <small className="listing-date">
+                      Dodano: {new Date(l.created_at).toLocaleDateString()}
+                    </small>
+                  </div>
+                </div>
+
+                <div className="listing-actions">
+                  <button className="sold-button" disabled>
+                    SPRZEDANO
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+
+
       </div>
     </div>
   );
