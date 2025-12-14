@@ -210,4 +210,88 @@ router.get('/listing/:id', authRequired, async (req, res) => {
   }
 });
 
+
+router.post('/apply', authRequired, async (req, res) => {
+  try {
+    const senderId = req.user.id;
+    const { listingId, content } = req.body;
+
+    if (!listingId) {
+      return res.status(400).json({ ok: false, error: 'Brak listingId.' });
+    }
+    const safeContent = String(content || '').trim();
+
+    const listingRes = await pool.query(
+      'SELECT id, user_id, title, type_id FROM listing WHERE id = $1',
+      [listingId]
+    );
+
+    if (listingRes.rowCount === 0) {
+      return res.status(404).json({ ok: false, error: 'Ogłoszenie nie istnieje.' });
+    }
+
+    const listing = listingRes.rows[0];
+    const receiverId = listing.user_id;
+
+    if (receiverId === senderId) {
+      return res.status(400).json({ ok: false, error: 'Nie możesz zgłosić się do własnego ogłoszenia.' });
+    }
+
+    if (Number(listing.type_id) === 1) {
+      return res.status(400).json({ ok: false, error: 'Zgłoszenie dotyczy tylko ogłoszeń Pomoc/Praca.' });
+    }
+
+    const autoContent =
+      Number(listing.type_id) === 3
+        ? `Aplikuję na Twoje ogłoszenie: "${listing.title}".`
+        : `Jestem chętny(a) w sprawie ogłoszenia: "${listing.title}".`;
+
+    const finalContent = safeContent.length ? safeContent : autoContent;
+
+    const existsRes = await pool.query(
+      `SELECT id FROM message
+       WHERE sender_id = $1 AND receiver_id = $2 AND listing_id = $3
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [senderId, receiverId, listingId]
+    );
+
+    if (existsRes.rowCount > 0) {
+      return res.status(409).json({ ok: false, error: 'Już wysłałeś(aś) zgłoszenie do tego ogłoszenia.' });
+    }
+
+    const insert = await pool.query(
+      `INSERT INTO message (sender_id, receiver_id, listing_id, content)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, sender_id, receiver_id, listing_id, content, created_at, is_read`,
+      [senderId, receiverId, listingId, finalContent]
+    );
+
+    const savedMessage = insert.rows[0];
+
+    const io = req.app && req.app.get && req.app.get('io');
+    if (io) {
+      const payload = {
+        id: savedMessage.id,
+        sender_id: savedMessage.sender_id,
+        receiver_id: savedMessage.receiver_id,
+        listing_id: savedMessage.listing_id,
+        content: savedMessage.content,
+        created_at: savedMessage.created_at,
+        is_read: savedMessage.is_read,
+      };
+
+      io.to(`user_${senderId}`).emit('chat:new-message', payload);
+      io.to(`user_${receiverId}`).emit('chat:new-message', payload);
+    }
+
+    return res.status(201).json({ ok: true, message: savedMessage });
+  } catch (err) {
+    console.error('Błąd /apply:', err);
+    return res.status(500).json({ ok: false, error: 'Błąd serwera przy wysyłaniu zgłoszenia.' });
+  }
+});
+
+
+
 module.exports = router;

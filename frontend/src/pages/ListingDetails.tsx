@@ -144,6 +144,7 @@ const PREFERRED_ORDER = [
   'tags',
 ];
 
+
 function isPlainObject(v: any) {
   return v && typeof v === 'object' && !Array.isArray(v);
 }
@@ -334,6 +335,11 @@ export default function ListingDetails() {
   const [isPurchased, setIsPurchased] = useState(false);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
 
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionSent, setActionSent] = useState(false);
+  const [actionError, setActionError] = useState('');
+
+
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -455,6 +461,12 @@ export default function ListingDetails() {
   const canEdit =
     !!user && !!data && user.id === data.user_id && !isSold;  
 
+  const isSale = data?.type_id === 1;
+  const isHelp = data?.type_id === 2;
+  const isWork = data?.type_id === 3;
+
+  const actionLabel = isWork ? 'Aplikuj' : isHelp ? 'Zgłoś się' : null;
+  
   const infoPairs = collectPairs(data);
   const infoPairsWithoutPrice = infoPairs.filter(
   (p) =>
@@ -768,6 +780,61 @@ const handleSave = async () => {
     }
     setShowPayment(true);
   };
+
+  const handleApplyClick = async () => {
+    if (!data) return;
+  
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+  
+    if (user.id === data.user_id) {
+      alert('Nie możesz zgłosić się do własnego ogłoszenia.');
+      return;
+    }
+  
+    if (data.type_id === 1) return;
+  
+    setActionLoading(true);
+    setActionError('');
+  
+    const content =
+      data.type_id === 3
+        ? `Aplikuję na Twoje ogłoszenie: "${data.title}".`
+        : `Jestem chętny(a) w sprawie ogłoszenia: "${data.title}".`;
+  
+    try {
+      const res = await fetch(`${API_BASE}/api/messages/apply`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          listingId: data.id,
+          content,
+        }),
+      });
+  
+      const payload = await res.json().catch(() => null);
+  
+      if (!res.ok || !payload?.ok) {
+        setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
+        return;
+      }
+  
+      setActionSent(true);
+      navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+    } catch (e) {
+      console.error(e);
+      setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  
 
   const handleConfirmBlik = async () => {
     if (!id) return;
@@ -1230,6 +1297,38 @@ const handleSave = async () => {
           )}
         </div>
       )}
+
+      {(data.type_id === 2 || data.type_id === 3) && (
+        <div className="listing-price-highlight listing-price-highlight--bottom">
+          <span className="listing-price-label">
+            {data.type_id === 3 ? 'Ogłoszenie pracy' : 'Ogłoszenie pomocy'}
+          </span>
+
+          {!isOwnListing && (
+            <button
+              className="buy-now-button" 
+              type="button"
+              onClick={handleApplyClick}
+              disabled={actionLoading}
+            >
+              <span>{actionLoading ? 'Wysyłanie…' : actionLabel}</span>
+            </button>
+          )}
+
+          {actionError && (
+            <div style={{ marginTop: 8, color: 'crimson', fontSize: 14 }}>
+              {actionError}
+            </div>
+          )}
+
+          {actionSent && !actionError && (
+            <div style={{ marginTop: 8, color: 'green', fontSize: 14 }}>
+              Wysłano!
+            </div>
+          )}
+        </div>
+      )}
+
 
 {showPayment && (
         <div

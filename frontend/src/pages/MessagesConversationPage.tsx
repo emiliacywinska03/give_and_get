@@ -78,12 +78,13 @@ const MessagesConversationPage: React.FC = () => {
   const peerName = useMemo(() => {
     if (!user) return '';
     const last = messages[messages.length - 1];
-    if (!last) return '';
-    if (last.sender_id === user.id) {
-      return last.receiver_username;
+    if (last) {
+      if (last.sender_id === user.id) return last.receiver_username;
+      return last.sender_username;
     }
-    return last.sender_username;
-  }, [messages, user]);
+    return listingInfo?.authorUsername || '';
+  }, [messages, user, listingInfo]);
+  
 
   useEffect(() => {
     if (!user) {
