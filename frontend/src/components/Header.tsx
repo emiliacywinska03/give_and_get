@@ -259,6 +259,8 @@ const Header: React.FC = () => {
                         )}
                     </button>
 
+                  
+
                     {/* WYSZUKIWARKA */}
                     <form
                     className="search-bar"
@@ -292,6 +294,16 @@ const Header: React.FC = () => {
                     )}
                     </form>
 
+                    {/* PRZYCISK DODAJ OGŁOSZENIE */}
+                    {user && (
+                      <button
+                        type="button"
+                        className="add-listing-header-btn"
+                        onClick={() => navigate('/listings/create')}
+                      >
+                        Dodaj ogłoszenie
+                      </button>
+                    )}
 
                     {/* KONTO */}
                     <div className="my-account">

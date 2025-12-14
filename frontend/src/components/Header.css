@@ -415,3 +415,38 @@ body.dark-mode .search-suggestion-item:hover {
     justify-content: space-between;
   }
 }
+
+.add-listing-header-btn {
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+
+  background-color: #eff6ff;     
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+
+  white-space: nowrap;
+}
+
+.add-listing-header-btn:hover {
+  background-color: #dbeafe;
+  color: #1e40af;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .add-listing-header-btn {
+  background-color: #1e293b;
+  color: #93c5fd;
+  border-color: #1d4ed8;
+}
+
+body.dark-mode .add-listing-header-btn:hover {
+  background-color: #1e3a8a;
+  color: #bfdbfe;
+}
