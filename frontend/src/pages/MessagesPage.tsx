@@ -6,24 +6,19 @@ import './MessagesPage.css';
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
 
-type MessageItem = {
+type ThreadItem = {
   id: number;
+  listing_id: number;
+  sender_id: number;
+  receiver_id: number;
+  other_user_id: number;
   content: string;
   created_at: string;
   is_read: boolean;
-  listing_id: number;
+  unread_count: number;
   listing_title: string;
-  sender_id: number;
-  sender_username: string;
-  receiver_id: number;
-  receiver_username: string;
-};
-
-type ConversationItem = {
-  last: MessageItem;
-  peerId: number;
-  peerName: string;
-  incoming: boolean; // czy ostatnia wiadomość jest odebrana (true) czy wysłana (false)
+  other_username: string;
+  other_avatar_url?: string | null;
 };
 
 type ListingPreview = {
@@ -62,7 +57,7 @@ const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [threads, setThreads] = useState<ThreadItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [listingInfos, setListingInfos] = useState<Record<number, ListingPreview>>({});
@@ -93,7 +88,8 @@ const MessagesPage: React.FC = () => {
           throw new Error(msg);
         }
 
-        setMessages(data.messages || []);
+        const list = (data.threads || data.messages || []) as ThreadItem[];
+        setThreads(list);
       } catch (err: any) {
         console.error('Błąd pobierania wiadomości:', err);
         setError(err.message || 'Wystąpił błąd podczas pobierania wiadomości.');
@@ -106,10 +102,10 @@ const MessagesPage: React.FC = () => {
   }, [user, navigate]);
 
   useEffect(() => {
-    if (!messages.length) return;
+    if (!threads.length) return;
 
     const uniqueListingIds = Array.from(
-      new Set(messages.map((m) => m.listing_id)),
+      new Set(threads.map((t) => t.listing_id)),
     );
     const idsToFetch = uniqueListingIds.filter(
       (id) => listingInfos[id] === undefined,
@@ -206,7 +202,7 @@ const MessagesPage: React.FC = () => {
     idsToFetch.forEach((id) => {
       fetchListing(id);
     });
-  }, [messages, listingInfos]);
+  }, [threads, listingInfos]);
 
   const formatDate = (value: string) => {
     try {
@@ -222,34 +218,6 @@ const MessagesPage: React.FC = () => {
     }
   };
 
-  const conversations: ConversationItem[] = useMemo(() => {
-    if (!user) return [];
-
-    const map = new Map<string, ConversationItem>();
-
-    for (const m of messages) {
-      const incoming = m.receiver_id === user.id;
-      const peerId = incoming ? m.sender_id : m.receiver_id;
-      const peerName = incoming ? m.sender_username : m.receiver_username;
-      const key = `${m.listing_id}-${peerId}`;
-
-      const existing = map.get(key);
-      if (!existing) {
-        // pierwsza wiadomość w tej parze => ustaw
-        map.set(key, { last: m, peerId, peerName, incoming });
-      } else {
-        // wybierz nowszą jako „ostatnią”
-        const prevTime = new Date(existing.last.created_at).getTime();
-        const curTime = new Date(m.created_at).getTime();
-        if (curTime > prevTime) {
-          map.set(key, { last: m, peerId, peerName, incoming });
-        }
-      }
-    }
-
-    return Array.from(map.values());
-  }, [messages, user]);
-
   return (
     <div className="messages-page">
       <div className="messages-header">
@@ -264,21 +232,23 @@ const MessagesPage: React.FC = () => {
         <p className="messages-info">Ładowanie wiadomości...</p>
       ) : error ? (
         <p className="messages-error">{error}</p>
-      ) : conversations.length === 0 ? (
+      ) : threads.length === 0 ? (
         <p className="messages-info">Nie masz jeszcze żadnych wiadomości.</p>
       ) : (
         <div className="messages-list">
-          {conversations.map((c) => {
-            const { last, peerId, peerName, incoming } = c;
-            const listingInfo = listingInfos[last.listing_id];
+          {threads.map((t) => {
+            const incoming = t.receiver_id === user?.id;
+            const peerId = t.other_user_id;
+            const peerName = t.other_username;
+            const listingInfo = listingInfos[t.listing_id];
             const typeIcon = getTypeIconSrc(listingInfo?.typeId);
 
             return (
               <div
-                key={`${last.listing_id}-${peerId}`}
+                key={`${t.listing_id}-${peerId}`}
                 className={`messages-item ${incoming ? 'incoming' : 'outgoing'}`}
                 onClick={() =>
-                  navigate(`/messages/listing/${last.listing_id}?peer=${peerId}`)
+                  navigate(`/messages/listing/${t.listing_id}?peer=${peerId}`)
                 }
                 style={{ cursor: 'pointer' }}
               >
@@ -287,7 +257,7 @@ const MessagesPage: React.FC = () => {
                     {incoming ? 'Odebrana' : 'Wysłana'}
                   </span>
                   <span className="messages-date">
-                    {formatDate(last.created_at)}
+                    {formatDate(t.created_at)}
                   </span>
                 </div>
 
@@ -313,7 +283,7 @@ const MessagesPage: React.FC = () => {
                     <div className="messages-listing-text">
                       <span className="messages-listing-label">Ogłoszenie:</span>
                       <span className="messages-listing-link">
-                        {listingInfo?.title || last.listing_title}
+                        {listingInfo?.title || t.listing_title}
                       </span>
                     </div>
                   </div>
@@ -326,7 +296,7 @@ const MessagesPage: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="messages-content">{last.content}</p>
+                <p className="messages-content">{t.content}</p>
               </div>
             );
           })}

@@ -15,8 +15,8 @@ type ChatMessage = {
   content: string;
   created_at: string;
   is_read: boolean;
-  sender_username: string;
-  receiver_username: string;
+  sender_username?: string;
+  receiver_username?: string;
 };
 
 type ListingPreview = {
@@ -34,6 +34,13 @@ const getInitials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const letters = parts.slice(0, 2).map((p) => p[0]);
   return letters.join('').toUpperCase();
+};
+
+const resolvePeerNameFromMessages = (msgs: ChatMessage[], currentUserId: number) => {
+  const last = msgs[msgs.length - 1];
+  if (!last) return '';
+  if (last.sender_id === currentUserId) return last.receiver_username || '';
+  return last.sender_username || '';
 };
 
 
@@ -77,12 +84,15 @@ const MessagesConversationPage: React.FC = () => {
 
   const peerName = useMemo(() => {
     if (!user) return '';
-    const last = messages[messages.length - 1];
-    if (last) {
-      if (last.sender_id === user.id) return last.receiver_username;
-      return last.sender_username;
-    }
-    return listingInfo?.authorUsername || '';
+
+    // 1) jeśli mamy authorUsername z ogłoszenia (najpewniejsze) — użyj
+    if (listingInfo?.authorUsername) return listingInfo.authorUsername;
+
+    // 2) próbuj wyciągnąć z ostatniej wiadomości (jeśli backend jeszcze zwraca)
+    const fromMsgs = resolvePeerNameFromMessages(messages, user.id);
+    if (fromMsgs) return fromMsgs;
+
+    return '';
   }, [messages, user, listingInfo]);
   
 
@@ -102,7 +112,11 @@ const MessagesConversationPage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`${API_BASE}/api/messages/listing/${listingId}`, {
+        const qs = new URLSearchParams();
+        qs.set('limit', '50');
+        if (peerId) qs.set('otherUserId', String(peerId));
+
+        const res = await fetch(`${API_BASE}/api/messages/listing/${listingId}?${qs.toString()}`, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
@@ -117,7 +131,9 @@ const MessagesConversationPage: React.FC = () => {
           throw new Error(msg);
         }
 
-        setMessages(data.messages || []);
+        const msgs: ChatMessage[] = data.messages || [];
+        // jeśli backend nie zwraca username — pozostawiamy je puste, a UI i tak pokaże "Ty" po stronie nadawcy
+        setMessages(msgs);
       } catch (err: any) {
         console.error('Błąd pobierania konwersacji:', err);
         setError(err.message || 'Wystąpił błąd podczas pobierania konwersacji.');
@@ -127,7 +143,7 @@ const MessagesConversationPage: React.FC = () => {
     };
 
     fetchConversation();
-  }, [user, listingId, navigate]);
+  }, [user, listingId, peerId, navigate]);
 
   useEffect(() => {
     if (!listingId) return;
@@ -169,48 +185,30 @@ const MessagesConversationPage: React.FC = () => {
           return null;
         };
 
-        let resolvedThumb: string | null = null;
+        const pickPrimary = (obj: any): string | null => {
+          const candidates = [
+            obj?.primary_image,
+            obj?.primaryImage,
+            obj?.primaryImageUrl,
+            obj?.thumbnailUrl,
+            obj?.thumbnail_url,
+            obj?.mainPhotoUrl,
+            obj?.main_photo_url,
+            obj?.photoUrl,
+            obj?.photo_url,
+          ];
+          for (const c of candidates) {
+            const src = toSrc(c);
+            if (src) return src;
+          }
+          if (Array.isArray(obj?.images) && obj.images.length > 0) {
+            const src = toSrc(obj.images[0]);
+            if (src) return src;
+          }
+          return null;
+        };
 
-        try {
-          const ri = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
-            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-            credentials: 'include',
-          });
-          if (ri.ok) {
-            const imgs = await ri.json();
-            if (Array.isArray(imgs) && imgs.length > 0) {
-              const first = imgs[0];
-              const src = toSrc(
-                (first && (first.dataUrl || first.url || first.path)) || first,
-              );
-              if (src) {
-                resolvedThumb = src;
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Błąd pobierania zdjęć ogłoszenia (preview):', e);
-        }
-        if (!resolvedThumb && Array.isArray(l.images) && l.images.length > 0) {
-          const src = toSrc(l.images[0]);
-          if (src) {
-            resolvedThumb = src;
-          }
-        }
-        if (!resolvedThumb) {
-          const rawThumb =
-            l.thumbnailUrl ||
-            l.thumbnail_url ||
-            l.mainPhotoUrl ||
-            l.main_photo_url ||
-            l.photoUrl ||
-            l.photo_url ||
-            null;
-          const src = toSrc(rawThumb);
-          if (src) {
-            resolvedThumb = src;
-          }
-        }
+        let resolvedThumb: string | null = pickPrimary(l);
 
         const preview: ListingPreview = {
           id: l.id,
@@ -254,13 +252,13 @@ const MessagesConversationPage: React.FC = () => {
     
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
-  
+
         const enriched: ChatMessage = {
           ...msg,
-          sender_username: msg.sender_username || (user?.username ?? 'Ty'),
-          receiver_username: msg.receiver_username || (peerName || 'Użytkownik'),
+          sender_username: msg.sender_username,
+          receiver_username: msg.receiver_username,
         };
-    
+
         return [...prev, enriched];
       });
     });
@@ -429,6 +427,11 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                   src={peerAvatarSrc}
                   alt={`Avatar użytkownika ${peerName || ''}`}
                   className="messages-conv-avatar-img"
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               ) : peerName ? (
                 getInitials(peerName)
@@ -455,6 +458,12 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                 src={listingInfo.thumbnailUrl || listingInfo.imageUrl || ''}
                 alt={listingInfo.title || 'Ogłoszenie'}
                 className="messages-conv-listing-thumb"
+                loading="lazy"
+                decoding="async"
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  img.style.display = 'none';
+                }}
               />
             ) : typeIcon ? (
               <img
@@ -501,7 +510,7 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                   >
                     <div className="messages-conv-bubble-header">
                       <span className="messages-conv-author">
-                        {mine ? 'Ty' : m.sender_username}
+                        {mine ? 'Ty' : (m.sender_username || 'Użytkownik')}
                       </span>
                       <span className="messages-conv-date">
                         {formatDate(m.created_at)}
@@ -516,7 +525,6 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
           </div>
 
           <form className="messages-conv-form" onSubmit={handleSend}>
-            {/* Wskaźnik pisania */}
             <div className="messages-conv-typing">
               {remoteTyping
                 ? `${peerName || 'Użytkownik'} pisze…`
