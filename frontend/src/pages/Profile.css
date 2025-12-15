@@ -960,3 +960,126 @@ body.dark-mode .profile-history-button:focus-visible{
   outline: none;
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
 }
+
+.profile-logout-button{
+  margin-top: 14px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  border: 1px solid #fca5a5;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.profile-logout-button:hover{
+  background: #fecaca;
+}
+
+.profile-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-avatar-upload--logout{
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+}
+.profile-avatar-upload--logout:hover{
+  background: #fecaca;
+}
+
+.profile-avatar-block{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.profile-avatar{
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;         
+  position: relative;
+  margin: 0;             
+}
+
+/* PRZYCISKI pod avatarem  */
+.profile-avatar-upload{
+  position: static;        
+  transform: none;         
+  bottom: auto;
+  left: auto;
+
+  padding: 6px 12px;
+  border-radius: 999px;
+  background-color: #e5e7eb;
+  border: 1px solid #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.18);
+  white-space: nowrap;
+}
+
+/* logout w tym samym stylu */
+.profile-avatar-upload--logout{
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+}
+.profile-avatar-upload--logout:hover{
+  background: #fecaca;
+}
+
+.profile-page .listing-card{
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+/* część klikalna (miniatura + opis) ma zająć całą dostępną szerokość */
+.profile-page .listing-main{
+  flex: 1;
+  display: flex;
+  gap: 18px;
+}
+
+/* przyciski zawsze po prawej */
+.profile-page .listing-actions{
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.profile-page .listing-actions button{
+  white-space: nowrap;
+}
+
+@media (max-width: 900px){
+  .profile-page .listing-card{
+    flex-direction: column;
+  }
+  .profile-page .listing-actions{
+    margin-left: 0;
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+
+

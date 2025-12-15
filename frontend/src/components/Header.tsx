@@ -323,17 +323,43 @@ const Header: React.FC = () => {
                     <div className="my-account">
                       {user ? (
                         !sidebarOpen && (
-                          <>
-                            <Link to="/profile" className="account">Mój profil</Link>
-                            <button onClick={handleLogout} className="account logout-button">
+                          <div className="account-dropdown">
+                          {/* KLIK = przejście do profilu */}
+                          <Link to="/profile" className="account-trigger">
+                            Mój profil
+                          </Link>
+
+                          {/* HOVER = menu */}
+                          <div className="account-menu">
+                            <button onClick={() => navigate('/profile')}>Profil</button>
+                            <button onClick={() => navigate('/favorites')}>Moje ulubione</button>
+                            <button onClick={() => navigate('/featured')}>Moje wyróżnione</button>
+                            <button onClick={() => navigate('/rewards')}>Nagrody</button>
+                            <button onClick={() => navigate('/history')}>Historia ogłoszeń</button>
+                            <button onClick={() => navigate('/messages')}>Wiadomości</button>
+
+                            <div className="menu-divider" />
+
+                            <button
+                              className="logout"
+                              onClick={async () => {
+                                await logout();
+                                navigate('/');
+                              }}
+                            >
                               Wyloguj
                             </button>
-                          </>
+                          </div>
+                        </div>
+
+                            
                         )
                       ) : (
                         <Link to="/auth" className="account">Zaloguj</Link>
                       )}
                     </div>
+
+
 
 
                 </div>

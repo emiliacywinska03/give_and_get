@@ -546,41 +546,39 @@ const Profile: React.FC = () => {
         <div className="profile-top">
           {/* LEWA STRONA — avatar + dane */}
           <div className="profile-left">
-            <div className="profile-avatar">
-              {avatarPreview || avatarUrl ? (
-                <img
-                  src={avatarPreview || avatarUrl}
-                  alt="Zdjęcie profilowe użytkownika"
-                  className="profile-avatar-img"
-                />
-              ) : (
-                <svg
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="80"
-                  height="80"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 8a7 7 0 1 1 14 0H5Z"
+          <div className="profile-avatar-block">
+              <div className="profile-avatar">
+                {avatarPreview || avatarUrl ? (
+                  <img
+                    src={avatarPreview || avatarUrl}
+                    alt="Zdjęcie profilowe użytkownika"
+                    className="profile-avatar-img"
                   />
-                </svg>
-              )}
+                ) : (
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                      d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm-7 8a7 7 0 1 1 14 0H5Z"
+                    />
+                  </svg>
+                )}
+              </div>
+
 
               <label className="profile-avatar-upload">
                 <span>{uploadingAvatar ? 'Zapisywanie...' : 'Zmień zdjęcie'}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  disabled={uploadingAvatar}
-                />
+                <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={uploadingAvatar} />
               </label>
+
+              <button
+                type="button"
+                className="profile-avatar-upload profile-avatar-upload--logout"
+                onClick={async () => {
+                  await logout();
+                  navigate('/');
+                }}
+              >
+                Wyloguj
+              </button>
             </div>
 
             <div className="profile-user-data">
@@ -599,6 +597,7 @@ const Profile: React.FC = () => {
               <p>
                 <strong>Punkty:</strong> {user.points ?? 0}
               </p>
+             
             </div>
           </div>
 
