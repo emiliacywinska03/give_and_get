@@ -217,17 +217,31 @@ const HistoryListingsPage: React.FC = () => {
   if (!user) return <p>Nie jesteś zalogowany.</p>;
 
   return (
-    <div className="profile-page">
-      <div className="profile-card">
+    <div className="profile-page history-layout">
+      <div className="history-main">
+        <div className="profile-card">
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <h2 className="profile-title" style={{ margin: 0 }}>Historia ogłoszeń</h2>
         </div>
+
+        {/* PANEL PUNKTÓW */}
+        <div className="history-points-panel">
+          <div style={{ fontSize: 14, color: "#6b7280" }}>Twoje punkty</div>
+          <div style={{ fontSize: 44, fontWeight: 800, color: "#2f6fff", lineHeight: 1.1 }}>
+            {(user as any)?.points ?? 0}
+          </div>
+          <div style={{ fontSize: 14, color: "#6b7280", marginTop: 8 }}>
+            Wznowienie ogłoszenia: <b>{RESUME_COST_POINTS} pkt</b>
+          </div>
+        </div>
+
   
         {loadingHistory ? (
           <p>Ładowanie historii…</p>
         ) : (
           <>
-            
+
             {/* ---------------- Zakończone / Nieaktywne ---------------- */}
             <h3 className="profile-subtitle">Zakończone ogłoszenia</h3>
   
@@ -257,7 +271,7 @@ const HistoryListingsPage: React.FC = () => {
   
                     <div className="listing-actions">
                       <button className="resume-button" onClick={() => handleResume(l.id)}>
-                        Wznów (5 pkt)
+                        Wznów
                       </button>
                     </div>
                   </div>
@@ -299,6 +313,7 @@ const HistoryListingsPage: React.FC = () => {
   
           </>
         )}
+      </div>
       </div>
     </div>
   );
