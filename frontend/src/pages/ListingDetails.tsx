@@ -339,6 +339,12 @@ export default function ListingDetails() {
   const [actionSent, setActionSent] = useState(false);
   const [actionError, setActionError] = useState('');
 
+  const [showOfferPrice, setShowOfferPrice] = useState(false);
+  const [offerPrice, setOfferPrice] = useState('');
+  const [offerError, setOfferError] = useState('');
+  const [offerLoading, setOfferLoading] = useState(false);
+
+
 
   useEffect(() => {
     if (!id) return;
@@ -780,6 +786,73 @@ const handleSave = async () => {
     }
     setShowPayment(true);
   };
+
+
+
+  const handleOfferPriceClick = () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    if (user.id === data?.user_id) {
+      alert('Nie możesz zaproponować ceny dla własnego ogłoszenia');
+      return;
+    }
+    setOfferError('');
+    setOfferPrice('');
+    setShowOfferPrice(true);
+  };
+  
+  const handleSendOfferPrice = async () => {
+    if (!data) return;
+  
+    const val = Number(offerPrice.replace(',', '.'));
+    if (!Number.isFinite(val) || val <= 0) {
+      setOfferError('Wpisz poprawną kwotę.');
+      return;
+    }
+  
+    try {
+      setOfferLoading(true);
+      setOfferError('');
+  
+      // najprościej: wysyłamy jako wiadomość do autora (masz już endpoint apply)
+      const content = `Cześć! Proponuję cenę ${new Intl.NumberFormat('pl-PL', {
+        style: 'currency',
+        currency: 'PLN',
+      }).format(val)} za "${data.title}".`;
+  
+      const res = await fetch(`${API_BASE}/api/messages`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          listingId: data.id,
+          content,
+        }),
+      });
+  
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.ok) {
+        setOfferError(payload?.error || 'Nie udało się wysłać propozycji.');
+        return;
+      }
+  
+      setShowOfferPrice(false);
+      navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+    } catch (e) {
+      console.error(e);
+      setOfferError('Wystąpił błąd podczas wysyłania propozycji.');
+    } finally {
+      setOfferLoading(false);
+    }
+  };
+  
+
+
 
   const handleApplyClick = async () => {
     if (!data) return;
@@ -1282,15 +1355,18 @@ const handleSave = async () => {
             </span>
           )}
 
-          {!isSold && !isPurchased && data.type_id === 1 && !data.is_free && (
-            <button
-              className="buy-now-button"
-              type="button"
-              onClick={handleBuyNowClick}
-            >
-              <span>Kup teraz</span>
-            </button>
+          {!isSold && !isPurchased && data.type_id === 1 && !data.is_free && !isOwnListing && (
+            <div className="listing-actions-row">
+              <button className="buy-now-button" type="button" onClick={handleBuyNowClick}>
+                <span>Kup teraz</span>
+              </button>
+
+              <button className="offer-price-button" type="button" onClick={handleOfferPriceClick}>
+                Zaproponuj cenę
+              </button>
+            </div>
           )}
+
 
           {(isSold || isPurchased) && (
             <span className="listing-purchased-label">SPRZEDANO</span>
@@ -1375,6 +1451,39 @@ const handleSave = async () => {
           </div>
         </div>
       )}
+
+
+
+      {showOfferPrice && (
+        <div className="blik-modal-backdrop" onClick={() => setShowOfferPrice(false)}>
+          <div className="blik-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Zaproponuj cenę</h2>
+            <p>Wpisz kwotę, a wyślemy ją jako wiadomość do autora.</p>
+
+            <input
+              type="text"
+              value={offerPrice}
+              onChange={(e) => setOfferPrice(e.target.value.replace(/[^0-9.,]/g, ''))}
+              className="blik-input"
+              placeholder="np. 250"
+            />
+
+            {offerError && <div className="blik-error">{offerError}</div>}
+
+            <div className="blik-actions">
+              <button type="button" onClick={() => setShowOfferPrice(false)}>
+                Anuluj
+              </button>
+              <button type="button" onClick={handleSendOfferPrice} disabled={offerLoading}>
+                {offerLoading ? 'Wysyłanie…' : 'Wyślij propozycję'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
 
 
       {lightboxOpen && lightboxImage && (

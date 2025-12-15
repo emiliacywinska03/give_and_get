@@ -940,3 +940,28 @@ body.dark-mode .buy-now-button::before{
     font-size: 18px;
   }
 }
+
+.listing-actions-row{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-left:auto;
+}
+
+.offer-price-button{
+  border: 1px solid #c7d2fe;
+  background: #ffffff;
+  color: #1d4ed8;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+
+.offer-price-button:hover{
+  transform: translateY(-1px);
+  background:#eff6ff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
