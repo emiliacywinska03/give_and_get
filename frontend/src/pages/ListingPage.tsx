@@ -306,7 +306,7 @@ const ListingPage: React.FC = () => {
           {typeFilter === 'help' && (
             <div className="filter-group">
               <label className="filter-label" htmlFor="helpTypeFilter">
-                Rodzaj ogłoszenia
+                Rodzaj pomocy
               </label>
               <select
                 id="helpTypeFilter"
@@ -317,8 +317,8 @@ const ListingPage: React.FC = () => {
                 }
               >
                 <option value="all">Wszystkie</option>
-                <option value="offer">Pomoc oferowana</option>
-                <option value="need">Pomoc poszukiwana</option>
+                <option value="offer">Oferuję pomoc</option>
+                <option value="need">Szukam pomocy</option>
               </select>
             </div>
           )}
@@ -336,21 +336,18 @@ const ListingPage: React.FC = () => {
         <div className="listing-grid">
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
-            const isOwnListing = !!user && user.id === listing.user_id;
             const imgSrc =
               listing.primary_image
                 ? listing.primary_image.startsWith('data:')
                   ? listing.primary_image
                   : `${API_BASE}${listing.primary_image}`
                 : null;
-
-            const authorAvatarSrc = listing.author_avatar_url
-              ? listing.author_avatar_url.startsWith('http') ||
-                listing.author_avatar_url.startsWith('data:')
-                ? listing.author_avatar_url
-                : `${API_BASE}${listing.author_avatar_url}`
-              : null;
-
+            const authorAvatarSrc =
+              listing.author_avatar_url
+                ? listing.author_avatar_url.startsWith('data:')
+                  ? listing.author_avatar_url
+                  : `${API_BASE}${listing.author_avatar_url}`
+                : null;
             return (
               <div
                 key={listing.id}
@@ -367,31 +364,34 @@ const ListingPage: React.FC = () => {
                 style={{ cursor: 'pointer' }}
               >
                 {/* ikona serduszka w rogu kafelka */}
-                {!isOwnListing && (
-                  <button
-                    className={`favorite-toggle ${isFav ? 'favorite-toggle--active' : ''}`}
-                    aria-label={isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
-                    onClick={(e) => handleToggleFavorite(e, listing.id, isFav)}
+                <button
+                  className={`favorite-toggle ${
+                    isFav ? 'favorite-toggle--active' : ''
+                  }`}
+                  aria-label={
+                    isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'
+                  }
+                  onClick={(e) =>
+                    handleToggleFavorite(e, listing.id, isFav)
+                  }
+                >
+                  <svg
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="22"
+                    height="22"
+                    fill="none"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="22"
-                      height="22"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
-                      />
-                    </svg>
-                  </button>
-                )}
-
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                    />
+                  </svg>
+                </button>
 
                   {/* znaczek WYRÓŻNIONE */}
                   {listing.is_featured && (
@@ -458,12 +458,18 @@ const ListingPage: React.FC = () => {
 
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
-                    <span className="mini-avatar">
+                    <span className="mini-avatar" aria-hidden="true">
                       {authorAvatarSrc ? (
                         <img
                           src={authorAvatarSrc}
-                          alt={`Avatar użytkownika ${listing.author_username ?? ''}`}
-                          className="mini-avatar-img"
+                          alt=""
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: '50%',
+                            display: 'block',
+                          }}
                         />
                       ) : (
                         (listing.author_username || 'U')[0].toUpperCase()

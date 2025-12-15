@@ -54,6 +54,7 @@ const Profile: React.FC = () => {
   const [loadingFavorites, setLoadingFavorites] = useState(true);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarBuster, setAvatarBuster] = useState<number>(Date.now());
   const navigate = useNavigate();
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
 
@@ -174,11 +175,17 @@ const Profile: React.FC = () => {
       const newAvatarUrl: string | undefined =
         data.avatarUrl || data.avatar_url;
 
-      if (newAvatarUrl) {
-        setAvatarPreview(newAvatarUrl);
-        setUser((prev: any) =>
-          prev ? { ...prev, avatar_url: newAvatarUrl } : prev
-        );
+     if (newAvatarUrl) {
+        const buster = Date.now();
+        setAvatarBuster(buster);
+
+        const withBuster = newAvatarUrl.includes('?')
+          ? `${newAvatarUrl}&v=${buster}`
+          : `${newAvatarUrl}?v=${buster}`;
+
+        setAvatarPreview(withBuster);
+
+        await refreshMe();
       }
     } catch (err) {
       console.error('Błąd podczas zmiany avatara:', err);
@@ -190,7 +197,7 @@ const Profile: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return; refreshMe();
   
 
     // ---------- Twoje ogłoszenia ----------
@@ -516,13 +523,14 @@ const Profile: React.FC = () => {
 
   const refreshMe = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
+      const res = await fetch(`${API_BASE}/api/users/me`, {
         credentials: 'include',
         headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
       });
       if (!res.ok) return;
       const me = await res.json();
       setUser(me);
+      setAvatarBuster(Date.now());
     } catch (e) {
       console.error('Nie udało się odświeżyć danych użytkownika', e);
     }
@@ -549,8 +557,16 @@ const Profile: React.FC = () => {
           <div className="profile-avatar-block">
               <div className="profile-avatar">
                 {avatarPreview || avatarUrl ? (
-                  <img
-                    src={avatarPreview || avatarUrl}
+                 <img
+                    src={
+                      avatarPreview
+                        ? avatarPreview
+                        : avatarUrl
+                        ? (avatarUrl.includes('?')
+                            ? `${avatarUrl}&v=${avatarBuster}`
+                            : `${avatarUrl}?v=${avatarBuster}`)
+                        : ''
+                    }
                     alt="Zdjęcie profilowe użytkownika"
                     className="profile-avatar-img"
                   />

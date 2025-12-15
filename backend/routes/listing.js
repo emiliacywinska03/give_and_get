@@ -345,7 +345,10 @@ router.get('/', async (req, res) => {
       SELECT
         l.*,
         u.username AS author_username,
-        u.avatar_url AS author_avatar_url,
+        CASE
+          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          ELSE u.avatar_url
+        END AS author_avatar_url,
         (
           SELECT COALESCE(
             li.path,
@@ -378,7 +381,10 @@ router.get('/my', authRequired, async (req, res) => {
       SELECT 
         l.*,
         u.username AS author_username,
-        u.avatar_url AS author_avatar_url,
+        CASE
+          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          ELSE u.avatar_url
+        END AS author_avatar_url,
         c.name AS category_name,
         s.name AS subcategory_name,
         (
@@ -414,7 +420,12 @@ router.get('/user/:id', async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `SELECT l.*, u.username AS author_username, u.avatar_url AS author_avatar_url
+      `SELECT l.*,
+              u.username AS author_username,
+              CASE
+                WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+                ELSE u.avatar_url
+              END AS author_avatar_url
        FROM listing l
        JOIN "user" u ON u.id = l.user_id
        WHERE l.user_id = $1
@@ -437,7 +448,10 @@ router.get('/featured', async (req, res) => {
       SELECT
         l.*,
         u.username AS author_username,
-        u.avatar_url AS author_avatar_url,
+        CASE
+          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          ELSE u.avatar_url
+        END AS author_avatar_url,
         (
           SELECT COALESCE(
             li.path,
@@ -474,7 +488,10 @@ router.get('/favorites', authRequired, async (req, res) => {
       SELECT
         l.*,
         u.username AS author_username,
-        u.avatar_url AS author_avatar_url,
+        CASE
+          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          ELSE u.avatar_url
+        END AS author_avatar_url,
         (
           SELECT COALESCE(
             li.path,
@@ -844,7 +861,10 @@ router.get('/:id', async (req, res) => {
       SELECT
         l.*,
         u.username AS author_username,
-        u.avatar_url AS author_avatar_url,
+        CASE
+          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          ELSE u.avatar_url
+        END AS author_avatar_url,
         c.name     AS category_name,
         s.name     AS subcategory_name
       FROM listing l
