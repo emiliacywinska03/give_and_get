@@ -943,3 +943,20 @@ body.dark-mode .profile-page .favorite-toggle{
 .profile-counters{
   justify-content: center;
 }
+
+/* DARK MODE — Historia ogłoszeń */
+body.dark-mode .profile-history-button{
+  background: #0b1120;       
+  border-color: #1d4ed8;      
+  color: #e5e7eb;             
+}
+
+body.dark-mode .profile-history-button:hover{
+  background: #1e293b;
+  border-color: #3b82f6;
+}
+
+body.dark-mode .profile-history-button:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+}
