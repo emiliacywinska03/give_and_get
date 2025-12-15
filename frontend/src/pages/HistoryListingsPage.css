@@ -158,3 +158,13 @@
   align-items: stretch;
   gap: 24px;
 }
+
+.listing-thumb-space--icon {
+  padding: 24px;
+}
+
+.listing-thumb-icon {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}

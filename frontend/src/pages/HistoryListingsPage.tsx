@@ -146,7 +146,8 @@ const HistoryListingsPage: React.FC = () => {
 
   const renderThumb = (item: Listing) => {
     const imgSrc = item.primary_image || null;
-
+  
+    // 1) jest zdjęcie -> normalnie
     if (imgSrc) {
       return (
         <div className="listing-thumb">
@@ -154,8 +155,48 @@ const HistoryListingsPage: React.FC = () => {
         </div>
       );
     }
-
-    // tu możesz wstawić swoje ikonki jak w Profile.tsx
+  
+    // 2) PRACA (type_id === 2) -> teczka
+    if (item.type_id === 2) {
+      return (
+        <div className="listing-thumb-space listing-thumb-space--icon">
+          <img
+            src="/icons/hands-holding-heart-svgrepo-com.svg"
+            alt="Ogłoszenie pomocy"
+            className="listing-thumb-icon"
+          />
+        </div>
+      );
+    }
+  
+    // 3) POMOC (type_id === 3) -> dłonie z sercem
+    if (item.type_id === 3) {
+      return (
+        <div className="listing-thumb
+        -space listing-thumb-space--icon">
+          <img
+            src="/icons/work-case-filled-svgrepo-com.svg"
+            alt="Ogłoszenie pracy"
+            className="listing-thumb-icon"
+          />
+        </div>
+      );
+    }
+  
+    // 4) SPRZEDAŻ (type_id === 1) -> koszyk (jeśli chcesz)
+    if (item.type_id === 1) {
+      return (
+        <div className="listing-thumb-space listing-thumb-space--icon">
+          <img
+            src="/icons/iconmonstr-shopping-cart-24.svg"
+            alt="Ogłoszenie sprzedaży"
+            className="listing-thumb-icon"
+          />
+        </div>
+      );
+    }
+  
+    // 5) fallback (X)
     return (
       <div className="listing-thumb-space">
         <svg
@@ -170,6 +211,7 @@ const HistoryListingsPage: React.FC = () => {
       </div>
     );
   };
+  
 
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
   if (!user) return <p>Nie jesteś zalogowany.</p>;
