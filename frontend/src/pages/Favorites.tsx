@@ -154,6 +154,49 @@ const Favorites: React.FC = () => {
 
   return (
     <div className="favorites-page">
+
+
+      {/* TLO SERDUSZKA */}
+      <div className="favorites-bg" aria-hidden="true">
+        {Array.from({ length: 64 }).map((_, i) => {
+          const top = `${Math.random() * 100}%`;
+          const left = `${Math.random() * 100}%`;
+          const size = 16 + Math.random() * 18; 
+          const rot = -25 + Math.random() * 50;
+          const op = 0.18 + Math.random() * 0.22; 
+
+          return (
+            <span
+              key={i}
+              className="bg-heart"
+              style={
+                {
+                  '--top': top,
+                  '--left': left,
+                  '--size': `${size}px`,
+                  '--rot': `${rot}deg`,
+                  '--op': op,
+                } as React.CSSProperties
+              }
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"  
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          );
+        })}
+      </div>
+
+
+
+
       <h2>Moje ulubione ogłoszenia</h2>
 
       {favorites.length === 0 ? (
