@@ -450,3 +450,32 @@ body.dark-mode .add-listing-header-btn:hover {
   background-color: #1e3a8a;
   color: #bfdbfe;
 }
+
+
+.header-content .right{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;      
+}
+
+.my-account{
+  display: flex;
+  align-items: center;
+  gap: 10px;             
+  flex-wrap: wrap;        
+}
+
+@media (max-width: 900px){
+  .my-account{
+    flex-direction: column;
+    align-items: stretch; 
+    gap: 8px;
+  }
+
+  .my-account .account,
+  .my-account .logout-button{
+    width: 100%;
+    text-align: center;
+  }
+}

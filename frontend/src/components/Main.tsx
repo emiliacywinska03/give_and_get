@@ -196,76 +196,76 @@ const Main: React.FC = () => {
                 ) : (
                 <div className="listing-grid">
                     {featuredListings.map((listing) => (
-<div key={listing.id} className="listing-card">
-  {listing.is_featured && (
-    <div className="featured-badge" onClick={(e) => e.stopPropagation()}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="#FACC15"
-      >
-        <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
-      </svg>
-    </div>
-  )}
+                <div key={listing.id} className="listing-card">
+                  {listing.is_featured && (
+                    <div className="featured-badge" onClick={(e) => e.stopPropagation()}>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="#FACC15"
+                      >
+                        <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+                      </svg>
+                    </div>
+                  )}
 
-  <Link
-    to={`/listing/${listing.id}`}
-    className="listing-link"
-    style={{ textDecoration: "none", color: "inherit" }}
-  >
-    <div className="listing-thumb-wrapper">
-      {resolveImgSrc(listing.primary_image) ? (
-        <img
-          className="listing-thumb"
-          src={resolveImgSrc(listing.primary_image)!}
-          alt={listing.title}
-        />
-      ) : getDefaultIconForType(listing.type_id) ? (
-        <div className="listing-thumb-space">
-          <img
-            className="listing-thumb"
-            src={getDefaultIconForType(listing.type_id)!}
-            alt="Ikona ogłoszenia"
-            style={{ objectFit: "contain", padding: "12px" }}
-          />
-        </div>
-      ) : (
-        <div className="listing-thumb-space">
-          <svg
-            className="listing-thumb-placeholder-icon"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <rect
-              x="3"
-              y="3"
-              width="18"
-              height="18"
-              rx="3"
-              ry="3"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M7 7l10 10M17 7L7 17"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-      )}
-    </div>
+                  <Link
+                    to={`/listing/${listing.id}`}
+                    className="listing-link"
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    <div className="listing-thumb-wrapper">
+                      {resolveImgSrc(listing.primary_image) ? (
+                        <img
+                          className="listing-thumb"
+                          src={resolveImgSrc(listing.primary_image)!}
+                          alt={listing.title}
+                        />
+                      ) : getDefaultIconForType(listing.type_id) ? (
+                        <div className="listing-thumb-space">
+                          <img
+                            className="listing-thumb"
+                            src={getDefaultIconForType(listing.type_id)!}
+                            alt="Ikona ogłoszenia"
+                            style={{ objectFit: "contain", padding: "12px" }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="listing-thumb-space">
+                          <svg
+                            className="listing-thumb-placeholder-icon"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                          >
+                            <rect
+                              x="3"
+                              y="3"
+                              width="18"
+                              height="18"
+                              rx="3"
+                              ry="3"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M7 7l10 10M17 7L7 17"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
 
-    <h3 className="listing-title">{listing.title}</h3>
-    <p className="listing-location">Lokalizacja: {listing.location}</p>
-  </Link>
-</div>
+                    <h3 className="listing-title">{listing.title}</h3>
+                    <p className="listing-location">Lokalizacja: {listing.location}</p>
+                  </Link>
+                </div>
                     ))}
                 </div>
                 )}
@@ -342,44 +342,44 @@ const Main: React.FC = () => {
               </p>
 
               <div className="why-grid">
-  <div className="why-card">
-    <div className="why-icon">
-      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-    </div>
-    <h3 className="why-card-title">Bezpiecznie</h3>
-    <p className="why-card-text">
-      Konto użytkownika i stały dostęp do Twoich ogłoszeń w profilu.
-    </p>
-  </div>
+              <div className="why-card">
+                <div className="why-icon">
+                  <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z" />
+                    <path d="M9 12l2 2 4-4" />
+                  </svg>
+                </div>
+                <h3 className="why-card-title">Bezpiecznie</h3>
+                <p className="why-card-text">
+                  Konto użytkownika i stały dostęp do Twoich ogłoszeń w profilu.
+                </p>
+              </div>
 
-  <div className="why-card">
-    <div className="why-icon">
-      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-      </svg>
-    </div>
-    <h3 className="why-card-title">Szybko</h3>
-    <p className="why-card-text">
-      Wyszukuj i filtruj oferty po typie oraz podkategorii.
-    </p>
-  </div>
+              <div className="why-card">
+                <div className="why-icon">
+                  <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+                  </svg>
+                </div>
+                <h3 className="why-card-title">Szybko</h3>
+                <p className="why-card-text">
+                  Wyszukuj i filtruj oferty po typie oraz podkategorii.
+                </p>
+              </div>
 
-  <div className="why-card">
-    <div className="why-icon">
-      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
-        <circle cx="12" cy="10" r="2.5" />
-      </svg>
-    </div>
-    <h3 className="why-card-title">Lokalnie</h3>
-    <p className="why-card-text">
-      Łatwiej znaleźć coś w okolicy — wystarczy lokalizacja w ogłoszeniu.
-    </p>
-  </div>
-</div>
+              <div className="why-card">
+                <div className="why-icon">
+                  <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" />
+                    <circle cx="12" cy="10" r="2.5" />
+                  </svg>
+                </div>
+                <h3 className="why-card-title">Lokalnie</h3>
+                <p className="why-card-text">
+                  Łatwiej znaleźć coś w okolicy — wystarczy lokalizacja w ogłoszeniu.
+                </p>
+              </div>
+            </div>
             </section>
             </main>
         );         

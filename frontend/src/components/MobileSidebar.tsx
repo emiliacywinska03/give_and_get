@@ -39,6 +39,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ open, onClose }) => {
           <Link to="/messages" onClick={onClose}>
             Wiadomości
           </Link>
+          <Link to="/history" onClick={onClose}>
+            Historia ogłoszeń
+          </Link>
         </nav>
 
         {/* Sekcja konta*/}

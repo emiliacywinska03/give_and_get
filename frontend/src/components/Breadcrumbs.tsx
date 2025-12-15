@@ -68,6 +68,13 @@ const Breadcrumbs: React.FC = () => {
     items.push({ label: 'Konwersacja' });
   }
 
+  // /history — historia ogłoszeń
+  if (pathname.startsWith('/history')) {
+    items.push({ label: 'Mój profil', to: '/profile' });
+    items.push({ label: 'Historia ogłoszeń' });
+  }
+
+
   // /auth
   if (pathname.startsWith('/auth')) {
     items.push({ label: 'Logowanie / Rejestracja' });

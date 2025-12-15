@@ -155,7 +155,7 @@ const Header: React.FC = () => {
                     <a href="/" className="logo">Give&Get</a>
                 </div>
                 <div className="right">
-
+                  
                     {/* NAGRODY */}
                     <div
                         className="icon-btn rewards"
@@ -244,6 +244,20 @@ const Header: React.FC = () => {
                         )}
                     </div>
 
+                    {/* HISTORIA OGLOSZEN */}
+                    <div
+                      className="icon-btn history"
+                      onClick={() => navigate('/history')}
+                      title="Historia ogłoszeń"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v6l4 2" />
+                      </svg>
+                    </div>
+
+
                     {/* MOTYW */}
                     <button className="button-theme-toggle" onClick={toggleTheme} aria-label="Przełącz motyw">
                         {isDarkMode ? (
@@ -295,7 +309,7 @@ const Header: React.FC = () => {
                     </form>
 
                     {/* PRZYCISK DODAJ OGŁOSZENIE */}
-                    {user && (
+                    {user && !sidebarOpen && (
                       <button
                         type="button"
                         className="add-listing-header-btn"
@@ -307,17 +321,20 @@ const Header: React.FC = () => {
 
                     {/* KONTO */}
                     <div className="my-account">
-                        {user ? (
-                            <>
-                                <Link to="/profile" className="account">Mój profil</Link>
-                                <button onClick={handleLogout} className="account logout-button" style={{ marginLeft: '10px' }}>
-                                    Wyloguj
-                                </button>
-                            </>
-                        ) : (
-                            <Link to="/auth" className="account">Zaloguj</Link>
-                        )}
+                      {user ? (
+                        !sidebarOpen && (
+                          <>
+                            <Link to="/profile" className="account">Mój profil</Link>
+                            <button onClick={handleLogout} className="account logout-button">
+                              Wyloguj
+                            </button>
+                          </>
+                        )
+                      ) : (
+                        <Link to="/auth" className="account">Zaloguj</Link>
+                      )}
                     </div>
+
 
                 </div>
 
