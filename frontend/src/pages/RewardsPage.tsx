@@ -14,6 +14,204 @@ type Reward = {
   points_cost: number;
 };
 
+const BrandIcon: React.FC<{ brand: string }> = ({ brand }) => {
+  const b = brand.toLowerCase();
+
+  /* LIDL – kupon / karta */
+  if (b === "lidl") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <rect x="3" y="6" width="18" height="12" rx="2"
+          fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M7 10h10M7 14h6"
+          stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  /* EMPIK – książka */
+  if (b === "empik") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        {/* lewa strona */}
+        <path
+          d="M4 6c0-1.1.9-2 2-2h6v14H6a2 2 0 0 0-2 2V6z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        {/* prawa strona */}
+        <path
+          d="M20 6c0-1.1-.9-2-2-2h-6v14h6a2 2 0 0 1 2 2V6z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        {/* środek */}
+        <path
+          d="M12 4v14"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          opacity="0.6"
+        />
+      </svg>
+    );
+  }
+
+
+  /* MEDIA MARKT – monitor / elektronika */
+  if (b === "mediamarkt") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18">
+        <rect x="3" y="5" width="18" height="12" rx="2"
+          fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M9 21h6M12 17v4"
+          stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  /* HEBE – kosmetyk */
+  if (b === "hebe") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18">
+        <path d="M9 3h6v4H9zM8 7h8v14H8z"
+          fill="none" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  /* ROSSMANN – torba zakupowa (drogeria) */
+  if (b === "rossmann") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path
+          d="M6.5 8h11l-1 13H7.5l-1-13z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9 8a3 3 0 0 1 6 0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M9 12h6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          opacity="0.75"
+        />
+      </svg>
+    );
+  }
+
+  /* SEPHORA – szminka */
+  if (b === "sephora") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        {/* korpus */}
+        <rect
+          x="9"
+          y="10"
+          width="6"
+          height="11"
+          rx="1.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+        {/* część środkowa */}
+        <path
+          d="M9 14h6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          opacity="0.75"
+        />
+        {/* szminka */}
+        <path
+          d="M10 10V6.8c0-.9.7-1.6 1.6-1.6h.8c.9 0 1.6.7 1.6 1.6V10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M10 6.8l2-1.8 2 1.8"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+
+  /* ZARA – koszulka (moda) */
+  if (b === "zara") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path
+          d="M9 4l3 2 3-2 4 3-2 3v10H7V10L5 7l4-3z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <path
+          d="M10 6h4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          opacity="0.8"
+        />
+      </svg>
+    );
+  }
+
+
+  /* ZALANDO – paczka */
+  if (b === "zalando") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18">
+        <path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"
+          fill="none" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  /* DOUGLAS – gwiazda premium */
+  if (b === "douglas") {
+    return (
+      <svg viewBox="0 0 24 24" width="18" height="18">
+        <path d="M12 3l2.7 5.6 6.2.9-4.5 4.4 1.1 6.2L12 18l-5.5 2.9 1.1-6.2-4.5-4.4 6.2-.9z"
+          fill="none" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
+  /* FALLBACK */
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18">
+      <circle cx="12" cy="12" r="9"
+        fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+};
+
+
+
 const RewardsPage: React.FC = () => {
   const { user, setUser } = useAuth();
   const [rewards, setRewards] = useState<Reward[]>([]);
@@ -156,8 +354,6 @@ const RewardsPage: React.FC = () => {
       )}
 
 
-
-
       {loading ? (
         <p>Ładowanie nagród...</p>
       ) : (
@@ -168,9 +364,22 @@ const RewardsPage: React.FC = () => {
 
             return (
               <div key={r.id} className="reward-card">
-                <p className="reward-brand"><strong>{r.brand}</strong></p>
-                <p className="reward-desc">{r.description}</p>
-                <p className="reward-cost">Koszt: {r.points_cost} pkt</p>
+                <div className="reward-top">
+                  <div className="reward-brandchip">
+                    <span className="reward-brandicon">
+                      <BrandIcon brand={r.brand} />
+                    </span>
+
+                    <p className="reward-brand">
+                      <strong>{r.brand}</strong>
+                    </p>
+                  </div>
+
+                  <span className="reward-badge">-{r.percent}%</span>
+                </div>
+
+                <p className="reward-desc">Kupon zniżkowy {r.percent}%</p>
+
 
                 <button
                   className={`reward-button ${!canRedeem ? 'reward-button--locked' : ''}`}
@@ -185,9 +394,10 @@ const RewardsPage: React.FC = () => {
                     redeemReward(r.id);
                   }}
                 >
-                  Odbierz
+                  Odbierz za {r.points_cost} pkt
                 </button>
               </div>
+
             );
           })}
 
