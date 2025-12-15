@@ -1,19 +1,160 @@
 .history-title {
-    text-align: center;
-    font-size: 28px;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 32px;
-  }
+  text-align: center;
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 32px;
+}
   
   /* karta sprzedanego/zakończonego ogłoszenia */
 .listing-card--sold {
-  opacity: 0.6;
   position: relative;
 }
 
-.listing-card--sold,
-.listing-card--history {
-  opacity: 0.55;
-  filter: grayscale(100%);
+.resume-button {
+  background-color: #9aa0a6;    
+  color: #1f2937;
+  border: none;
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+}
+
+.resume-button:hover {
+  background-color: #8b9198;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.resume-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.resume-button:disabled {
+  background-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.listing-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch; 
+  gap: 24px;
+}
+
+.listing-actions {
+  display: flex;
+  align-items: center;    
+  justify-content: center;
+  padding-right: 20px;
+}
+
+.listing-actions {
+  min-width: 160px;
+}
+
+
+.resume-button:disabled {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.listing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 20px;
+  min-width: 160px;
+  padding-top: 18px; 
+}
+
+/* delikatne wyszarzenie treści */
+.listing-card--history .listing-main,
+.listing-card--sold .listing-main {
+  opacity: 0.75;
+  filter: grayscale(60%);
+}
+
+/* przyciski zawsze normalne */
+.listing-card--history .listing-actions,
+.listing-card--sold .listing-actions {
+  opacity: 1;
+  filter: none;
+}
+
+.resume-button {
+  background: #eaf2ff;
+  color: #2f6fff;
+  border: 2px solid #2f6fff;
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
+}
+
+.resume-button:hover {
+  background: #dbe9ff;
+  box-shadow: 0 10px 24px rgba(47, 111, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.resume-button:active {
+  transform: translateY(0);
+}
+
+/* ====== DELIKATNE "NIEAKTYWNE / SPRZEDANE"  ====== */
+.listing-card--history .listing-main,
+.listing-card--sold .listing-main {
+  opacity: 0.88;           
+  filter: grayscale(25%);    
+}
+
+/* przyciski NIE są wyszarzane */
+.listing-card--history .listing-actions,
+.listing-card--sold .listing-actions {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.resume-button {
+  background: #eaf2ff !important;
+  color: #2f6fff !important;
+  border: 2px solid #2f6fff !important;
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.08s ease;
+}
+
+.resume-button:hover {
+  background: #dbe9ff !important;
+  box-shadow: 0 10px 24px rgba(47, 111, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.resume-button:active {
+  transform: translateY(0);
+}
+
+.history-page .listing-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 24px;
 }

@@ -899,3 +899,47 @@ body.dark-mode .profile-page .favorite-toggle{
   box-shadow: 0 0 0 4px rgba(47, 111, 255, 0.18);
   border-color: #2f6fff;
 }
+
+
+
+.profile-card{
+  padding: 3rem;
+}
+
+.profile-top{
+  justify-content: center;     
+  align-items: center;
+  gap: 60px;
+  padding: 34px 0 26px;
+}
+
+.profile-left{
+  flex: 1;
+  max-width: 720px;
+  justify-content: center;
+  gap: 28px;
+}
+
+.profile-avatar{
+  width: 110px;
+  height: 110px;
+}
+
+.profile-username{
+  font-size: 2rem;
+}
+
+.profile-user-data p{
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.profile-right{
+  flex: 1;
+  max-width: 520px;
+  align-items: center;        
+}
+
+.profile-counters{
+  justify-content: center;
+}
