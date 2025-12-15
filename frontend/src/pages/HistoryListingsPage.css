@@ -294,3 +294,78 @@
   filter: grayscale(40%) brightness(0.9);
   opacity: 0.7;
 }
+
+.body.dark-mode .history-title {
+  color: #e5e7eb;
+}
+
+body.dark-mode .profile-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+body.dark-mode .history-points-panel,
+body.dark-mode .points-card {
+  background: rgba(2, 6, 23, 0.75);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+}
+
+body.dark-mode .points-label {
+  color: #9ca3af;
+}
+
+body.dark-mode .points-value {
+  color: #93c5fd;
+  text-shadow: 0 10px 24px rgba(59,130,246,0.20);
+}
+
+body.dark-mode .points-hint {
+  color: #9ca3af;
+}
+
+body.dark-mode .history-page h2,
+body.dark-mode .history-page h3 {
+  color: #e5e7eb;
+}
+
+body.dark-mode .history-page .listing-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.55);
+}
+
+body.dark-mode .history-page .listing-title,
+body.dark-mode .history-page .listing-main,
+body.dark-mode .history-page .listing-description {
+  color: #e5e7eb;
+}
+
+body.dark-mode .history-page .listing-meta,
+body.dark-mode .history-page .listing-location,
+body.dark-mode .history-page .listing-date {
+  color: #9ca3af;
+}
+
+body.dark-mode .resume-button {
+  background: rgba(59,130,246,0.12) !important;
+  color: #93c5fd !important;
+  border-color: rgba(59,130,246,0.55) !important;
+}
+
+body.dark-mode .resume-button:hover {
+  background: rgba(59,130,246,0.20) !important;
+  box-shadow: 0 10px 24px rgba(37,99,235,0.30) !important;
+}
+
+body.dark-mode .listing-card--history .listing-thumb img,
+body.dark-mode .listing-card--sold .listing-thumb img {
+  filter: grayscale(15%) brightness(0.9);
+  opacity: 0.85;
+}
+
+body.dark-mode .listing-card--history .listing-thumb-icon,
+body.dark-mode .listing-card--sold .listing-thumb-icon {
+  filter: grayscale(10%) brightness(0.95);
+  opacity: 0.85;
+}

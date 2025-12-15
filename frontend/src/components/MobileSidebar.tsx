@@ -48,6 +48,9 @@ const MobileSidebar: React.FC<MobileSidebarProps> = ({ open, onClose }) => {
         <nav className="sidebar-links">
           {user ? (
             <>
+              <Link to="/listings/create" onClick={onClose}>
+                Dodaj ogłoszenie
+              </Link>
               <Link to="/profile" onClick={onClose}>
                 Mój profil
               </Link>
