@@ -351,8 +351,8 @@ router.get('/', async (req, res) => {
         END AS author_avatar_url,
         (
           SELECT COALESCE(
-            li.path,
-            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
+            li.path
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
@@ -389,9 +389,9 @@ router.get('/my', authRequired, async (req, res) => {
         s.name AS subcategory_name,
         (
           SELECT COALESCE(
-            li.path,
-            'data:' || li.mime || ';base64,' || encode(li.data, 'base64')
-          )
+        'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
+        li.path
+      )
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
@@ -454,8 +454,8 @@ router.get('/featured', async (req, res) => {
         END AS author_avatar_url,
         (
           SELECT COALESCE(
-            li.path,
-            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
+            li.path
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
@@ -494,8 +494,8 @@ router.get('/favorites', authRequired, async (req, res) => {
         END AS author_avatar_url,
         (
           SELECT COALESCE(
-            li.path,
-            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
+            li.path
           )
           FROM listing_images li
           WHERE li.listing_id = l.id
@@ -895,10 +895,7 @@ router.get('/:id/images', async (req, res) => {
       `
       SELECT
         id,
-        COALESCE(
-          path,
-          'data:' || mime || ';base64,' || encode(data,'base64')
-        ) AS path
+        COALESCE('data:' || mime || ';base64,' || encode(data,'base64'), path) AS path
       FROM listing_images
       WHERE listing_id = $1
       ORDER BY COALESCE(sort_order, id) ASC, id ASC
@@ -1062,24 +1059,17 @@ if (multer) {
   const uploadDir = path.join(__dirname, '..', 'uploads');
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-  const storage = multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadDir),
-    filename: (_req, file, cb) => {
-      const uniq = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname);
-      cb(null, `listing-${uniq}${ext}`);
-    }
-  });
+    const storage = multer.memoryStorage();
 
-  upload = multer({
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 },
-    fileFilter: (_req, file, cb) => {
-      const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
-      cb(ok ? null : new Error('Invalid file type'), ok);
+    upload = multer({
+      storage,
+      limits: { fileSize: 10 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
+        cb(ok ? null : new Error('Invalid file type'), ok);
+      }
+    });
     }
-  });
-}
 
 if (upload) {
   router.post('/:id/images', authRequired, upload.array('images', 6), async (req, res) => {
@@ -1103,16 +1093,15 @@ if (upload) {
       const values = [];
       const placeholders = [];
       files.forEach((f, i) => {
-        const relPath = `/uploads/${path.basename(f.path)}`;
-        const fileBuf = fs.readFileSync(f.path);
-        const sortOrder = startOrder + i;
+      const fileBuf = f.buffer;
+      const sortOrder = startOrder + i;
 
-        values.push(listingId, relPath, f.mimetype, f.size, fileBuf, sortOrder);
-        const base = i * 6;
-        placeholders.push(
-          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
-        );
-      });
+      values.push(listingId, null, f.mimetype, f.size, fileBuf, sortOrder);
+      const base = i * 6;
+      placeholders.push(
+        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
+      );
+    });
 
       await pool.query(
         `INSERT INTO listing_images (listing_id, path, mime, size, data, sort_order) VALUES ${placeholders.join(',')}`,
@@ -1120,14 +1109,14 @@ if (upload) {
       );
 
       return res.status(201).json({
-        listingId,
-        filesCount: files.length,
-        files: files.map(f => ({
-          path: `/uploads/${path.basename(f.path)}`,
-          mime: f.mimetype,
-          size: f.size
-        }))
-      });
+      listingId,
+      filesCount: files.length,
+      files: files.map((f) => ({
+        path: `data:${f.mimetype};base64,${f.buffer.toString('base64')}`,
+        mime: f.mimetype,
+        size: f.size,
+      })),
+    });
     } catch (err) {
       console.error('Błąd podczas uploadu zdjęć:', err.message);
       return res.status(500).json({ error: 'Upload failed', details: err.message });
