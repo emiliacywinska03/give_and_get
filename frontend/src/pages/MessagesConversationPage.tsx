@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { io } from 'socket.io-client';
@@ -6,6 +6,15 @@ import './MessagesConversationPage.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
+
+const API_BASE_NO_SLASH = API_BASE.replace(/\/$/, '');
+
+const joinApiUrl = (p: string) => {
+  if (!p) return p;
+  if (p.startsWith('data:') || p.startsWith('http')) return p;
+  if (p.startsWith('/')) return `${API_BASE_NO_SLASH}${p}`;
+  return `${API_BASE_NO_SLASH}/${p}`;
+};
 
 type ChatMessage = {
   id: number;
@@ -107,6 +116,8 @@ const MessagesConversationPage: React.FC = () => {
       return;
     }
 
+    const controller = new AbortController();
+
     const fetchConversation = async () => {
       try {
         setLoading(true);
@@ -118,6 +129,7 @@ const MessagesConversationPage: React.FC = () => {
 
         const res = await fetch(`${API_BASE}/api/messages/listing/${listingId}?${qs.toString()}`, {
           credentials: 'include',
+          signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
             ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
@@ -132,9 +144,9 @@ const MessagesConversationPage: React.FC = () => {
         }
 
         const msgs: ChatMessage[] = data.messages || [];
-        // jeśli backend nie zwraca username — pozostawiamy je puste, a UI i tak pokaże "Ty" po stronie nadawcy
         setMessages(msgs);
       } catch (err: any) {
+        if (err?.name === 'AbortError') return;
         console.error('Błąd pobierania konwersacji:', err);
         setError(err.message || 'Wystąpił błąd podczas pobierania konwersacji.');
       } finally {
@@ -143,15 +155,22 @@ const MessagesConversationPage: React.FC = () => {
     };
 
     fetchConversation();
+
+    return () => {
+      controller.abort();
+    };
   }, [user, listingId, peerId, navigate]);
 
   useEffect(() => {
     if (!listingId) return;
 
+    const controller = new AbortController();
+
     const fetchListing = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/listings/${listingId}`, {
           credentials: 'include',
+          signal: controller.signal,
           headers: {
             'Content-Type': 'application/json',
             ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
@@ -163,75 +182,90 @@ const MessagesConversationPage: React.FC = () => {
           return;
         }
 
-
         const l = data.listing ?? data.data ?? data;
 
         if (!l) {
           return;
         }
 
+        const rawPrimary =
+          l.primary_image ??
+          l.primaryImage ??
+          l.listing_primary_image ??
+          l.listingPrimaryImage ??
+          (Array.isArray(l.images) && l.images.length ? l.images[0] : null);
 
-        const toSrc = (val: any): string | null => {
-          if (!val) return null;
-          if (typeof val === 'string') {
-            if (val.startsWith('data:') || val.startsWith('http')) return val;
-            return `${API_BASE}${val}`;
-          }
-          if (typeof val === 'object') {
-            if (val.dataUrl) return toSrc(val.dataUrl);
-            if (val.url) return toSrc(val.url);
-            if (val.path) return toSrc(val.path);
-          }
-          return null;
-        };
+        const resolvedImageUrl =
+          typeof rawPrimary === 'string'
+            ? rawPrimary.startsWith('data:') || rawPrimary.startsWith('http')
+              ? rawPrimary
+              : joinApiUrl(rawPrimary)
+            : rawPrimary && typeof rawPrimary === 'object'
+            ? (rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path
+                ? (String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('data:') ||
+                   String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('http')
+                    ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)
+                    : joinApiUrl(String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)))
+                : null)
+            : null;
 
-        const pickPrimary = (obj: any): string | null => {
-          const candidates = [
-            obj?.primary_image,
-            obj?.primaryImage,
-            obj?.primaryImageUrl,
-            obj?.thumbnailUrl,
-            obj?.thumbnail_url,
-            obj?.mainPhotoUrl,
-            obj?.main_photo_url,
-            obj?.photoUrl,
-            obj?.photo_url,
-          ];
-          for (const c of candidates) {
-            const src = toSrc(c);
-            if (src) return src;
-          }
-          if (Array.isArray(obj?.images) && obj.images.length > 0) {
-            const src = toSrc(obj.images[0]);
-            if (src) return src;
-          }
-          return null;
-        };
+        const typeIdValue =
+          typeof l.type_id === 'number'
+            ? l.type_id
+            : typeof l.typeId === 'number'
+            ? l.typeId
+            : null;
 
-        let resolvedThumb: string | null = pickPrimary(l);
+        let finalImageUrl = resolvedImageUrl;
+        
+        if (!finalImageUrl && typeIdValue === 1) {
+          try {
+            const ri = await fetch(`${API_BASE_NO_SLASH}/api/listings/${listingId}/images`, {
+              credentials: 'include',
+              signal: controller.signal,
+              headers: {
+                ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+              },
+            });
+            if (ri.ok) {
+              const imgs = await ri.json();
+              if (Array.isArray(imgs) && imgs.length > 0) {
+                const first = imgs[0];
+                const raw =
+                  (first && (first.dataUrl || first.url || first.path)) ||
+                  (typeof first === 'string' ? first : null);
+                if (raw) finalImageUrl = joinApiUrl(String(raw));
+              }
+            }
+          } catch (e: any) {
+            if (e?.name !== 'AbortError') {
+              console.error('Błąd pobierania miniaturki sprzedaży (fallback):', e);
+            }
+          }
+        }
 
         const preview: ListingPreview = {
           id: l.id,
-          title: l.title || l.name || '',
-          thumbnailUrl: resolvedThumb,
-          imageUrl: resolvedThumb,
-          typeId:
-            typeof l.type_id === 'number'
-              ? l.type_id
-              : typeof l.typeId === 'number'
-              ? l.typeId
-              : null,
+          title: l.title || '',
+          imageUrl: finalImageUrl,
+          thumbnailUrl: finalImageUrl,
+          typeId: typeIdValue,
           authorUsername: l.author_username || l.authorUsername || '',
           authorAvatarUrl: l.author_avatar_url || l.authorAvatarUrl || null,
         };
 
         setListingInfo(preview);
-      } catch (e) {
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return;
         console.error('Błąd pobierania ogłoszenia do podglądu:', e);
       }
     };
 
     fetchListing();
+
+    return () => {
+      controller.abort();
+    };
   }, [listingId]);
 
   const socketRef = useRef<any>(null);
@@ -240,6 +274,10 @@ const MessagesConversationPage: React.FC = () => {
 
     const socket = io(API_BASE, {
       withCredentials: true,
+      transports: ['websocket'],
+      upgrade: false,
+      timeout: 10000,
+      reconnectionAttempts: 5,
     });
     socketRef.current = socket;
 
@@ -288,6 +326,7 @@ const MessagesConversationPage: React.FC = () => {
       if (remoteTypingTimeoutRef.current) {
         window.clearTimeout(remoteTypingTimeoutRef.current);
       }
+      socketRef.current = null;
       socket.disconnect();
     };
   }, [user, listingId]);
@@ -407,10 +446,7 @@ if (!listingId) {
 
 const peerAvatarSrc =
   listingInfo && listingInfo.authorAvatarUrl
-    ? (listingInfo.authorAvatarUrl.startsWith('http') ||
-      listingInfo.authorAvatarUrl.startsWith('data:'))
-      ? listingInfo.authorAvatarUrl
-      : `${API_BASE}${listingInfo.authorAvatarUrl}`
+    ? joinApiUrl(listingInfo.authorAvatarUrl)
     : null;
 
 const typeIcon = getTypeIconSrc(listingInfo?.typeId);

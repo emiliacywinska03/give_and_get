@@ -102,22 +102,12 @@ router.get('/inbox', authRequired, async (req, res) => {
       ),
       last_msg AS (
         SELECT DISTINCT ON (listing_id, other_user_id)
-          id,
-          listing_id,
-          other_user_id,
-          sender_id,
-          receiver_id,
-          content,
-          created_at,
-          is_read
+          id, listing_id, other_user_id, sender_id, receiver_id, content, created_at, is_read
         FROM base
         ORDER BY listing_id, other_user_id, created_at DESC
       ),
       unread AS (
-        SELECT
-          listing_id,
-          sender_id AS other_user_id,
-          COUNT(*)::int AS unread_count
+        SELECT listing_id, sender_id AS other_user_id, COUNT(*)::int AS unread_count
         FROM message
         WHERE receiver_id = $1 AND is_read = FALSE
         GROUP BY listing_id, sender_id
@@ -133,8 +123,19 @@ router.get('/inbox', authRequired, async (req, res) => {
         lm.is_read,
         COALESCE(u.unread_count, 0) AS unread_count,
         l.title AS listing_title,
+        l.type_id AS listing_type_id,
         ou.username AS other_username,
-        ou.avatar_url AS other_avatar_url
+        ou.avatar_url AS other_avatar_url,
+        (
+          SELECT COALESCE(
+            li.path,
+            'data:' || li.mime || ';base64,' || encode(li.data,'base64')
+          )
+          FROM listing_images li
+          WHERE li.listing_id = lm.listing_id
+          ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
+          LIMIT 1
+        ) AS listing_primary_image
       FROM last_msg lm
       JOIN listing l ON l.id = lm.listing_id
       JOIN "user" ou ON ou.id = lm.other_user_id
@@ -163,48 +164,73 @@ router.get('/listing/:id', authRequired, async (req, res) => {
     const userId = req.user.id;
 
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+
+    const params = [listingId, userId];
+
     const beforeIdRaw = req.query.beforeId;
     const beforeId = beforeIdRaw ? Number(beforeIdRaw) : null;
 
     const otherUserIdRaw = req.query.otherUserId;
     const otherUserId = otherUserIdRaw ? Number(otherUserIdRaw) : null;
 
-    const params = [listingId, userId];
-    const where = [
-      'm.listing_id = $1',
-      '(m.sender_id = $2 OR m.receiver_id = $2)'
-    ];
-
-    if (Number.isFinite(beforeId) && beforeId > 0) {
-      params.push(beforeId);
-      where.push(`m.id < $${params.length}`);
+    if (Number.isFinite(otherUserId) && otherUserId > 0 && otherUserId === userId) {
+      return res.status(400).json({ ok: false, error: 'Nieprawidłowy otherUserId.' });
     }
 
+    let beforeIdx = null;
+    if (Number.isFinite(beforeId) && beforeId > 0) {
+      params.push(beforeId);
+      beforeIdx = params.length;
+    }
+
+    let otherIdx = null;
     if (Number.isFinite(otherUserId) && otherUserId > 0) {
-      if (otherUserId === userId) {
-        return res.status(400).json({ ok: false, error: 'Nieprawidłowy otherUserId.' });
-      }
       params.push(otherUserId);
-      const otherIdx = params.length;
-      where.push(`((m.sender_id = $2 AND m.receiver_id = $${otherIdx}) OR (m.sender_id = $${otherIdx} AND m.receiver_id = $2))`);
+      otherIdx = params.length;
     }
 
     params.push(limit);
     const limitIdx = params.length;
 
+    const senderSide = [
+      'm.listing_id = $1',
+      'm.sender_id = $2'
+    ];
+    const receiverSide = [
+      'm.listing_id = $1',
+      'm.receiver_id = $2'
+    ];
+
+    if (beforeIdx) {
+      senderSide.push(`m.id < $${beforeIdx}`);
+      receiverSide.push(`m.id < $${beforeIdx}`);
+    }
+
+    if (otherIdx) {
+      senderSide.push(`m.receiver_id = $${otherIdx}`);
+      receiverSide.push(`m.sender_id = $${otherIdx}`);
+    }
+
     const { rows } = await pool.query(
       `
       SELECT
-        m.id,
-        m.sender_id,
-        m.receiver_id,
-        m.listing_id,
-        m.content,
-        m.created_at,
-        m.is_read
-      FROM message m
-      WHERE ${where.join(' AND ')}
-      ORDER BY m.id DESC
+        x.id,
+        x.sender_id,
+        x.receiver_id,
+        x.listing_id,
+        x.content,
+        x.created_at,
+        x.is_read
+      FROM (
+        SELECT m.id, m.sender_id, m.receiver_id, m.listing_id, m.content, m.created_at, m.is_read
+        FROM message m
+        WHERE ${senderSide.join(' AND ')}
+        UNION ALL
+        SELECT m.id, m.sender_id, m.receiver_id, m.listing_id, m.content, m.created_at, m.is_read
+        FROM message m
+        WHERE ${receiverSide.join(' AND ')}
+      ) x
+      ORDER BY x.id DESC
       LIMIT $${limitIdx}
       `,
       params
@@ -235,8 +261,8 @@ router.get('/listing/:id', authRequired, async (req, res) => {
       );
     }
 
-    rows.reverse();
-    return res.json({ ok: true, messages: rows });
+    const ordered = rows.sort((a, b) => Number(a.id) - Number(b.id));
+    return res.json({ ok: true, messages: ordered });
   } catch (err) {
     console.error('Błąd przy pobieraniu wiadomości (listing):', err);
     return res.status(500).json({ ok: false, error: 'Błąd serwera przy pobieraniu wiadomości.' });
