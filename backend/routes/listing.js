@@ -670,6 +670,14 @@ router.put('/:id', authRequired, async (req, res) => {
     type_id,
     helpType,
     help_type,
+    salary,
+    employmentType,
+    employment_type,
+    jobMode,
+    job_mode,
+    jobCategory,
+    job_category,
+    requirements,
   } = req.body;
 
   if (Number.isNaN(listingId)) {
@@ -765,6 +773,61 @@ router.put('/:id', authRequired, async (req, res) => {
   const finalHasNegotiable = listingTypeId === 1 && (hasNegotiable || shouldForceFree);
   const finalNegotiableValue = shouldForceFree ? false : negotiableValue;
 
+  const hasSalary = Object.prototype.hasOwnProperty.call(req.body, 'salary');
+  const hasEmploymentType =
+    Object.prototype.hasOwnProperty.call(req.body, 'employmentType') ||
+    Object.prototype.hasOwnProperty.call(req.body, 'employment_type');
+  const hasWorkMode =
+    Object.prototype.hasOwnProperty.call(req.body, 'jobMode') ||
+    Object.prototype.hasOwnProperty.call(req.body, 'job_mode');
+  const hasJobCategory =
+    Object.prototype.hasOwnProperty.call(req.body, 'jobCategory') ||
+    Object.prototype.hasOwnProperty.call(req.body, 'job_category');
+  const hasRequirements = Object.prototype.hasOwnProperty.call(req.body, 'requirements');
+
+  const salaryRaw = salary;
+  let salaryValue = null;
+  if (hasSalary) {
+    if (salaryRaw === null || typeof salaryRaw === 'undefined' || String(salaryRaw).trim() === '') {
+      salaryValue = null;
+    } else {
+      const num = Number(String(salaryRaw).replace(',', '.'));
+      if (Number.isNaN(num)) {
+        return res.status(400).json({ error: 'Nieprawidłowe wynagrodzenie' });
+      }
+      salaryValue = num;
+    }
+  }
+
+  const employmentTypeRaw = typeof employment_type !== 'undefined' ? employment_type : employmentType;
+  const employmentTypeValue =
+    employmentTypeRaw === null || typeof employmentTypeRaw === 'undefined' || String(employmentTypeRaw).trim() === ''
+      ? null
+      : String(employmentTypeRaw).trim();
+
+  const workModeRaw = typeof job_mode !== 'undefined' ? job_mode : jobMode;
+  const workModeValue =
+    workModeRaw === null || typeof workModeRaw === 'undefined' || String(workModeRaw).trim() === ''
+      ? null
+      : String(workModeRaw).trim();
+
+  const jobCategoryRaw = typeof job_category !== 'undefined' ? job_category : jobCategory;
+  const jobCategoryValue =
+    jobCategoryRaw === null || typeof jobCategoryRaw === 'undefined' || String(jobCategoryRaw).trim() === ''
+      ? null
+      : String(jobCategoryRaw).trim();
+
+  const requirementsValue =
+    requirements === null || typeof requirements === 'undefined' || String(requirements).trim() === ''
+      ? null
+      : String(requirements).trim();
+
+  const finalHasSalary = listingTypeId === 3 && hasSalary;
+  const finalHasEmploymentType = listingTypeId === 3 && hasEmploymentType;
+  const finalHasWorkMode = listingTypeId === 3 && hasWorkMode;
+  const finalHasJobCategory = listingTypeId === 3 && hasJobCategory;
+  const finalHasRequirements = listingTypeId === 3 && hasRequirements;
+
   try {
     const result = await pool.query(
       `
@@ -783,7 +846,14 @@ router.put('/:id', authRequired, async (req, res) => {
         negotiable     = CASE WHEN $13 THEN $14 ELSE negotiable END,
 
         -- NOWE: edycja pomocy
-        help_type      = CASE WHEN $15 THEN $16 ELSE help_type END
+        help_type      = CASE WHEN $15 THEN $16 ELSE help_type END,
+
+        -- NOWE: edycja pracy
+        salary         = CASE WHEN $17 THEN $18 ELSE salary END,
+        employment_type= CASE WHEN $19 THEN $20 ELSE employment_type END,
+        work_mode      = CASE WHEN $21 THEN $22 ELSE work_mode END,
+        job_category   = CASE WHEN $23 THEN $24 ELSE job_category END,
+        requirements   = CASE WHEN $25 THEN $26 ELSE requirements END
 
       WHERE id = $7::int AND user_id = $8::int
       RETURNING *
@@ -805,6 +875,16 @@ router.put('/:id', authRequired, async (req, res) => {
         finalNegotiableValue,
         finalHasHelpType,
         finalHelpTypeValue,
+        finalHasSalary,
+        salaryValue,
+        finalHasEmploymentType,
+        employmentTypeValue,
+        finalHasWorkMode,
+        workModeValue,
+        finalHasJobCategory,
+        jobCategoryValue,
+        finalHasRequirements,
+        requirementsValue,
       ]
     );
 

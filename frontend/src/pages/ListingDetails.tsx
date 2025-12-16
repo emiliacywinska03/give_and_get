@@ -325,6 +325,11 @@ export default function ListingDetails() {
   const [editIsFree, setEditIsFree] = useState(false);
   const [editNegotiable, setEditNegotiable] = useState(false);
   const [editHelpType, setEditHelpType] = useState<'offer' | 'need' | ''>('');
+  // PRACA (work) edit fields
+  const [editSalary, setEditSalary] = useState('');
+  const [editWorkMode, setEditWorkMode] = useState('');
+  const [editJobCategory, setEditJobCategory] = useState('');
+  const [editRequirements, setEditRequirements] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -515,6 +520,25 @@ export default function ListingDetails() {
         setEditIsFree(false);
         setEditNegotiable(false);
       }
+      // --- PRACA (work) fields initialization ---
+      const isWork = (data as any)?.type_id === 3;
+      if (isWork) {
+        const rawSalary = (data as any)?.salary;
+        setEditSalary(
+          rawSalary === null || typeof rawSalary === 'undefined' ? '' : String(rawSalary),
+        );
+        setEditWorkMode(
+          String((data as any)?.work_mode ?? (data as any)?.jobMode ?? ''),
+        );
+        setEditJobCategory(String((data as any)?.job_category ?? ''));
+        setEditRequirements(String((data as any)?.requirements ?? ''));
+      } else {
+        setEditSalary('');
+        setEditWorkMode('');
+        setEditJobCategory('');
+        setEditRequirements('');
+      }
+      // ---
       if (startInEdit) {
         setEditMode(true);
       }
@@ -618,24 +642,36 @@ const handleSave = async () => {
       },
       credentials: 'include',
       body: JSON.stringify({
-      title: editTitle,
-      description: editDescription,
-      location: editLocation,
-      condition: editCondition,
+        title: editTitle,
+        description: editDescription,
+        location: editLocation,
+        condition: editCondition,
 
-      help_type: (data as any)?.type_id === 2 ? (editHelpType || null) : undefined,
+        help_type: (data as any)?.type_id === 2 ? (editHelpType || null) : undefined,
 
-      price:
-        (data as any)?.type_id === 1
-          ? editIsFree
-            ? 0
-            : editPrice.trim() === ''
-            ? null
-            : Number(editPrice)
-          : undefined,
-      isFree: (data as any)?.type_id === 1 ? editIsFree : undefined,
-      negotiable: (data as any)?.type_id === 1 ? editNegotiable : undefined,
-    }),
+        // SPRZEDAŻ
+        price:
+          (data as any)?.type_id === 1
+            ? editIsFree
+              ? 0
+              : editPrice.trim() === ''
+              ? null
+              : Number(editPrice.replace(',', '.'))
+            : undefined,
+        isFree: (data as any)?.type_id === 1 ? editIsFree : undefined,
+        negotiable: (data as any)?.type_id === 1 ? editNegotiable : undefined,
+
+        // PRACA
+        salary:
+          (data as any)?.type_id === 3
+            ? editSalary.trim() === ''
+              ? null
+              : Number(editSalary.replace(/[^0-9.,-]/g, '').replace(',', '.'))
+            : undefined,
+        work_mode: (data as any)?.type_id === 3 ? (editWorkMode || null) : undefined,
+        job_category: (data as any)?.type_id === 3 ? (editJobCategory || null) : undefined,
+        requirements: (data as any)?.type_id === 3 ? (editRequirements || '') : undefined,
+      }),
     });
 
     if (!res.ok) {
@@ -1156,6 +1192,19 @@ const handleSave = async () => {
                     setEditDescription(data.description || '');
                     setEditLocation(data.location || '');
                     setEditCondition(((data as any).condition ?? '') as string);
+
+                    // reset PRACA fields
+                    const rawSalary = (data as any)?.salary;
+                    setEditSalary(
+                      rawSalary === null || typeof rawSalary === 'undefined'
+                        ? ''
+                        : String(rawSalary),
+                    );
+                    setEditWorkMode(
+                      String((data as any)?.work_mode ?? (data as any)?.jobMode ?? ''),
+                    );
+                    setEditJobCategory(String((data as any)?.job_category ?? ''));
+                    setEditRequirements(String((data as any)?.requirements ?? ''));
                   }
                   setUiImages(images.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
                   setOrderDirty(false);
@@ -1288,7 +1337,32 @@ const handleSave = async () => {
       <option value="need">Szukam pomocy</option>
     </select>
   </div>
-) : (
+    ) : editMode && canEdit && key === 'salary' && isWork ? (
+      <input
+        className="inline-edit-input"
+        type="text"
+        inputMode="decimal"
+        value={editSalary}
+        onChange={(e) => setEditSalary(e.target.value)}
+        placeholder="Np. 4500"
+      />
+    ) : editMode && canEdit && key === 'work_mode' && isWork ? (
+      <input
+        className="inline-edit-input"
+        type="text"
+        value={editWorkMode}
+        onChange={(e) => setEditWorkMode(e.target.value)}
+        placeholder="Np. stacjonarna / zdalna / hybrydowa"
+      />
+    ) : editMode && canEdit && key === 'job_category' && isWork ? (
+      <input
+        className="inline-edit-input"
+        type="text"
+        value={editJobCategory}
+        onChange={(e) => setEditJobCategory(e.target.value)}
+        placeholder="Np. pracownik / budowlanka / IT"
+      />
+    ) : (
       <span className="listing-attribute-value">{value}</span>
     )}
   </div>
@@ -1311,18 +1385,29 @@ const handleSave = async () => {
     )}
   </section>
 )}
-        {requirementsPair && (
+        {(requirementsPair || (isWork && canEdit && editMode)) && (
           <section className="listing-section listing-section-description">
             <h3 className="listing-section-title">Wymagania</h3>
-            <ul className="listing-description-text listing-requirements-list">
-              {String(requirementsPair.value)
-                .split('\n')
-                .map((line) => line.trim())
-                .filter((line) => line.length > 0)
-                .map((line, idx) => (
-                  <li key={idx}>{line}</li>
-                ))}
-            </ul>
+
+            {editMode && canEdit && isWork ? (
+              <textarea
+                className="inline-edit-textarea"
+                value={editRequirements}
+                onChange={(e) => setEditRequirements(e.target.value)}
+                rows={8}
+                placeholder="Wpisz wymagania – najlepiej każdą pozycję w nowej linii"
+              />
+            ) : (
+              <ul className="listing-description-text listing-requirements-list">
+                {String(requirementsPair?.value ?? '')
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter((line) => line.length > 0)
+                  .map((line, idx) => (
+                    <li key={idx}>{line}</li>
+                  ))}
+              </ul>
+            )}
           </section>
         )}
       </div>
