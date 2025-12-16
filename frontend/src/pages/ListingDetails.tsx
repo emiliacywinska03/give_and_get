@@ -324,6 +324,7 @@ export default function ListingDetails() {
   const [editPrice, setEditPrice] = useState('');
   const [editIsFree, setEditIsFree] = useState(false);
   const [editNegotiable, setEditNegotiable] = useState(false);
+  const [editHelpType, setEditHelpType] = useState<'offer' | 'need' | ''>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -498,6 +499,7 @@ export default function ListingDetails() {
       setEditTitle(data.title || '');
       setEditDescription(data.description || '');
       setEditLocation(data.location || '');
+      setEditHelpType((data.help_type as any) ?? '');
       setEditCondition(
         String((data as any)?.item_condition ?? (data as any)?.condition ?? '')
       );
@@ -508,6 +510,10 @@ export default function ListingDetails() {
         setEditPrice(rawIsFree ? '' : (rawPrice === null || typeof rawPrice === 'undefined' ? '' : String(rawPrice)));
         setEditIsFree(rawIsFree);
         setEditNegotiable(Boolean((data as any)?.negotiable));
+      } else {
+        setEditPrice('');
+        setEditIsFree(false);
+        setEditNegotiable(false);
       }
       if (startInEdit) {
         setEditMode(true);
@@ -516,6 +522,10 @@ export default function ListingDetails() {
   }, [data, canEdit, startInEdit]);
 
   const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isSale) {
+      e.target.value = '';
+      return;
+    }
     if (!e.target.files) return;
     const filesArray = Array.from(e.target.files);
 
@@ -613,6 +623,7 @@ const handleSave = async () => {
       location: editLocation,
       condition: editCondition,
 
+      help_type: (data as any)?.type_id === 2 ? (editHelpType || null) : undefined,
 
       price:
         (data as any)?.type_id === 1
@@ -637,7 +648,7 @@ const handleSave = async () => {
     const updated = body.updated ?? body;
     setData(updated);
 
-    if (desiredNewFiles.length > 0) {
+    if (isSale && desiredNewFiles.length > 0) {
       const formData = new FormData();
       desiredNewFiles.forEach((file) => formData.append('images', file));
 
@@ -712,7 +723,7 @@ const handleSave = async () => {
     }
 
 
-    if (finalOrderedIds.length > 0) {
+    if (isSale && finalOrderedIds.length > 0) {
       try {
         const ro = await fetch(`${API_BASE}/api/listings/${id}/images/reorder`, {
           method: 'PATCH',
@@ -972,7 +983,7 @@ const handleSave = async () => {
     );
   }
 
-  const helpTypeLabel =
+    const helpTypeLabel =
     data.help_type === 'offer'
       ? 'Oferuję pomoc'
       : data.help_type === 'need'
@@ -1031,9 +1042,7 @@ const handleSave = async () => {
 
         </div>
 
-        {helpTypeLabel && (
-          <div className="listing-details-help-pill">{helpTypeLabel}</div>
-        )}
+
 
               <div className="listing-author-box">
         <div className="listing-author-left">
@@ -1159,9 +1168,9 @@ const handleSave = async () => {
           )}
         </div>
       )}
-       {(uiImages.length > 0 || (canEdit && editMode)) && (
-        <div className="listing-details-gallery">
-          {canEdit && editMode && (
+      {isSale && (uiImages.length > 0 || (canEdit && editMode)) && (
+      <div className="listing-details-gallery">
+          {isSale && canEdit && editMode && (
             <>
               <input
                 ref={fileInputRef}
@@ -1267,7 +1276,19 @@ const handleSave = async () => {
         onChange={(e) => setEditCondition(e.target.value)}
         placeholder="Np. Nowy / Bardzo dobry"
       />
-    ) : (
+    ) : editMode && canEdit && key === 'help_type' && isHelp ? (
+  <div className="select-wrap">
+    <select
+      className="inline-edit-input"
+      value={editHelpType}
+      onChange={(e) => setEditHelpType(e.target.value as any)}
+    >
+      <option value="">— wybierz —</option>
+      <option value="offer">Oferuję pomoc</option>
+      <option value="need">Szukam pomocy</option>
+    </select>
+  </div>
+) : (
       <span className="listing-attribute-value">{value}</span>
     )}
   </div>

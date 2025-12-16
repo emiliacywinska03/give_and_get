@@ -668,6 +668,8 @@ router.put('/:id', authRequired, async (req, res) => {
     is_free,
     negotiable,
     type_id,
+    helpType,
+    help_type,
   } = req.body;
 
   if (Number.isNaN(listingId)) {
@@ -702,6 +704,20 @@ router.put('/:id', authRequired, async (req, res) => {
     Object.prototype.hasOwnProperty.call(req.body, 'is_free');
   const hasNegotiable = Object.prototype.hasOwnProperty.call(req.body, 'negotiable');
 
+  const hasHelpType =
+    Object.prototype.hasOwnProperty.call(req.body, 'helpType') ||
+    Object.prototype.hasOwnProperty.call(req.body, 'help_type');
+
+  const helpTypeRaw = typeof help_type !== 'undefined' ? help_type : helpType;
+  const helpTypeValue =
+    helpTypeRaw === null || typeof helpTypeRaw === 'undefined' || String(helpTypeRaw).trim() === ''
+      ? null
+      : String(helpTypeRaw).trim();
+
+  if (helpTypeValue !== null && !['offer', 'need'].includes(helpTypeValue)) {
+    return res.status(400).json({ error: 'Nieprawidłowy rodzaj pomocy (help_type)' });
+  }
+
   const freeRaw = typeof is_free !== 'undefined' ? is_free : isFree;
   const isFreeValue = typeof freeRaw === 'string' ? freeRaw === 'true' : Boolean(freeRaw);
 
@@ -722,6 +738,9 @@ router.put('/:id', authRequired, async (req, res) => {
     }
     listingTypeId = Number(tRows[0].type_id);
   }
+
+  const finalHasHelpType = listingTypeId === 2 && hasHelpType;
+  const finalHelpTypeValue = helpTypeValue;
 
   let priceValue = null;
   if (hasPrice) {
@@ -761,7 +780,10 @@ router.put('/:id', authRequired, async (req, res) => {
         -- NOWE: edycja sprzedaży
         price          = CASE WHEN $9  THEN $10 ELSE price END,
         is_free        = CASE WHEN $11 THEN $12 ELSE is_free END,
-        negotiable     = CASE WHEN $13 THEN $14 ELSE negotiable END
+        negotiable     = CASE WHEN $13 THEN $14 ELSE negotiable END,
+
+        -- NOWE: edycja pomocy
+        help_type      = CASE WHEN $15 THEN $16 ELSE help_type END
 
       WHERE id = $7::int AND user_id = $8::int
       RETURNING *
@@ -781,6 +803,8 @@ router.put('/:id', authRequired, async (req, res) => {
         finalIsFreeValue,
         finalHasNegotiable,
         finalNegotiableValue,
+        finalHasHelpType,
+        finalHelpTypeValue,
       ]
     );
 
@@ -1077,8 +1101,17 @@ if (upload) {
       const listingId = Number(req.params.id);
       if (!listingId) return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
 
-      const check = await pool.query('SELECT id FROM listing WHERE id=$1 AND user_id=$2', [listingId, req.user.id]);
-      if (check.rowCount === 0) return res.status(404).json({ error: 'Ogłoszenie nie znalezione lub nie należy do Ciebie' });
+      const check = await pool.query(
+        'SELECT id, type_id FROM listing WHERE id=$1 AND user_id=$2',
+        [listingId, req.user.id]
+      );
+      if (check.rowCount === 0) {
+        return res.status(404).json({ error: 'Ogłoszenie nie znalezione lub nie należy do Ciebie' });
+      }
+      const t = Number(check.rows[0].type_id);
+      if (t !== 1) {
+        return res.status(400).json({ error: 'Zdjęcia można dodawać tylko do ogłoszeń sprzedaży' });
+      }
 
       const files = req.files || [];
       if (files.length === 0) return res.status(400).json({ error: 'Nie przesłano żadnych plików' });
@@ -1093,15 +1126,15 @@ if (upload) {
       const values = [];
       const placeholders = [];
       files.forEach((f, i) => {
-      const fileBuf = f.buffer;
-      const sortOrder = startOrder + i;
+        const fileBuf = f.buffer;
+        const sortOrder = startOrder + i;
 
-      values.push(listingId, null, f.mimetype, f.size, fileBuf, sortOrder);
-      const base = i * 6;
-      placeholders.push(
-        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
-      );
-    });
+        values.push(listingId, null, f.mimetype, f.size, fileBuf, sortOrder);
+        const base = i * 6;
+        placeholders.push(
+          `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
+        );
+      });
 
       await pool.query(
         `INSERT INTO listing_images (listing_id, path, mime, size, data, sort_order) VALUES ${placeholders.join(',')}`,
@@ -1109,14 +1142,14 @@ if (upload) {
       );
 
       return res.status(201).json({
-      listingId,
-      filesCount: files.length,
-      files: files.map((f) => ({
-        path: `data:${f.mimetype};base64,${f.buffer.toString('base64')}`,
-        mime: f.mimetype,
-        size: f.size,
-      })),
-    });
+        listingId,
+        filesCount: files.length,
+        files: files.map((f) => ({
+          path: `data:${f.mimetype};base64,${f.buffer.toString('base64')}`,
+          mime: f.mimetype,
+          size: f.size,
+        })),
+      });
     } catch (err) {
       console.error('Błąd podczas uploadu zdjęć:', err.message);
       return res.status(500).json({ error: 'Upload failed', details: err.message });

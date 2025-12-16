@@ -965,3 +965,73 @@ body.dark-mode .buy-now-button::before{
   background:#eff6ff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
+
+.select-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+
+
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: translateY(-35%);
+  pointer-events: none;
+
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid rgba(15, 23, 42, 0.72);
+  opacity: 0.95;
+}
+
+.select-wrap select.inline-edit-input {
+  -webkit-appearance: none;
+  appearance: none;
+
+  width: 100%;
+  min-height: 44px;
+
+  padding: 10px 46px 10px 14px; 
+  border-radius: 14px;
+
+  background: #ffffff;
+  color: #0f172a;
+
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  outline: none;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.select-wrap select.inline-edit-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 10px 26px rgba(15, 23, 42, 0.08);
+}
+
+
+.select-wrap select.inline-edit-input option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+
+body.dark-mode .select-wrap::after {
+  border-top-color: rgba(255, 255, 255, 0.82);
+}
+
+body.dark-mode .select-wrap select.inline-edit-input {
+  background: rgba(15, 23, 42, 0.45);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  -webkit-text-fill-color: #e5e7eb;
+}
+
+body.dark-mode .select-wrap select.inline-edit-input option {
+  background: #0b1220;
+  color: #e5e7eb;
+}
