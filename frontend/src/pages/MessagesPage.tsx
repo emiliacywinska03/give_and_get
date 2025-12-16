@@ -29,6 +29,14 @@ type ThreadItem = {
   listing?: { title?: string; type_id?: number | null; primary_image?: string | null };
 };
 
+const stripOfferMeta = (text: string) =>
+  String(text || '')
+    .replace(/\n?\[OFFER_ID:\d+\]\s*/g, '')
+    .replace(/\n?\[OFFER_STATUS:(accepted|rejected)\]\s*/g, '')
+    .replace(/\n?\[OFFER_PRICE:[0-9]+(?:\.[0-9]+)?\]\s*/g, '')
+    .trim();
+
+
 const toSrc = (val: any): string | null => {
   if (!val) return null;
   if (typeof val === 'string') {
@@ -205,7 +213,8 @@ const MessagesPage: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="messages-content">{t.content}</p>
+                <p className="messages-content">{stripOfferMeta(t.content)}</p>
+
               </div>
             );
           })}

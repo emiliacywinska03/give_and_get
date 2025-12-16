@@ -850,6 +850,7 @@ const handleSave = async () => {
     setShowOfferPrice(true);
   };
   
+  
   const handleSendOfferPrice = async () => {
     if (!data) return;
   
@@ -863,13 +864,35 @@ const handleSave = async () => {
       setOfferLoading(true);
       setOfferError('');
   
-      // najprościej: wysyłamy jako wiadomość do autora (masz już endpoint apply)
+      // UTWÓRZ OFERTĘ W price_offer
+      const offerRes = await fetch(`${API_BASE}/api/price-offers`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          listingId: data.id,
+          price: val,
+        }),
+      });
+  
+      const offerPayload = await offerRes.json().catch(() => null);
+      if (!offerRes.ok || !offerPayload?.ok) {
+        setOfferError(offerPayload?.error || 'Nie udało się utworzyć oferty.');
+        return;
+      }
+  
+      const offerId = offerPayload.offer.id;
+  
+      // WYŚLIJ WIADOMOŚĆ Z TAGIEM OFERTY
       const content = `Cześć! Proponuję cenę ${new Intl.NumberFormat('pl-PL', {
         style: 'currency',
         currency: 'PLN',
-      }).format(val)} za "${data.title}".`;
+      }).format(val)} za "${data.title}".\n\n[OFFER_ID:${offerId}]`;
   
-      const res = await fetch(`${API_BASE}/api/messages`, {
+      const msgRes = await fetch(`${API_BASE}/api/messages`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -882,9 +905,9 @@ const handleSave = async () => {
         }),
       });
   
-      const payload = await res.json().catch(() => null);
-      if (!res.ok || !payload?.ok) {
-        setOfferError(payload?.error || 'Nie udało się wysłać propozycji.');
+      const msgPayload = await msgRes.json().catch(() => null);
+      if (!msgRes.ok || !msgPayload?.ok) {
+        setOfferError(msgPayload?.error || 'Nie udało się wysłać wiadomości.');
         return;
       }
   
@@ -898,7 +921,7 @@ const handleSave = async () => {
     }
   };
   
-
+  
 
 
   const handleApplyClick = async () => {

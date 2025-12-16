@@ -36,6 +36,7 @@ type ListingPreview = {
   typeId?: number | null;
   authorUsername?: string;
   authorAvatarUrl?: string | null;
+  authorId?: number | null;
 };
 
 const getInitials = (name: string) => {
@@ -94,10 +95,8 @@ const MessagesConversationPage: React.FC = () => {
   const peerName = useMemo(() => {
     if (!user) return '';
 
-    // 1) jeśli mamy authorUsername z ogłoszenia (najpewniejsze) — użyj
     if (listingInfo?.authorUsername) return listingInfo.authorUsername;
 
-    // 2) próbuj wyciągnąć z ostatniej wiadomości (jeśli backend jeszcze zwraca)
     const fromMsgs = resolvePeerNameFromMessages(messages, user.id);
     if (fromMsgs) return fromMsgs;
 
@@ -105,6 +104,34 @@ const MessagesConversationPage: React.FC = () => {
   }, [messages, user, listingInfo]);
   
 
+  const parseOfferStatus = (text: string): 'accepted' | 'rejected' | null => {
+    const m = String(text || '').match(/\[OFFER_STATUS:(accepted|rejected)\]/);
+    return (m?.[1] as any) ?? null;
+  };
+
+  const parseOfferId = (text: string): number | null => {
+    const m = String(text || '').match(/\[OFFER_ID:(\d+)\]/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  };
+  
+  
+  const parseOfferPrice = (text: string): number | null => {
+    const m = String(text || '').match(/\[OFFER_PRICE:([0-9]+(?:\.[0-9]+)?)\]/);
+    if (!m) return null;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : null;
+  };
+  
+  const stripOfferMeta = (text: string) =>
+    String(text || '')
+      .replace(/\n?\[OFFER_ID:\d+\]\s*/g, '')
+      .replace(/\n?\[OFFER_STATUS:(accepted|rejected)\]\s*/g, '')
+      .replace(/\n?\[OFFER_PRICE:[0-9]+(?:\.[0-9]+)?\]\s*/g, '')
+      .trim();
+  
+  
   useEffect(() => {
     if (!user) {
       navigate('/auth');
@@ -252,6 +279,7 @@ const MessagesConversationPage: React.FC = () => {
           typeId: typeIdValue,
           authorUsername: l.author_username || l.authorUsername || '',
           authorAvatarUrl: l.author_avatar_url || l.authorAvatarUrl || null,
+          authorId: l.user_id ?? l.author_id ?? null,
         };
 
         setListingInfo(preview);
@@ -411,6 +439,90 @@ const MessagesConversationPage: React.FC = () => {
   };
 
 
+  const acceptOffer = async (offerId: number, buyerId: number) => {
+    if (!user) return;
+  
+    const res = await fetch(`${API_BASE}/api/price-offers/${offerId}/accept`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+    });
+  
+    const p = await res.json().catch(() => null);
+    if (!res.ok || !p?.ok) {
+      alert(p?.error || 'Nie udało się zaakceptować oferty.');
+      return;
+    }
+  
+    // jeśli backend zwraca cenę (polecam dodać), to bierzemy ją stąd
+    const newPrice = p?.price ?? p?.offer?.price ?? null;
+  
+    const text =
+      `Oferta została zaakceptowana.` +
+      (newPrice ? ` Nowa cena: ${new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(newPrice)}.` : '');
+  
+    // Wyślij wiadomość do kupującego jako normalną wiadomość czatu
+    const msgRes = await fetch(`${API_BASE}/api/messages`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        listingId,
+        receiverId: buyerId,
+        content: `${text}\n[OFFER_STATUS:accepted][OFFER_ID:${offerId}]${newPrice ? `[OFFER_PRICE:${newPrice}]` : ''}`,
+      }),
+    });
+  
+    const msgPayload = await msgRes.json().catch(() => null);
+    if (msgRes.ok && msgPayload?.ok && msgPayload?.message) {
+      setMessages((prev) => [...prev, msgPayload.message]); // ma id -> TS nie krzyczy
+    }
+  
+    alert('Zaakceptowano ofertę.');
+  };
+  
+  const rejectOffer = async (offerId: number, buyerId: number) => {
+    if (!user) return;
+  
+    const res = await fetch(`${API_BASE}/api/price-offers/${offerId}/reject`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+    });
+  
+    const p = await res.json().catch(() => null);
+    if (!res.ok || !p?.ok) {
+      alert(p?.error || 'Nie udało się odrzucić oferty.');
+      return;
+    }
+  
+    const msgRes = await fetch(`${API_BASE}/api/messages`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        listingId,
+        receiverId: buyerId,
+        content: `Oferta została odrzucona.\n[OFFER_STATUS:rejected][OFFER_ID:${offerId}]`,
+      }),
+    });
+  
+    const msgPayload = await msgRes.json().catch(() => null);
+    if (msgRes.ok && msgPayload?.ok && msgPayload?.message) {
+      setMessages((prev) => [...prev, msgPayload.message]);
+    }
+  
+    alert('Odrzucono ofertę.');
+  };
+  
+  
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     await sendMessage();
@@ -539,6 +651,13 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
             ) : (
               messages.map((m) => {
                 const mine = user && m.sender_id === user.id;
+              
+                const offerId = parseOfferId(m.content);
+                const status = parseOfferStatus(m.content);
+                const offerPrice = parseOfferPrice(m.content);
+                const cleanText = stripOfferMeta(m.content);
+
+              
                 return (
                   <div
                     key={m.id}
@@ -552,10 +671,40 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                         {formatDate(m.created_at)}
                       </span>
                     </div>
-                    <div className="messages-conv-text">{m.content}</div>
+              
+                    <div className="messages-conv-text">{cleanText}</div>
+              
+                    {status && (
+                      <div className={`offer-status-badge ${status}`}>
+                        {status === 'accepted'
+                          ? `✅ Oferta zaakceptowana${offerPrice ? ` (${new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(offerPrice)})` : ''}`
+                          : '❌ Oferta odrzucona'}
+                      </div>
+                    )}
+
+                    {offerId && listingInfo?.authorId === user?.id && !status && (
+                      <div className="offer-actions">
+                        <button
+                          type="button"
+                          className="offer-btn accept"
+                          onClick={() => acceptOffer(offerId, m.sender_id)}
+                        >
+                          Akceptuj
+                        </button>
+                        <button
+                          type="button"
+                          className="offer-btn reject"
+                          onClick={() => rejectOffer(offerId, m.sender_id)}
+                        >
+                          Odrzuć
+                        </button>
+                      </div>
+                    )}
+
                   </div>
                 );
               })
+              
             )}
             <div ref={bottomRef} />
           </div>

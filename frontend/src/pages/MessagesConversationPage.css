@@ -416,3 +416,120 @@ body.dark-mode .messages-conv-back:hover {
   color: #f9fafb;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.6);
 }
+
+/* Przyciski Akceptuj / Odrzuć */
+.offer-actions button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  margin: 4px;
+  transition: background-color 0.3s;
+}
+
+/* Akceptuj - zielony */
+.offer-actions button.accept-btn {
+  background-color: #4CAF50; /* Zielony */
+  color: white;
+}
+
+.offer-actions button.accept-btn:hover {
+  background-color: #45a049;
+}
+
+/* Odrzuć - czerwony */
+.offer-actions button.reject-btn {
+  background-color: #f44336; /* Czerwony */
+  color: white;
+}
+
+.offer-actions button.reject-btn:hover {
+  background-color: #e53935;
+}
+
+/* Styl komunikatów */
+.offer-message {
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+.offer-message.accepted {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.offer-message.rejected {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.offer-message span {
+  margin-left: 8px;
+}
+
+/* Nowa cena na przycisku "Kup teraz" */
+.buy-now-button.updated {
+  background-color: #008CBA; /* Niebieski */
+  color: white;
+}
+.buy-now-button.updated:hover {
+  background-color: #007bb5;
+}
+
+.offer-actions{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+.offer-btn{
+  border:0;
+  border-radius:10px;
+  padding:8px 14px;
+  font-weight:600;
+  cursor:pointer;
+  transition: transform .08s ease, filter .15s ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+}
+
+.offer-btn:active{ transform: scale(.98); }
+
+.offer-btn.accept{
+  background:#16a34a;
+  color:#fff;
+}
+.offer-btn.accept:hover{ filter: brightness(.95); }
+
+.offer-btn.reject{
+  background:#dc2626;
+  color:#fff;
+}
+.offer-btn.reject:hover{ filter: brightness(.95); }
+
+.offer-status-badge{
+  margin-top:10px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:600;
+  font-size:13px;
+}
+
+.offer-status-badge.accepted{
+  background: rgba(22,163,74,.12);
+  color:#166534;
+  border:1px solid rgba(22,163,74,.25);
+}
+
+.offer-status-badge.rejected{
+  background: rgba(220,38,38,.12);
+  color:#991b1b;
+  border:1px solid rgba(220,38,38,.25);
+}
