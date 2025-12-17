@@ -83,7 +83,20 @@ router.post('/', authRequired, async (req, res) => {
       [senderId, finalReceiverId, listingId, content.trim()]
     );
 
-    return res.status(201).json({ ok: true, message: insert.rows[0] });
+    const message = insert.rows[0];
+
+    const io = req.app.get('io');
+    if (io && message) {
+      io.to(`user_${finalReceiverId}`).emit('chat:new-message', message);
+      io.to(`user_${senderId}`).emit('chat:new-message', message);
+
+      io.to(`user_${finalReceiverId}`).emit('chat:unread-bump', {
+        listingId: Number(message.listing_id),
+        fromUserId: Number(message.sender_id),
+      });
+    }
+
+    return res.status(201).json({ ok: true, message });
   } catch (err) {
     console.error('Błąd podczas wysyłania wiadomości:', err);
     return res.status(500).json({ ok: false, error: 'Błąd serwera przy wysyłaniu wiadomości.' });
@@ -370,7 +383,17 @@ router.get('/listing/:id', authRequired, async (req, res) => {
         [userId, listingId]
       );
     }
-        let peer = null;
+
+    const io = req.app.get('io');
+    if (io && Number.isFinite(otherUserId) && otherUserId > 0) {
+      io.to(`user_${otherUserId}`).emit('chat:read', {
+        listingId,
+        byUserId: userId,
+        otherUserId,
+      });
+    }
+
+    let peer = null;
 
     if (Number.isFinite(otherUserId) && otherUserId > 0) {
       const peerRes = await pool.query(
