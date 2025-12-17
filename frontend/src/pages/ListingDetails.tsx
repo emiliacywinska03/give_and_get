@@ -852,74 +852,46 @@ const handleSave = async () => {
   
   
   const handleSendOfferPrice = async () => {
-    if (!data) return;
-  
-    const val = Number(offerPrice.replace(',', '.'));
-    if (!Number.isFinite(val) || val <= 0) {
-      setOfferError('Wpisz poprawną kwotę.');
+  if (!data) return;
+
+  const val = Number(offerPrice.replace(',', '.'));
+  if (!Number.isFinite(val) || val <= 0) {
+    setOfferError('Wpisz poprawną kwotę.');
+    return;
+  }
+
+  try {
+    setOfferLoading(true);
+    setOfferError('');
+
+    const res = await fetch(`${API_BASE}/api/price-offers/start`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        listingId: data.id,
+        price: val,
+      }),
+    });
+
+    const payload = await res.json().catch(() => null);
+    if (!res.ok || !payload?.ok) {
+      setOfferError(payload?.error || 'Nie udało się wysłać propozycji.');
       return;
     }
-  
-    try {
-      setOfferLoading(true);
-      setOfferError('');
-  
-      // UTWÓRZ OFERTĘ W price_offer
-      const offerRes = await fetch(`${API_BASE}/api/price-offers`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-        body: JSON.stringify({
-          listingId: data.id,
-          price: val,
-        }),
-      });
-  
-      const offerPayload = await offerRes.json().catch(() => null);
-      if (!offerRes.ok || !offerPayload?.ok) {
-        setOfferError(offerPayload?.error || 'Nie udało się utworzyć oferty.');
-        return;
-      }
-  
-      const offerId = offerPayload.offer.id;
-  
-      // WYŚLIJ WIADOMOŚĆ Z TAGIEM OFERTY
-      const content = `Cześć! Proponuję cenę ${new Intl.NumberFormat('pl-PL', {
-        style: 'currency',
-        currency: 'PLN',
-      }).format(val)} za "${data.title}".\n\n[OFFER_ID:${offerId}]`;
-  
-      const msgRes = await fetch(`${API_BASE}/api/messages`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-        body: JSON.stringify({
-          listingId: data.id,
-          content,
-        }),
-      });
-  
-      const msgPayload = await msgRes.json().catch(() => null);
-      if (!msgRes.ok || !msgPayload?.ok) {
-        setOfferError(msgPayload?.error || 'Nie udało się wysłać wiadomości.');
-        return;
-      }
-  
-      setShowOfferPrice(false);
-      navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
-    } catch (e) {
-      console.error(e);
-      setOfferError('Wystąpił błąd podczas wysyłania propozycji.');
-    } finally {
-      setOfferLoading(false);
-    }
-  };
+
+    setShowOfferPrice(false);
+    navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+  } catch (e) {
+    console.error(e);
+    setOfferError('Wystąpił błąd podczas wysyłania propozycji.');
+  } finally {
+    setOfferLoading(false);
+  }
+};
   
   
 
@@ -1485,16 +1457,18 @@ const handleSave = async () => {
           )}
 
           {!isSold && !isPurchased && data.type_id === 1 && !data.is_free && !isOwnListing && (
-            <div className="listing-actions-row">
-              <button className="buy-now-button" type="button" onClick={handleBuyNowClick}>
-                <span>Kup teraz</span>
-              </button>
+          <div className="listing-actions-row">
+            <button className="buy-now-button" type="button" onClick={handleBuyNowClick}>
+              <span>Kup teraz</span>
+            </button>
 
+            {isNegotiable && (
               <button className="offer-price-button" type="button" onClick={handleOfferPriceClick}>
                 Zaproponuj cenę
               </button>
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
 
           {(isSold || isPurchased) && (
@@ -1587,7 +1561,7 @@ const handleSave = async () => {
         <div className="blik-modal-backdrop" onClick={() => setShowOfferPrice(false)}>
           <div className="blik-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Zaproponuj cenę</h2>
-            <p>Wpisz kwotę, a wyślemy ją jako wiadomość do autora.</p>
+            <p>Wpisz kwotę – uruchomimy negocjację i przeniesiemy Cię do czatu.</p>
 
             <input
               type="text"

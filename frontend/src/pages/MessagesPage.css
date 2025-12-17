@@ -285,3 +285,43 @@ body.dark-mode .messages-content {
 body.dark-mode .messages-listing-link {
   color: #e5e7eb;
 }
+.messages-conv-msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.messages-conv-msg-row.mine {
+  justify-content: flex-end;
+}
+
+.messages-conv-msg-row.theirs {
+  justify-content: flex-start;
+}
+
+.messages-conv-msg-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  background: #e5e7eb;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  color: #111827;
+}
+
+.messages-conv-msg-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+body.dark-mode .messages-conv-msg-avatar {
+  background: #0b1220;
+  border-color: #1f2937;
+  color: #e5e7eb;
+}

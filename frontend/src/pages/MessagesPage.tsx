@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './MessagesPage.css';
 
@@ -60,6 +60,7 @@ const getTypeIconSrc = (typeId?: number | null): string | null => {
 const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [threads, setThreads] = useState<ThreadItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -165,6 +166,9 @@ const MessagesPage: React.FC = () => {
               typeof listingTypeId === 'string' ? Number(listingTypeId) : listingTypeId
             );
 
+            const cleaned = stripOfferMeta(t.content);
+            const previewText = cleaned || 'Negocjacja ceny — otwórz czat, aby odpowiedzieć.';
+
             return (
               <div
                 key={`${t.listing_id}-${peerId}`}
@@ -213,7 +217,7 @@ const MessagesPage: React.FC = () => {
                   </div>
                 </div>
 
-                <p className="messages-content">{stripOfferMeta(t.content)}</p>
+                <p className="messages-content">{previewText}</p>
 
               </div>
             );

@@ -1,3 +1,4 @@
+/* ------ Layout ------ */
 .messages-conv-page {
   height: 100vh;
   max-width: 900px;
@@ -18,13 +19,7 @@
   margin: 12px 0 4px;
 }
 
-.messages-conv-subtitle,
-.messages-conv-peer {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-}
-
+/* ------ Header row (user + listing pill) ------ */
 .messages-conv-header-row {
   margin-top: 10px;
   display: flex;
@@ -54,7 +49,7 @@
   font-size: 0.9rem;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
   flex-shrink: 0;
-  overflow: hidden; /* avatar-img w środku przycięty do kółka */
+  overflow: hidden;
 }
 
 .messages-conv-avatar-img {
@@ -80,8 +75,7 @@
   font-weight: 600;
 }
 
-/* mini karta ogłoszenia */
-
+/* ------ Listing preview pill ------ */
 .messages-conv-listing-preview {
   display: inline-flex;
   align-items: center;
@@ -91,8 +85,7 @@
   background-color: #f3f4f6;
   text-decoration: none;
   border: 1px solid transparent;
-  transition: background-color 0.15s ease, border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .messages-conv-listing-preview:hover {
@@ -141,6 +134,7 @@
   text-decoration: underline;
 }
 
+/* ------ Info / error ------ */
 .messages-conv-info {
   font-size: 14px;
   color: #6b7280;
@@ -154,24 +148,188 @@
   gap: 10px;
 }
 
-.messages-conv-back {
-  align-self: flex-start;
-  padding: 6px 14px;
+/* =========================
+   Negotiation panel (NEW)
+   ========================= */
+.messages-conv-negotiation {
+  flex-shrink: 0;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.messages-conv-negotiation-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.messages-conv-negotiation-meta {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.messages-conv-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid #2563eb;
-  background: transparent;
-  color: #2563eb;
-  font-size: 13px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+}
+
+.messages-conv-status-badge.open {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.messages-conv-status-badge.accepted {
+  background: rgba(22, 163, 74, 0.12);
+  color: #166534;
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.messages-conv-status-badge.rejected {
+  background: rgba(220, 38, 38, 0.12);
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+/* Dark mode */
+body.dark-mode .messages-conv-status-badge.open {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+body.dark-mode .messages-conv-status-badge.accepted {
+  background: rgba(22, 163, 74, 0.18);
+  color: #86efac;
+  border-color: rgba(22, 163, 74, 0.35);
+}
+
+body.dark-mode .messages-conv-status-badge.rejected {
+  background: rgba(220, 38, 38, 0.18);
+  color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.messages-conv-offers {
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.messages-conv-offer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #111827;
+}
+
+.messages-conv-offer-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.messages-conv-offer-actions input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.messages-conv-offer-actions input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.messages-conv-offer-actions button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.messages-conv-back:hover {
-  background-color: #2563eb;
+  background: #1d4ed8;
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  transition: transform 0.08s ease, filter 0.15s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
 }
 
+.messages-conv-offer-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  box-shadow: none;
+}
+
+.messages-conv-offer-actions button:active {
+  transform: scale(0.98);
+}
+
+.messages-conv-offer-actions button:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+.messages-conv-offer-admin-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.messages-conv-offer-admin-actions button {
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.messages-conv-offer-admin-actions button:first-child {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.messages-conv-offer-admin-actions button:last-child {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.messages-conv-offer-admin-actions button:active {
+  transform: scale(0.98);
+}
+
+.messages-conv-offer-admin-actions button:hover {
+  filter: brightness(0.95);
+}
+
+/* =========================
+   Thread (messages)
+   ========================= */
 .messages-conv-thread {
   flex: 1;
   margin-top: 8px;
@@ -196,7 +354,7 @@
 .messages-conv-bubble.mine {
   margin-left: auto;
   background: #1d4ed8;
-  color: white;
+  color: #ffffff;
   border-bottom-right-radius: 2px;
 }
 
@@ -227,7 +385,9 @@
   white-space: pre-wrap;
 }
 
-
+/* =========================
+   Form (textarea)
+   ========================= */
 .messages-conv-form {
   margin-top: 10px;
   display: flex;
@@ -251,7 +411,7 @@
   width: 100%;
   resize: vertical;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #d1d5db;
   font-size: 14px;
   font-family: inherit;
@@ -265,12 +425,13 @@
 
 .messages-conv-submit {
   align-self: flex-end;
-  padding: 6px 16px;
+  padding: 8px 16px;
   border-radius: 999px;
   border: none;
   background: #1d4ed8;
   color: #ffffff;
   font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -279,7 +440,9 @@
   cursor: default;
 }
 
-
+/* =========================
+   Responsive
+   ========================= */
 @media (max-width: 640px) {
   .messages-conv-page {
     padding: 16px 12px 24px;
@@ -301,9 +464,20 @@
   .messages-conv-listing-title {
     max-width: 180px;
   }
+
+  .messages-conv-offer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .messages-conv-offer-actions button {
+    width: 100%;
+  }
 }
 
-
+/* =========================
+   Dark mode
+   ========================= */
 body.dark-mode .messages-conv-page {
   background: #020617;
   color: #e5e7eb;
@@ -313,15 +487,12 @@ body.dark-mode .messages-conv-header h2 {
   color: #f9fafb;
 }
 
-body.dark-mode .messages-conv-subtitle,
-body.dark-mode .messages-conv-peer,
 body.dark-mode .messages-conv-peer-line {
   color: #e5e7eb;
 }
 
 body.dark-mode .messages-conv-peer-line .messages-conv-peer-name {
   color: #ffffff;
-  font-weight: 600;
 }
 
 body.dark-mode .messages-conv-avatar {
@@ -338,10 +509,73 @@ body.dark-mode .messages-conv-error {
   color: #fecaca;
 }
 
+body.dark-mode .messages-conv-listing-preview {
+  background-color: #020617;
+  border-color: #1f2937;
+}
+
+body.dark-mode .messages-conv-listing-preview:hover {
+  background-color: #111827;
+  border-color: #3b82f6;
+}
+
+body.dark-mode .messages-conv-listing-thumb.placeholder {
+  background-color: #111827;
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-conv-listing-title {
+  color: #e5e7eb;
+}
+
+/* Dark: negotiation */
+body.dark-mode .messages-conv-negotiation {
+  background: #0b1220;
+  border-color: #1f2937;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .messages-conv-negotiation-title {
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-conv-negotiation-meta {
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-conv-offers {
+  background: #020617;
+  border-color: #1f2937;
+}
+
+body.dark-mode .messages-conv-offer-row {
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-offer-actions input {
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-offer-actions input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45);
+}
+
+body.dark-mode .messages-conv-offer-actions button {
+  background: #2563eb;
+}
+
+body.dark-mode .messages-conv-offer-actions button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* Dark: thread + bubbles */
 body.dark-mode .messages-conv-thread {
   border-color: #1f2937;
   background: #020617;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55);
 }
 
 body.dark-mode .messages-conv-bubble.mine {
@@ -359,6 +593,7 @@ body.dark-mode .messages-conv-date {
   color: #6b7280;
 }
 
+/* Dark: form */
 body.dark-mode .messages-conv-form {
   background: #020617;
   border-top-color: #1f2937;
@@ -387,149 +622,23 @@ body.dark-mode .messages-conv-submit:hover:not(:disabled) {
   background: #1d4ed8;
 }
 
-body.dark-mode .messages-conv-listing-preview {
-  background-color: #020617;
-  border-color: #1f2937;
+.messages-conv-waiting-info {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  border: 1px dashed rgba(59, 130, 246, 0.35);
 }
 
-body.dark-mode .messages-conv-listing-preview:hover {
-  background-color: #111827;
-  border-color: #3b82f6;
-}
-
-body.dark-mode .messages-conv-listing-thumb.placeholder {
-  background-color: #111827;
-  color: #9ca3af;
-}
-
-body.dark-mode .messages-conv-listing-title {
-  color: #e5e7eb;
-}
-
-body.dark-mode .messages-conv-back {
-  border-color: #3b82f6;
+body.dark-mode .messages-conv-waiting-info {
+  background: rgba(59, 130, 246, 0.12);
   color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.45);
 }
 
-body.dark-mode .messages-conv-back:hover {
-  background-color: #2563eb;
-  color: #f9fafb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.6);
-}
-
-/* Przyciski Akceptuj / Odrzuć */
-.offer-actions button {
-  padding: 8px 16px;
-  font-size: 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: none;
-  margin: 4px;
-  transition: background-color 0.3s;
-}
-
-/* Akceptuj - zielony */
-.offer-actions button.accept-btn {
-  background-color: #4CAF50; /* Zielony */
-  color: white;
-}
-
-.offer-actions button.accept-btn:hover {
-  background-color: #45a049;
-}
-
-/* Odrzuć - czerwony */
-.offer-actions button.reject-btn {
-  background-color: #f44336; /* Czerwony */
-  color: white;
-}
-
-.offer-actions button.reject-btn:hover {
-  background-color: #e53935;
-}
-
-/* Styl komunikatów */
-.offer-message {
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-}
-
-.offer-message.accepted {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.offer-message.rejected {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.offer-message span {
-  margin-left: 8px;
-}
-
-/* Nowa cena na przycisku "Kup teraz" */
-.buy-now-button.updated {
-  background-color: #008CBA; /* Niebieski */
-  color: white;
-}
-.buy-now-button.updated:hover {
-  background-color: #007bb5;
-}
-
-.offer-actions{
-  display:flex;
-  gap:10px;
-  margin-top:10px;
-}
-
-.offer-btn{
-  border:0;
-  border-radius:10px;
-  padding:8px 14px;
-  font-weight:600;
-  cursor:pointer;
-  transition: transform .08s ease, filter .15s ease;
-  box-shadow: 0 6px 16px rgba(0,0,0,.08);
-}
-
-.offer-btn:active{ transform: scale(.98); }
-
-.offer-btn.accept{
-  background:#16a34a;
-  color:#fff;
-}
-.offer-btn.accept:hover{ filter: brightness(.95); }
-
-.offer-btn.reject{
-  background:#dc2626;
-  color:#fff;
-}
-.offer-btn.reject:hover{ filter: brightness(.95); }
-
-.offer-status-badge{
-  margin-top:10px;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 12px;
-  border-radius:999px;
-  font-weight:600;
-  font-size:13px;
-}
-
-.offer-status-badge.accepted{
-  background: rgba(22,163,74,.12);
-  color:#166534;
-  border:1px solid rgba(22,163,74,.25);
-}
-
-.offer-status-badge.rejected{
-  background: rgba(220,38,38,.12);
-  color:#991b1b;
-  border:1px solid rgba(220,38,38,.25);
+.messages-conv-offer-actions input:disabled,
+.messages-conv-offer-actions button:disabled {
+  filter: grayscale(0.3);
 }

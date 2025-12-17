@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { io } from 'socket.io-client';
@@ -26,6 +26,8 @@ type ChatMessage = {
   is_read: boolean;
   sender_username?: string;
   receiver_username?: string;
+  sender_avatar_url?: string | null;
+  receiver_avatar_url?: string | null;
 };
 
 type ListingPreview = {
@@ -34,10 +36,32 @@ type ListingPreview = {
   thumbnailUrl?: string | null;
   imageUrl?: string | null;
   typeId?: number | null;
-  authorUsername?: string;
-  authorAvatarUrl?: string | null;
-  authorId?: number | null;
 };
+
+type PriceNegotiation = {
+  id: number;
+  listing_id: number;
+  buyer_id: number;
+  seller_id: number;
+  status: 'open' | 'accepted' | 'rejected';
+  accepted_offer_id?: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type PriceOffer = {
+  id: number;
+  negotiation_id: number;
+  listing_id: number;
+  buyer_id: number;
+  seller_id: number;
+  price: number;
+  status: 'pending' | 'accepted' | 'rejected';
+  proposed_by: 'buyer' | 'seller';
+  created_at: string;
+};
+
+type PeerInfo = { id: number; username: string; avatar_url: string | null } | null;
 
 const getInitials = (name: string) => {
   if (!name) return '?';
@@ -46,92 +70,156 @@ const getInitials = (name: string) => {
   return letters.join('').toUpperCase();
 };
 
-const resolvePeerNameFromMessages = (msgs: ChatMessage[], currentUserId: number) => {
-  const last = msgs[msgs.length - 1];
-  if (!last) return '';
-  if (last.sender_id === currentUserId) return last.receiver_username || '';
-  return last.sender_username || '';
-};
-
-
 const getTypeIconSrc = (typeId?: number | null): string | null => {
-  if (typeId === 3) {
-    return '/icons/work-case-filled-svgrepo-com.svg';
-  }
-  if (typeId === 2) {
-    return '/icons/hands-holding-heart-svgrepo-com.svg';
-  }
+  if (typeId === 3) return '/icons/work-case-filled-svgrepo-com.svg';
+  if (typeId === 2) return '/icons/hands-holding-heart-svgrepo-com.svg';
   return null;
 };
 
+const IconTag: React.FC<{ kind: 'money' | 'check' | 'x' | 'clock' }> = ({ kind }) => {
+  if (kind === 'money') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 7h18v10H3V7z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M7 12h0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path
+          d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <path d="M17 12h0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (kind === 'check') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M20 6 9 17l-5-5"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  if (kind === 'x') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M18 6 6 18M6 6l12 12"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 6v6l4 2"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+};
+
+const normalizeNegotiation = (n: any): PriceNegotiation | null => {
+  if (!n) return null;
+  return {
+    ...n,
+    id: Number(n.id),
+    listing_id: Number(n.listing_id),
+    buyer_id: Number(n.buyer_id),
+    seller_id: Number(n.seller_id),
+    accepted_offer_id: n.accepted_offer_id != null ? Number(n.accepted_offer_id) : null,
+  };
+};
+
+const normalizeOffers = (arr: any[]): PriceOffer[] => {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((o: any) => ({
+    ...o,
+    id: Number(o.id),
+    negotiation_id: Number(o.negotiation_id),
+    listing_id: Number(o.listing_id),
+    buyer_id: Number(o.buyer_id),
+    seller_id: Number(o.seller_id),
+    price: Number(o.price),
+  }));
+};
+
 const MessagesConversationPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>(); // listingId
+  const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [peerInfo, setPeerInfo] = useState<PeerInfo>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+
   const [listingInfo, setListingInfo] = useState<ListingPreview | null>(null);
+
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<number | null>(null);
+
   const [remoteTyping, setRemoteTyping] = useState(false);
   const remoteTypingTimeoutRef = useRef<number | null>(null);
+
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // NEGOCJACJE
+  const [negotiation, setNegotiation] = useState<PriceNegotiation | null>(null);
+  const [offers, setOffers] = useState<PriceOffer[]>([]);
+  const [offerInput, setOfferInput] = useState('');
+  const [offerSending, setOfferSending] = useState(false);
+  const [negoLoading, setNegoLoading] = useState(false);
 
   const listingId = Number(id);
 
-  const peerId = useMemo(() => {
+
+  const peerIdFromQuery = useMemo(() => {
     const v = searchParams.get('peer');
     if (!v) return null;
     const parsed = Number(v);
     return Number.isFinite(parsed) ? parsed : null;
   }, [searchParams]);
 
-  const peerName = useMemo(() => {
-    if (!user) return '';
+  const resolvedPeerId = useMemo(() => {
+    if (peerIdFromQuery) return peerIdFromQuery;
 
-    if (listingInfo?.authorUsername) return listingInfo.authorUsername;
+    if (peerInfo?.id) return peerInfo.id;
 
-    const fromMsgs = resolvePeerNameFromMessages(messages, user.id);
-    if (fromMsgs) return fromMsgs;
+    if (user && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      const other = last.sender_id === user.id ? last.receiver_id : last.sender_id;
+      return Number.isFinite(other) ? other : null;
+    }
 
-    return '';
-  }, [messages, user, listingInfo]);
-  
+    return null;
+  }, [peerIdFromQuery, peerInfo, messages, user]);
 
-  const parseOfferStatus = (text: string): 'accepted' | 'rejected' | null => {
-    const m = String(text || '').match(/\[OFFER_STATUS:(accepted|rejected)\]/);
-    return (m?.[1] as any) ?? null;
-  };
 
-  const parseOfferId = (text: string): number | null => {
-    const m = String(text || '').match(/\[OFFER_ID:(\d+)\]/);
-    if (!m) return null;
-    const n = Number(m[1]);
-    return Number.isFinite(n) ? n : null;
-  };
-  
-  
-  const parseOfferPrice = (text: string): number | null => {
-    const m = String(text || '').match(/\[OFFER_PRICE:([0-9]+(?:\.[0-9]+)?)\]/);
-    if (!m) return null;
-    const n = Number(m[1]);
-    return Number.isFinite(n) ? n : null;
-  };
-  
-  const stripOfferMeta = (text: string) =>
-    String(text || '')
-      .replace(/\n?\[OFFER_ID:\d+\]\s*/g, '')
-      .replace(/\n?\[OFFER_STATUS:(accepted|rejected)\]\s*/g, '')
-      .replace(/\n?\[OFFER_PRICE:[0-9]+(?:\.[0-9]+)?\]\s*/g, '')
-      .trim();
-  
-  
   useEffect(() => {
     if (!user) {
       navigate('/auth');
@@ -152,7 +240,7 @@ const MessagesConversationPage: React.FC = () => {
 
         const qs = new URLSearchParams();
         qs.set('limit', '50');
-        if (peerId) qs.set('otherUserId', String(peerId));
+        if (peerIdFromQuery) qs.set('otherUserId', String(peerIdFromQuery));
 
         const res = await fetch(`${API_BASE}/api/messages/listing/${listingId}?${qs.toString()}`, {
           credentials: 'include',
@@ -170,8 +258,8 @@ const MessagesConversationPage: React.FC = () => {
           throw new Error(msg);
         }
 
-        const msgs: ChatMessage[] = data.messages || [];
-        setMessages(msgs);
+        setMessages(data.messages || []);
+        setPeerInfo(data.peer ?? null);
       } catch (err: any) {
         if (err?.name === 'AbortError') return;
         console.error('Błąd pobierania konwersacji:', err);
@@ -183,10 +271,8 @@ const MessagesConversationPage: React.FC = () => {
 
     fetchConversation();
 
-    return () => {
-      controller.abort();
-    };
-  }, [user, listingId, peerId, navigate]);
+    return () => controller.abort();
+  }, [user, listingId, peerIdFromQuery, navigate]);
 
   useEffect(() => {
     if (!listingId) return;
@@ -205,15 +291,10 @@ const MessagesConversationPage: React.FC = () => {
         });
 
         const data = await res.json();
-        if (!res.ok) {
-          return;
-        }
+        if (!res.ok) return;
 
         const l = data.listing ?? data.data ?? data;
-
-        if (!l) {
-          return;
-        }
+        if (!l) return;
 
         const rawPrimary =
           l.primary_image ??
@@ -228,23 +309,19 @@ const MessagesConversationPage: React.FC = () => {
               ? rawPrimary
               : joinApiUrl(rawPrimary)
             : rawPrimary && typeof rawPrimary === 'object'
-            ? (rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path
-                ? (String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('data:') ||
-                   String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('http')
-                    ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)
-                    : joinApiUrl(String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)))
-                : null)
-            : null;
+              ? rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path
+                ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('data:') ||
+                  String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('http')
+                  ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)
+                  : joinApiUrl(String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path))
+                : null
+              : null;
 
         const typeIdValue =
-          typeof l.type_id === 'number'
-            ? l.type_id
-            : typeof l.typeId === 'number'
-            ? l.typeId
-            : null;
+          typeof l.type_id === 'number' ? l.type_id : typeof l.typeId === 'number' ? l.typeId : null;
 
         let finalImageUrl = resolvedImageUrl;
-        
+
         if (!finalImageUrl && typeIdValue === 1) {
           try {
             const ri = await fetch(`${API_BASE_NO_SLASH}/api/listings/${listingId}/images`, {
@@ -265,24 +342,17 @@ const MessagesConversationPage: React.FC = () => {
               }
             }
           } catch (e: any) {
-            if (e?.name !== 'AbortError') {
-              console.error('Błąd pobierania miniaturki sprzedaży (fallback):', e);
-            }
+            if (e?.name !== 'AbortError') console.error(e);
           }
         }
 
-        const preview: ListingPreview = {
+        setListingInfo({
           id: l.id,
           title: l.title || '',
           imageUrl: finalImageUrl,
           thumbnailUrl: finalImageUrl,
           typeId: typeIdValue,
-          authorUsername: l.author_username || l.authorUsername || '',
-          authorAvatarUrl: l.author_avatar_url || l.authorAvatarUrl || null,
-          authorId: l.user_id ?? l.author_id ?? null,
-        };
-
-        setListingInfo(preview);
+        });
       } catch (e: any) {
         if (e?.name === 'AbortError') return;
         console.error('Błąd pobierania ogłoszenia do podglądu:', e);
@@ -290,13 +360,56 @@ const MessagesConversationPage: React.FC = () => {
     };
 
     fetchListing();
-
-    return () => {
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [listingId]);
 
+  useEffect(() => {
+    if (!user || !listingId || !resolvedPeerId) return;
+
+    const controller = new AbortController();
+
+    const fetchNegotiation = async () => {
+      try {
+        setNegoLoading(true);
+
+        const qs = new URLSearchParams();
+        qs.set('listingId', String(listingId));
+        qs.set('otherUserId', String(resolvedPeerId));
+
+        const res = await fetch(`${API_BASE}/api/price-offers/negotiation?${qs.toString()}`, {
+          credentials: 'include',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+        });
+
+        const data = await res.json().catch(() => null);
+
+        if (!res.ok || !data?.ok) {
+          setNegotiation(null);
+          setOffers([]);
+          return;
+        }
+
+        setNegotiation(normalizeNegotiation(data.negotiation));
+        setOffers(normalizeOffers(data.offers));
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return;
+        setNegotiation(null);
+        setOffers([]);
+      } finally {
+        setNegoLoading(false);
+      }
+    };
+
+    fetchNegotiation();
+    return () => controller.abort();
+  }, [user, listingId, resolvedPeerId]);
+
   const socketRef = useRef<any>(null);
+
   useEffect(() => {
     if (!user) return;
 
@@ -307,6 +420,7 @@ const MessagesConversationPage: React.FC = () => {
       timeout: 10000,
       reconnectionAttempts: 5,
     });
+
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -315,27 +429,18 @@ const MessagesConversationPage: React.FC = () => {
 
     socket.on('chat:new-message', (msg: any) => {
       if (msg.listing_id !== listingId) return;
-    
+
       setMessages((prev) => {
         if (prev.some((m) => m.id === msg.id)) return prev;
-
-        const enriched: ChatMessage = {
-          ...msg,
-          sender_username: msg.sender_username,
-          receiver_username: msg.receiver_username,
-        };
-
-        return [...prev, enriched];
+        return [...prev, msg];
       });
     });
-    
-
 
     socket.on('chat:typing', (payload: any) => {
       const { fromUserId, listingId: msgListingId } = payload || {};
       if (!user) return;
       if (msgListingId !== listingId) return;
-      if (fromUserId === user.id) return; 
+      if (fromUserId === user.id) return;
 
       setRemoteTyping(true);
       if (remoteTypingTimeoutRef.current) {
@@ -351,30 +456,49 @@ const MessagesConversationPage: React.FC = () => {
     });
 
     return () => {
-      if (remoteTypingTimeoutRef.current) {
-        window.clearTimeout(remoteTypingTimeoutRef.current);
-      }
+      if (remoteTypingTimeoutRef.current) window.clearTimeout(remoteTypingTimeoutRef.current);
       socketRef.current = null;
       socket.disconnect();
     };
   }, [user, listingId]);
 
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
     return () => {
-      if (typingTimeoutRef.current) {
-        window.clearTimeout(typingTimeoutRef.current);
-      }
-      if (remoteTypingTimeoutRef.current) {
-        window.clearTimeout(remoteTypingTimeoutRef.current);
-      }
+      if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
+      if (remoteTypingTimeoutRef.current) window.clearTimeout(remoteTypingTimeoutRef.current);
     };
   }, []);
+
+  const peerName = useMemo(() => {
+    if (peerInfo?.username) return peerInfo.username;
+
+    if (user && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      if (last.sender_id === user.id) return last.receiver_username || 'Użytkownik';
+      return last.sender_username || 'Użytkownik';
+    }
+
+    return 'Użytkownik';
+  }, [peerInfo, messages, user]);
+
+  const peerAvatarSrc = useMemo(() => {
+    if (peerInfo?.avatar_url) return joinApiUrl(peerInfo.avatar_url);
+
+    if (user && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      const mine = last.sender_id === user.id;
+      const av = mine ? last.receiver_avatar_url : last.sender_avatar_url;
+      return av ? joinApiUrl(av) : null;
+    }
+
+    return null;
+  }, [peerInfo, messages, user]);
+
+  const typeIcon = getTypeIconSrc(listingInfo?.typeId);
 
   const formatDate = (value: string) => {
     try {
@@ -411,7 +535,7 @@ const MessagesConversationPage: React.FC = () => {
         body: JSON.stringify({
           listingId,
           content: content.trim(),
-          receiverId: peerId || undefined,
+          receiverId: resolvedPeerId || undefined,
         }),
       });
 
@@ -422,13 +546,7 @@ const MessagesConversationPage: React.FC = () => {
         throw new Error(msg);
       }
 
-      const newMsg: ChatMessage = {
-        ...data.message,
-        sender_username: user.username,
-        receiver_username: peerName || 'Użytkownik',
-      };
-
-      setMessages((prev) => (prev.some((m) => m.id === newMsg.id) ? prev : [...prev, newMsg]));
+      setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
       setContent('');
       setIsTyping(false);
     } catch (err) {
@@ -438,90 +556,116 @@ const MessagesConversationPage: React.FC = () => {
     }
   };
 
+  const formatPLN = (n: number) =>
+    new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(n);
 
-  const acceptOffer = async (offerId: number, buyerId: number) => {
-    if (!user) return;
-  
-    const res = await fetch(`${API_BASE}/api/price-offers/${offerId}/accept`, {
+  const negotiationStatusLabel = (s: PriceNegotiation['status']) => {
+    if (s === 'open') return 'W trakcie';
+    if (s === 'accepted') return 'Zaakceptowana';
+    return 'Odrzucona';
+  };
+
+  const negotiationStatusClass = (s: PriceNegotiation['status']) => {
+    if (s === 'open') return 'open';
+    if (s === 'accepted') return 'accepted';
+    return 'rejected';
+  };
+
+  const reloadNegotiation = async () => {
+    if (!user || !listingId || !resolvedPeerId) return;
+
+    const qs = new URLSearchParams();
+    qs.set('listingId', String(listingId));
+    qs.set('otherUserId', String(resolvedPeerId));
+
+    const res = await fetch(`${API_BASE}/api/price-offers/negotiation?${qs.toString()}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.ok) return;
+
+    setNegotiation(normalizeNegotiation(data.negotiation));
+    setOffers(normalizeOffers(data.offers));
+  };
+
+  const submitOffer = async () => {
+    if (!user || !listingId || !resolvedPeerId) return;
+
+    const normalized = offerInput.replace(',', '.').trim();
+    const n = Number(normalized);
+
+    if (!Number.isFinite(n) || n <= 0) {
+      alert('Podaj poprawną cenę.');
+      return;
+    }
+
+    setOfferSending(true);
+    try {
+      const url = negotiation?.id
+        ? `${API_BASE}/api/price-offers/${negotiation.id}/offer`
+        : `${API_BASE}/api/price-offers/start`;
+
+      const body = negotiation?.id ? { price: n } : { listingId, price: n };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        alert(data?.error || 'Nie udało się wysłać oferty.');
+        return;
+      }
+
+      setOfferInput('');
+      await reloadNegotiation();
+    } finally {
+      setOfferSending(false);
+    }
+  };
+
+  const acceptPriceOffer = async (offerId: number) => {
+    const res = await fetch(`${API_BASE}/api/price-offers/offer/${offerId}/accept`, {
       method: 'POST',
       credentials: 'include',
       headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
     });
-  
+
     const p = await res.json().catch(() => null);
     if (!res.ok || !p?.ok) {
       alert(p?.error || 'Nie udało się zaakceptować oferty.');
       return;
     }
-  
-    // jeśli backend zwraca cenę (polecam dodać), to bierzemy ją stąd
-    const newPrice = p?.price ?? p?.offer?.price ?? null;
-  
-    const text =
-      `Oferta została zaakceptowana.` +
-      (newPrice ? ` Nowa cena: ${new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(newPrice)}.` : '');
-  
-    // Wyślij wiadomość do kupującego jako normalną wiadomość czatu
-    const msgRes = await fetch(`${API_BASE}/api/messages`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-      body: JSON.stringify({
-        listingId,
-        receiverId: buyerId,
-        content: `${text}\n[OFFER_STATUS:accepted][OFFER_ID:${offerId}]${newPrice ? `[OFFER_PRICE:${newPrice}]` : ''}`,
-      }),
-    });
-  
-    const msgPayload = await msgRes.json().catch(() => null);
-    if (msgRes.ok && msgPayload?.ok && msgPayload?.message) {
-      setMessages((prev) => [...prev, msgPayload.message]); // ma id -> TS nie krzyczy
-    }
-  
-    alert('Zaakceptowano ofertę.');
+    await reloadNegotiation();
   };
-  
-  const rejectOffer = async (offerId: number, buyerId: number) => {
-    if (!user) return;
-  
-    const res = await fetch(`${API_BASE}/api/price-offers/${offerId}/reject`, {
+
+  const rejectNegotiation = async () => {
+    if (!negotiation?.id) return;
+
+    const res = await fetch(`${API_BASE}/api/price-offers/${negotiation.id}/reject`, {
       method: 'POST',
       credentials: 'include',
       headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
     });
-  
+
     const p = await res.json().catch(() => null);
     if (!res.ok || !p?.ok) {
-      alert(p?.error || 'Nie udało się odrzucić oferty.');
+      alert(p?.error || 'Nie udało się odrzucić negocjacji.');
       return;
     }
-  
-    const msgRes = await fetch(`${API_BASE}/api/messages`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-      body: JSON.stringify({
-        listingId,
-        receiverId: buyerId,
-        content: `Oferta została odrzucona.\n[OFFER_STATUS:rejected][OFFER_ID:${offerId}]`,
-      }),
-    });
-  
-    const msgPayload = await msgRes.json().catch(() => null);
-    if (msgRes.ok && msgPayload?.ok && msgPayload?.message) {
-      setMessages((prev) => [...prev, msgPayload.message]);
-    }
-  
-    alert('Odrzucono ofertę.');
+    await reloadNegotiation();
   };
-  
-  
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -530,38 +674,57 @@ const MessagesConversationPage: React.FC = () => {
 
   const handleTypingChange = (value: string) => {
     setContent(value);
+    if (!isTyping) setIsTyping(true);
 
-    if (!isTyping) {
-      setIsTyping(true);
-    }
+    if (typingTimeoutRef.current) window.clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = window.setTimeout(() => setIsTyping(false), 1500);
 
-    if (typingTimeoutRef.current) {
-      window.clearTimeout(typingTimeoutRef.current);
-    }
-
-    typingTimeoutRef.current = window.setTimeout(() => {
-      setIsTyping(false);
-    }, 1500);
-
-    if (socketRef.current && user && peerId && listingId) {
+    if (socketRef.current && user && resolvedPeerId && listingId) {
       socketRef.current.emit('chat:typing', {
         fromUserId: user.id,
-        toUserId: peerId,
+        toUserId: resolvedPeerId,
         listingId,
       });
     }
   };
 
-if (!listingId) {
-  return <p className="messages-conv-error">Nieprawidłowe ID ogłoszenia.</p>;
-}
+  const myRole = useMemo<'buyer' | 'seller' | null>(() => {
+    if (!user || !negotiation) return null;
+    if (user.id === negotiation.buyer_id) return 'buyer';
+    if (user.id === negotiation.seller_id) return 'seller';
+    return null;
+  }, [user, negotiation]);
 
-const peerAvatarSrc =
-  listingInfo && listingInfo.authorAvatarUrl
-    ? joinApiUrl(listingInfo.authorAvatarUrl)
-    : null;
+  const lastOffer = offers.length > 0 ? offers[offers.length - 1] : null;
 
-const typeIcon = getTypeIconSrc(listingInfo?.typeId);
+  const canRespondToLastOffer =
+    negotiation?.status === 'open' &&
+    !!lastOffer &&
+    lastOffer.status === 'pending' &&
+    !!myRole &&
+    lastOffer.proposed_by !== myRole;
+
+
+  const pendingOffer = useMemo(() => {
+    return offers.find((o) => o.status === 'pending') || null;
+  }, [offers]);
+
+  const isWaitingForPeer =
+    negotiation?.status === 'open' &&
+    !!pendingOffer &&
+    !!myRole &&
+    pendingOffer.proposed_by === myRole;
+
+  const offerInputsDisabled =
+    offerSending ||
+    !offerInput.trim() ||
+    (negotiation?.status && negotiation.status !== 'open') ||
+    isWaitingForPeer;
+
+  if (!listingId) {
+    return <p className="messages-conv-error">Nieprawidłowe ID ogłoszenia.</p>;
+  }
+
   return (
     <div className="messages-conv-page">
       <div className="messages-conv-header">
@@ -577,9 +740,7 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                   className="messages-conv-avatar-img"
                   loading="lazy"
                   decoding="async"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
+                  onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
                 />
               ) : peerName ? (
                 getInitials(peerName)
@@ -587,20 +748,15 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                 '?'
               )}
             </div>
+
             <div className="messages-conv-user-text">
               <span className="messages-conv-peer-line">
-                Rozmowa z{' '}
-                <span className="messages-conv-peer-name">
-                  {peerName || 'użytkownikiem'}
-                </span>
+                Rozmowa z <span className="messages-conv-peer-name">{peerName || 'użytkownikiem'}</span>
               </span>
             </div>
           </div>
 
-          <Link
-            to={`/listing/${listingId}`}
-            className="messages-conv-listing-preview"
-          >
+          <Link to={`/listing/${listingId}`} className="messages-conv-listing-preview">
             {listingInfo?.thumbnailUrl || listingInfo?.imageUrl ? (
               <img
                 src={listingInfo.thumbnailUrl || listingInfo.imageUrl || ''}
@@ -608,10 +764,7 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                 className="messages-conv-listing-thumb"
                 loading="lazy"
                 decoding="async"
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement;
-                  img.style.display = 'none';
-                }}
+                onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
               />
             ) : typeIcon ? (
               <img
@@ -621,21 +774,97 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
                 style={{ objectFit: 'contain', padding: '6px' }}
               />
             ) : (
-              <div className="messages-conv-listing-thumb placeholder">
-                brak zdjęcia
-              </div>
+              <div className="messages-conv-listing-thumb placeholder">brak zdjęcia</div>
             )}
+
             <div className="messages-conv-listing-text">
-              <span className="messages-conv-listing-title">
-                {listingInfo?.title || 'Tytuł ogłoszenia'}
-              </span>
-              <span className="messages-conv-listing-link-text">
-                Zobacz szczegóły
-              </span>
+              <span className="messages-conv-listing-title">{listingInfo?.title || 'Tytuł ogłoszenia'}</span>
+              <span className="messages-conv-listing-link-text">Zobacz szczegóły</span>
             </div>
           </Link>
         </div>
       </div>
+
+      {/* PANEL NEGOCJACJI */}
+      {listingInfo?.typeId === 1 && resolvedPeerId ? (
+        <div className="messages-conv-negotiation">
+          <div className="messages-conv-negotiation-title">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <IconTag kind="money" /> Negocjacja ceny
+            </span>
+          </div>
+
+          {negoLoading ? (
+            <div className="messages-conv-negotiation-meta">Ładowanie…</div>
+          ) : negotiation ? (
+            <div className="messages-conv-negotiation-meta">
+              <span className={`messages-conv-status-badge ${negotiationStatusClass(negotiation.status)}`}>
+                {negotiationStatusLabel(negotiation.status)}
+              </span>
+            </div>
+          ) : (
+            <div className="messages-conv-negotiation-meta">Brak aktywnej negocjacji.</div>
+          )}
+
+          {offers.length > 0 ? (
+            <div className="messages-conv-offers">
+              {offers.map((o) => (
+                <div key={o.id} className="messages-conv-offer-row">
+                  <span>
+                    {o.proposed_by === 'buyer' ? 'Kupujący' : 'Sprzedający'}: <b>{formatPLN(o.price)}</b>
+                  </span>
+                  <span className="messages-conv-offer-status-icon" aria-label={o.status}>
+                    {o.status === 'accepted' ? (
+                      <IconTag kind="check" />
+                    ) : o.status === 'rejected' ? (
+                      <IconTag kind="x" />
+                    ) : (
+                      <IconTag kind="clock" />
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="messages-conv-offer-actions">
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder={isWaitingForPeer ? 'Czekasz na odpowiedź…' : 'Twoja propozycja (PLN)'}
+              value={offerInput}
+              onChange={(e) => setOfferInput(e.target.value)}
+              disabled={(negotiation?.status && negotiation.status !== 'open') || isWaitingForPeer}
+            />
+            <button type="button" onClick={submitOffer} disabled={offerInputsDisabled}>
+              {offerSending ? 'Wysyłanie…' : negotiation ? 'Wyślij propozycję' : 'Zaproponuj cenę'}
+            </button>
+          </div>
+
+          {isWaitingForPeer ? (
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 13,
+                opacity: 0.85,
+              }}
+            >
+              Wysłałaś już ofertę. Poczekaj na akceptację / odrzucenie lub kontrpropozycję drugiej strony.
+            </div>
+          ) : null}
+
+          {canRespondToLastOffer ? (
+            <div className="messages-conv-offer-admin-actions">
+              <button type="button" onClick={() => acceptPriceOffer(lastOffer!.id)}>
+                Akceptuj ofertę
+              </button>
+              <button type="button" onClick={rejectNegotiation}>
+                Odrzuć negocjację
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {loading ? (
         <p className="messages-conv-info">Ładowanie konwersacji...</p>
@@ -645,77 +874,61 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
         <>
           <div className="messages-conv-thread">
             {messages.length === 0 ? (
-              <p className="messages-conv-info">
-                Brak wiadomości w tej konwersacji – rozpocznij rozmowę poniżej.
-              </p>
+              <p className="messages-conv-info">Brak wiadomości w tej konwersacji – rozpocznij rozmowę poniżej.</p>
             ) : (
               messages.map((m) => {
                 const mine = user && m.sender_id === user.id;
-              
-                const offerId = parseOfferId(m.content);
-                const status = parseOfferStatus(m.content);
-                const offerPrice = parseOfferPrice(m.content);
-                const cleanText = stripOfferMeta(m.content);
 
-              
+                const avatarRaw = m.sender_avatar_url;
+                const avatarSrc = avatarRaw ? joinApiUrl(String(avatarRaw)) : null;
+
                 return (
-                  <div
-                    key={m.id}
-                    className={`messages-conv-bubble ${mine ? 'mine' : 'theirs'}`}
-                  >
-                    <div className="messages-conv-bubble-header">
-                      <span className="messages-conv-author">
-                        {mine ? 'Ty' : (m.sender_username || 'Użytkownik')}
-                      </span>
-                      <span className="messages-conv-date">
-                        {formatDate(m.created_at)}
-                      </span>
+                  <div key={m.id} className={`messages-conv-msg-row ${mine ? 'mine' : 'theirs'}`}>
+                    {!mine && (
+                      <div className="messages-conv-msg-avatar">
+                        {avatarSrc && (
+                          <img
+                            src={avatarSrc}
+                            className="messages-conv-msg-avatar-img"
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    <div className={`messages-conv-bubble ${mine ? 'mine' : 'theirs'}`}>
+                      <div className="messages-conv-bubble-header">
+                        <span className="messages-conv-author">{mine ? 'Ty' : m.sender_username}</span>
+                        <span className="messages-conv-date">{formatDate(m.created_at)}</span>
+                      </div>
+                      <div className="messages-conv-text">{m.content}</div>
                     </div>
-              
-                    <div className="messages-conv-text">{cleanText}</div>
-              
-                    {status && (
-                      <div className={`offer-status-badge ${status}`}>
-                        {status === 'accepted'
-                          ? `✅ Oferta zaakceptowana${offerPrice ? ` (${new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(offerPrice)})` : ''}`
-                          : '❌ Oferta odrzucona'}
+
+                    {mine && (
+                      <div className="messages-conv-msg-avatar">
+                        {avatarSrc && (
+                          <img
+                            src={avatarSrc}
+                            className="messages-conv-msg-avatar-img"
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
                       </div>
                     )}
-
-                    {offerId && listingInfo?.authorId === user?.id && !status && (
-                      <div className="offer-actions">
-                        <button
-                          type="button"
-                          className="offer-btn accept"
-                          onClick={() => acceptOffer(offerId, m.sender_id)}
-                        >
-                          Akceptuj
-                        </button>
-                        <button
-                          type="button"
-                          className="offer-btn reject"
-                          onClick={() => rejectOffer(offerId, m.sender_id)}
-                        >
-                          Odrzuć
-                        </button>
-                      </div>
-                    )}
-
                   </div>
                 );
               })
-              
             )}
             <div ref={bottomRef} />
           </div>
 
-          <form className="messages-conv-form" onSubmit={handleSend}>
+          <form className="messages-conv-form" onSubmit={(e) => { e.preventDefault(); sendMessage(); }}>
             <div className="messages-conv-typing">
-              {remoteTyping
-                ? `${peerName || 'Użytkownik'} pisze…`
-                : isTyping
-                ? 'Piszesz…'
-                : '\u00A0'}
+              {remoteTyping ? `${peerName || 'Użytkownik'} pisze…` : isTyping ? 'Piszesz…' : '\u00A0'}
             </div>
 
             <textarea
@@ -726,19 +939,14 @@ const typeIcon = getTypeIconSrc(listingInfo?.typeId);
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (!sending && content.trim()) {
-                    sendMessage();
-                  }
+                  if (!sending && content.trim()) sendMessage();
                 }
               }}
               rows={3}
               disabled={sending}
             />
-            <button
-              type="submit"
-              className="messages-conv-submit"
-              disabled={sending || !content.trim()}
-            >
+
+            <button type="submit" className="messages-conv-submit" disabled={sending || !content.trim()}>
               {sending ? 'Wysyłanie...' : 'Wyślij'}
             </button>
           </form>
