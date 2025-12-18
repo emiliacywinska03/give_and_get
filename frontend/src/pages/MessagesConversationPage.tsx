@@ -527,12 +527,12 @@ const MessagesConversationPage: React.FC = () => {
     }
   };
 
-  const sendMutation = useMutation<ChatMessage, Error, void>({
-    mutationFn: async () => {
+  const sendMutation = useMutation<ChatMessage, Error, { text: string }>({
+    mutationFn: async ({ text }) => {
       if (!user) throw new Error('Brak sesji');
       if (!listingId) throw new Error('Brak listingId');
-      if (!content.trim()) throw new Error('Pusta wiadomość');
-
+      if (!text.trim()) throw new Error('Pusta wiadomość');
+  
       const res = await fetch(`${API_BASE}/api/messages`, {
         method: 'POST',
         credentials: 'include',
@@ -542,17 +542,16 @@ const MessagesConversationPage: React.FC = () => {
         },
         body: JSON.stringify({
           listingId,
-          content: content.trim(),
+          content: text.trim(),
           receiverId: resolvedPeerId || undefined,
         }),
       });
-
+  
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
-        const msg = data?.error || 'Nie udało się wysłać wiadomości.';
-        throw new Error(msg);
+        throw new Error(data?.error || 'Nie udało się wysłać wiadomości.');
       }
-
+  
       return data.message as ChatMessage;
     },
     onSuccess: (msg) => {
@@ -562,10 +561,11 @@ const MessagesConversationPage: React.FC = () => {
         return { ...(prev || {}), messages: [...prevMessages, msg], peer: prev?.peer ?? peerInfo ?? null };
       });
       queryClient.invalidateQueries({ queryKey: inboxQueryKey });
-      setContent('');
+      setContent('');       // czyścimy pole
       setIsTyping(false);
     },
   });
+  
 
   const sending = sendMutation.isPending;
 
@@ -713,7 +713,7 @@ const MessagesConversationPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
       queryClient.invalidateQueries({ queryKey: ['listing', 'preview', listingId] });
   
-      setContent('Zapłacone BLIK — kupione ✅'); sendMutation.mutate();
+      sendMutation.mutate({ text: 'Zapłacone BLIK — kupione ' });
     } catch (e) {
       console.error(e);
       setBlikError('Wystąpił błąd podczas płatności.');
@@ -725,8 +725,10 @@ const MessagesConversationPage: React.FC = () => {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sending && content.trim()) sendMutation.mutate();
+    const text = content.trim();
+    if (!sending && text) sendMutation.mutate({ text });
   };
+  
 
   const handleTypingChange = (value: string) => {
     setContent(value);
@@ -966,7 +968,7 @@ const MessagesConversationPage: React.FC = () => {
 
                 {myRole === 'seller' && (
                   <div className="messages-conv-system-text">
-                    Kupujący zaakceptował cenę. Teraz czekasz na zakup („Kup teraz” + BLIK) po stronie kupującego.
+                    Kupujący zaakceptował cenę. Teraz czekasz na zakup („Kup teraz”) po stronie kupującego.
                   </div>
                 )}
 
@@ -982,7 +984,7 @@ const MessagesConversationPage: React.FC = () => {
                       onClick={handleBuyNowClick}
                       disabled={isPurchased}
                     >
-                      {isPurchased ? 'Kupiono ✅' : 'Kup teraz'}
+                      {isPurchased ? 'Kupiono' : 'Kup teraz'}
                     </button>
                   </div>
                 )}
@@ -1056,7 +1058,7 @@ const MessagesConversationPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (!sending && content.trim()) sendMutation.mutate();
+                  if (!sending && content.trim()) sendMutation.mutate({ text: content.trim() });
                 }
               }}
               rows={3}

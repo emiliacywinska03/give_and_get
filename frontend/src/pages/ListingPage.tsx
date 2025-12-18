@@ -230,6 +230,40 @@ const ListingPage: React.FC = () => {
     }
   };
 
+  type InboxThread = {
+    listing_id: number;
+    unread_count: number; 
+  };
+  
+  const { data: inboxThreads = [] } = useQuery<InboxThread[], Error>({
+    queryKey: ['messages', 'inbox'],
+    enabled: !!user,
+    staleTime: 10_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/messages/inbox`, {
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+      const data = await res.json().catch(() => null);
+  
+      const threads = Array.isArray(data) ? data : data?.threads || data?.items || [];
+      return threads.map((t: any) => ({
+        listing_id: Number(t.listing_id ?? t.listingId),
+        unread_count: Number(t.unread_count ?? t.unreadCount ?? 0),
+      }));
+    },
+  });
+  
+  const unreadByListingId = useMemo(() => {
+    const map: Record<number, number> = {};
+    for (const t of inboxThreads) {
+      if (!Number.isFinite(t.listing_id)) continue;
+      map[t.listing_id] = (map[t.listing_id] || 0) + (t.unread_count || 0);
+    }
+    return map;
+  }, [inboxThreads]);
+  
+
   return (
     <div className="listing-page">
       <h2>
@@ -315,6 +349,7 @@ const ListingPage: React.FC = () => {
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
             const isOwn = !!user && listing.user_id === user.id;
+            const unreadCount = unreadByListingId[listing.id] || 0;
             const imgSrc =
               listing.primary_image
                 ? listing.primary_image.startsWith('data:')
