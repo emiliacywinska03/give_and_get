@@ -23,29 +23,37 @@ const Breadcrumbs: React.FC = () => {
 
   // /listing/:id – szczegóły ogłoszenia
   if (pathname.startsWith('/listing/')) {
-    items.push({ label: 'Przeglądaj ogłoszenia', to: '/listings' });
-
-    const categoryName = state?.categoryName;
-    const subcategoryName = state?.subcategoryName;
-
-    if (categoryName) {
-      items.push({
-        label: categoryName,
-        to: `/listings?category=${encodeURIComponent(categoryName)}`,
-      });
+    const backTo: string | undefined = state?.backTo;
+  
+    const fromConversation = typeof backTo === 'string' && backTo.startsWith('/messages/listing/');
+  
+    if (fromConversation) {
+      items.push({ label: 'Wiadomości', to: '/messages' });
+      items.push({ label: 'Konwersacja', to: backTo }); // link do rozmowy
+    } else {
+      items.push({ label: 'Przeglądaj ogłoszenia', to: '/listings' });
+  
+      const categoryName = state?.categoryName;
+      const subcategoryName = state?.subcategoryName;
+  
+      if (categoryName) {
+        items.push({
+          label: categoryName,
+          to: `/listings?category=${encodeURIComponent(categoryName)}`,
+        });
+      }
+  
+      if (categoryName && subcategoryName) {
+        items.push({
+          label: subcategoryName,
+          to: `/listings?category=${encodeURIComponent(categoryName)}&subcategory=${encodeURIComponent(subcategoryName)}`,
+        });
+      }
     }
-
-    if (categoryName && subcategoryName) {
-      items.push({
-        label: subcategoryName,
-        to: `/listings?category=${encodeURIComponent(
-          categoryName
-        )}&subcategory=${encodeURIComponent(subcategoryName)}`,
-      });
-    }
-
+  
     items.push({ label: state?.listingTitle || 'Szczegóły ogłoszenia' });
   }
+  
 
   // /profile
   if (pathname.startsWith('/profile')) {
@@ -85,10 +93,15 @@ const Breadcrumbs: React.FC = () => {
       <button
         type="button"
         className="breadcrumbs-back"
-        onClick={() => navigate(-1)}
+        onClick={() => {
+          const backTo = state?.backTo;
+          if (typeof backTo === 'string') navigate(backTo);
+          else navigate(-1);
+        }}
       >
         ← Wróć
       </button>
+
 
       <nav className="breadcrumbs-trail" aria-label="Breadcrumb">
         {items.map((item, index) => {

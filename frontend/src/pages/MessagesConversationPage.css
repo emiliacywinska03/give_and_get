@@ -642,3 +642,31 @@ body.dark-mode .messages-conv-waiting-info {
 .messages-conv-offer-actions button:disabled {
   filter: grayscale(0.3);
 }
+
+.messages-conv-listing-price {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+.messages-conv-listing-preview{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;     
+  border-radius: 999px;
+  max-width: 320px;       
+}
+
+.messages-conv-listing-text{
+  min-width: 0;         
+}
+
+.messages-conv-listing-link-text{
+  display: block;
+  white-space: nowrap;   
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;     
+}

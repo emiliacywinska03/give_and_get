@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import './MessagesConversationPage.css';
+import { useLocation } from 'react-router-dom';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -37,6 +38,8 @@ type ListingPreview = {
   thumbnailUrl?: string | null;
   imageUrl?: string | null;
   typeId?: number | null;
+  price?: number | null;
+  currency?: string | null;
 };
 
 type PriceNegotiation = {
@@ -169,6 +172,7 @@ const MessagesConversationPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [content, setContent] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -271,6 +275,24 @@ const MessagesConversationPage: React.FC = () => {
         l.listingPrimaryImage ??
         (Array.isArray(l.images) && l.images.length ? l.images[0] : null);
 
+        const rawPrice =
+          typeof l.price === 'number'
+            ? l.price
+            : typeof l.price === 'string'
+              ? Number(l.price)
+              : typeof l.current_price === 'number'
+                ? l.current_price
+                : typeof l.currentPrice === 'number'
+                  ? l.currentPrice
+                  : null;
+
+        const rawCurrency =
+          (typeof l.currency === 'string' && l.currency) ||
+          (typeof l.price_currency === 'string' && l.price_currency) ||
+          (typeof l.priceCurrency === 'string' && l.priceCurrency) ||
+          'PLN';
+
+          
       const resolvedImageUrl =
         typeof rawPrimary === 'string'
           ? rawPrimary.startsWith('data:') || rawPrimary.startsWith('http')
@@ -315,7 +337,10 @@ const MessagesConversationPage: React.FC = () => {
             imageUrl: finalImageUrl,
             thumbnailUrl: finalImageUrl,
             typeId: typeIdValue,
+            price: Number.isFinite(rawPrice as number) ? (rawPrice as number) : null,
+            currency: rawCurrency,
           };
+          
         }
       }
 
@@ -325,7 +350,10 @@ const MessagesConversationPage: React.FC = () => {
         imageUrl: finalImageUrl,
         thumbnailUrl: finalImageUrl,
         typeId: typeIdValue,
+        price: Number.isFinite(rawPrice as number) ? (rawPrice as number) : null,
+        currency: rawCurrency,
       };
+      
     },
   });
 
@@ -700,7 +728,16 @@ const MessagesConversationPage: React.FC = () => {
             </div>
           </div>
 
-          <Link to={`/listing/${listingId}`} className="messages-conv-listing-preview">
+          <Link
+            to={`/listing/${listingId}`}
+            state={{
+              backTo: `${location.pathname}${location.search}`,
+              from: 'conversation',
+              listingTitle: listingInfo?.title,
+            }}
+            className="messages-conv-listing-preview"
+          >
+
             {listingInfo?.thumbnailUrl || listingInfo?.imageUrl ? (
               <img
                 src={listingInfo.thumbnailUrl || listingInfo.imageUrl || ''}
@@ -722,9 +759,24 @@ const MessagesConversationPage: React.FC = () => {
             )}
 
             <div className="messages-conv-listing-text">
-              <span className="messages-conv-listing-title">{listingInfo?.title || 'Tytuł ogłoszenia'}</span>
+              <span className="messages-conv-listing-title">
+                {listingInfo?.title || 'Tytuł ogłoszenia'}
+              </span>
+
+              {listingInfo?.typeId === 1 ? (
+                <span className="messages-conv-listing-price">
+                  {listingInfo?.price != null
+                    ? new Intl.NumberFormat('pl-PL', {
+                        style: 'currency',
+                        currency: listingInfo.currency || 'PLN',
+                      }).format(listingInfo.price)
+                    : 'Cena: —'}
+                </span>
+              ) : null}
+
               <span className="messages-conv-listing-link-text">Zobacz szczegóły</span>
             </div>
+
           </Link>
         </div>
       </div>

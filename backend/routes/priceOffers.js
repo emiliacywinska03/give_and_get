@@ -127,7 +127,7 @@ router.post('/start', authRequired, async (req, res) => {
         RETURNING id, negotiation_id, listing_id, buyer_id, seller_id, price, status, proposed_by, created_at
         `,
         [negotiationId, lid, buyerId, sellerId, p]
-      );
+    );
 
       await pool.query('COMMIT');
       return res.status(201).json({ ok: true, negotiationId, offer: insert.rows[0] });
@@ -211,8 +211,8 @@ router.post('/:negotiationId/offer', authRequired, async (req, res) => {
       await pool.query(`UPDATE price_negotiation SET updated_at = NOW() WHERE id = $1`, [negotiationId]);
 
       await pool.query('COMMIT');
-      return res.status(201).json({ ok: true, offer: insert.rows[0] });
-    } catch (e) {
+    return res.status(201).json({ ok: true, offer: insert.rows[0] });
+  } catch (e) {
       await pool.query('ROLLBACK');
       throw e;
     }
@@ -331,7 +331,7 @@ router.post('/offer/:id/accept', authRequired, async (req, res) => {
     );
 
     await pool.query(`UPDATE listing SET price = $1 WHERE id = $2`, [offer.price, offer.listing_id]);
-
+      
     return res.json({ ok: true });
   } catch (e) {
     console.error('POST /price-offers/offer/:id/accept error', e);
