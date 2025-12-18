@@ -712,3 +712,7 @@ body.dark-mode .price-edit-input:focus {
 body.dark-mode .price-edit-check input {
   accent-color: #3b82f6;
 }
+.favorite-toggle--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

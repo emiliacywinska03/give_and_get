@@ -80,6 +80,21 @@ const getTypeIconSrc = (typeId?: number | null): string | null => {
   return null;
 };
 
+
+const AcceptedIcon: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <rect x="2" y="2" width="20" height="20" rx="10" fill="#16a34a" />
+    <path
+      d="M7 12.5l3 3 7-7"
+      stroke="white"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+
 const IconTag: React.FC<{ kind: 'money' | 'check' | 'x' | 'clock' }> = ({ kind }) => {
   if (kind === 'money') {
     return (
@@ -183,8 +198,14 @@ const MessagesConversationPage: React.FC = () => {
   const [offerInput, setOfferInput] = useState('');
   const [offerSending, setOfferSending] = useState(false);
 
-  const listingId = Number(id);
+  const [showPayment, setShowPayment] = useState(false);
+  const [blikCode, setBlikCode] = useState('');
+  const [blikError, setBlikError] = useState('');
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [isPurchased, setIsPurchased] = useState(false);
 
+
+  const listingId = Number(id);
 
   const queryClient = useQueryClient();
 
@@ -639,6 +660,69 @@ const MessagesConversationPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
   };
 
+  const acceptedOffer = useMemo(() => {
+    if (!negotiation || negotiation.status !== 'accepted') return null;
+    return offers.find((o) => o.status === 'accepted') || null;
+  }, [negotiation, offers]);
+  
+  const acceptedPrice = acceptedOffer?.price ?? null;
+  
+  const showAcceptedBanner = !!acceptedOffer && negotiation?.status === 'accepted';
+
+  const handleBuyNowClick = () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    if (myRole !== 'buyer') return; 
+    setBlikError('');
+    setBlikCode('');
+    setShowPayment(true);
+  };
+  
+  const handleConfirmBlik = async () => {
+    if (!/^\d{6}$/.test(blikCode)) {
+      setBlikError('Kod BLIK musi mieć dokładnie 6 cyfr.');
+      return;
+    }
+  
+    try {
+      setPurchaseLoading(true);
+      setBlikError('');
+  
+      const res = await fetch(`${API_BASE}/api/listings/${listingId}/purchase`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({ blikCode }),
+      });
+  
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        setBlikError(payload?.error || 'Błąd podczas płatności.');
+        return;
+      }
+  
+      setIsPurchased(true);
+      setShowPayment(false);
+      setBlikCode('');
+  
+      queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
+      queryClient.invalidateQueries({ queryKey: ['listing', 'preview', listingId] });
+  
+      setContent('Zapłacone BLIK — kupione ✅'); sendMutation.mutate();
+    } catch (e) {
+      console.error(e);
+      setBlikError('Wystąpił błąd podczas płatności.');
+    } finally {
+      setPurchaseLoading(false);
+    }
+  };
+  
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!sending && content.trim()) sendMutation.mutate();
@@ -869,6 +953,43 @@ const MessagesConversationPage: React.FC = () => {
       ) : (
         <>
           <div className="messages-conv-thread">
+            {showAcceptedBanner && (
+              <div className="messages-conv-system-card">
+                <div className="messages-conv-system-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AcceptedIcon />
+                  <span>
+                    Cena zaakceptowana:{' '}
+                    <b>{acceptedPrice != null ? formatPLN(acceptedPrice) : '—'}</b>
+                  </span>
+                </div>
+
+
+                {myRole === 'seller' && (
+                  <div className="messages-conv-system-text">
+                    Kupujący zaakceptował cenę. Teraz czekasz na zakup („Kup teraz” + BLIK) po stronie kupującego.
+                  </div>
+                )}
+
+                {myRole === 'buyer' && (
+                  <div className="messages-conv-system-actions">
+                    <div className="messages-conv-system-text">
+                      Sprzedający zaakceptował cenę. Teraz możesz kupić przedmiot.
+                    </div>
+
+                    <button
+                      type="button"
+                      className="messages-conv-buy-now"
+                      onClick={handleBuyNowClick}
+                      disabled={isPurchased}
+                    >
+                      {isPurchased ? 'Kupiono ✅' : 'Kup teraz'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+
             {messages.length === 0 ? (
               <p className="messages-conv-info">Brak wiadomości w tej konwersacji – rozpocznij rozmowę poniżej.</p>
             ) : (
@@ -948,6 +1069,36 @@ const MessagesConversationPage: React.FC = () => {
           </form>
         </>
       )}
+
+      {showPayment && (
+        <div className="messages-conv-blik-backdrop" onClick={() => setShowPayment(false)}>
+          <div className="messages-conv-blik-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Płatność BLIK</h2>
+            <p>Wpisz 6-cyfrowy kod BLIK, aby kupić przedmiot.</p>
+
+            <input
+              type="text"
+              maxLength={6}
+              value={blikCode}
+              onChange={(e) => setBlikCode(e.target.value.replace(/\D/g, ''))}
+              className="messages-conv-blik-input"
+              placeholder="••••••"
+            />
+
+            {blikError && <div className="messages-conv-blik-error">{blikError}</div>}
+
+            <div className="messages-conv-blik-actions">
+              <button type="button" onClick={() => setShowPayment(false)}>
+                Anuluj
+              </button>
+              <button type="button" onClick={handleConfirmBlik} disabled={purchaseLoading}>
+                {purchaseLoading ? 'Przetwarzanie…' : 'Zapłać BLIK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

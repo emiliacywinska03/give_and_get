@@ -314,6 +314,7 @@ const ListingPage: React.FC = () => {
         <div className="listing-grid">
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
+            const isOwn = !!user && listing.user_id === user.id;
             const imgSrc =
               listing.primary_image
                 ? listing.primary_image.startsWith('data:')
@@ -344,28 +345,31 @@ const ListingPage: React.FC = () => {
                 }
                 style={{ cursor: 'pointer' }}
               >
-                <button
-                  className={`favorite-toggle ${isFav ? 'favorite-toggle--active' : ''}`}
-                  aria-label={isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
-                  onClick={(e) => handleToggleFavorite(e, listing.id, isFav)}
-                >
-                  <svg
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="22"
-                    height="22"
-                    fill="none"
-                    viewBox="0 0 24 24"
+                {!isOwn && (
+                  <button
+                    className={`favorite-toggle ${isFav ? 'favorite-toggle--active' : ''}`}
+                    aria-label={isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                    onClick={(e) => handleToggleFavorite(e, listing.id, isFav)}
                   >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                      />
+                    </svg>
+                  </button>
+                )}
+
 
                 {listing.is_featured && (
                   <div

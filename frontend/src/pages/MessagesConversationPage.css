@@ -670,3 +670,108 @@ body.dark-mode .messages-conv-waiting-info {
   text-overflow: ellipsis;
   max-width: 150px;     
 }
+
+.messages-conv-system-card{
+  border: 1px solid #e6e8ef;
+  background: #f7f8fb;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 12px 0 16px;
+}
+
+.messages-conv-system-title{
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.messages-conv-system-text{
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.messages-conv-system-actions{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.messages-conv-buy-now{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #cdd7ff;
+  background: #eaf0ff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.messages-conv-buy-now:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* BLIK modal w czacie */
+.messages-conv-blik-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.messages-conv-blik-modal{
+  width: min(520px, calc(100vw - 28px));
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.18);
+}
+
+.messages-conv-blik-input{
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #e0e3eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 16px;
+  outline: none;
+}
+
+.messages-conv-blik-error{
+  margin-top: 10px;
+  color: crimson;
+  font-size: 14px;
+}
+
+.messages-conv-blik-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.messages-conv-page{
+  display: flex;
+  flex-direction: column;
+  min-height: auto;
+}
+
+.messages-conv-thread{
+  flex: 1;
+  min-height: 320px;   
+  overflow-y: auto;
+}
+
+.messages-conv-form{
+  position: static;      
+  margin-top: 14px;
+  padding: 12px 0 24px;  
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+  z-index: auto;
+}
+
+.messages-conv-page{
+  padding-bottom: 32px;  
+}
