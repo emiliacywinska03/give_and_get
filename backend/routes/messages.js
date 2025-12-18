@@ -359,8 +359,10 @@ router.get('/listing/:id', authRequired, async (req, res) => {
       params
     );
 
+    let markedSenders = [];
+
     if (Number.isFinite(otherUserId) && otherUserId > 0) {
-      await pool.query(
+      const r = await pool.query(
         `
         UPDATE message
         SET is_read = TRUE
@@ -368,29 +370,37 @@ router.get('/listing/:id', authRequired, async (req, res) => {
           AND listing_id = $2
           AND sender_id = $3
           AND is_read = FALSE
+        RETURNING sender_id
         `,
         [userId, listingId, otherUserId]
       );
+      markedSenders = r.rows.map((x) => Number(x.sender_id)).filter((x) => Number.isFinite(x) && x > 0);
     } else {
-      await pool.query(
+      const r = await pool.query(
         `
         UPDATE message
         SET is_read = TRUE
         WHERE receiver_id = $1
           AND listing_id = $2
           AND is_read = FALSE
+        RETURNING sender_id
         `,
         [userId, listingId]
       );
+      markedSenders = r.rows.map((x) => Number(x.sender_id)).filter((x) => Number.isFinite(x) && x > 0);
     }
 
+    const uniqueSenders = Array.from(new Set(markedSenders)).filter((sid) => sid !== userId);
+
     const io = req.app.get('io');
-    if (io && Number.isFinite(otherUserId) && otherUserId > 0) {
-      io.to(`user_${otherUserId}`).emit('chat:read', {
-        listingId,
-        byUserId: userId,
-        otherUserId,
-      });
+    if (io) {
+      for (const sid of uniqueSenders) {
+        io.to(`user_${sid}`).emit('chat:read', {
+          listingId,
+          byUserId: userId,
+          otherUserId: sid,
+        });
+      }
     }
 
     let peer = null;

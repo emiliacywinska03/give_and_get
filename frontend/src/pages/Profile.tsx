@@ -17,31 +17,49 @@ interface Listing {
   type_id?: number | null;
 }
 
+
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
 
+
+const normalizeImgUrl = (raw?: string | null): string | null => {
+  if (!raw) return null;
+  if (raw.startsWith('data:') || raw.startsWith('http')) return raw;
+  if (raw.startsWith('/')) return `${API_BASE}${raw}`;
+  return raw;
+};
+
+
+const firstImageCache = new Map<number, string | null>();
+
 async function fetchFirstImageFor(listingId: number): Promise<string | null> {
+  if (firstImageCache.has(listingId)) {
+    return firstImageCache.get(listingId) ?? null;
+  }
+
   try {
     const r = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
       credentials: 'include',
       headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
     });
-    if (!r.ok) return null;
-
-    const imgs: { id: number; dataUrl?: string; path?: string }[] = await r.json();
-    if (!Array.isArray(imgs) || imgs.length === 0) return null;
-
-    const first = imgs[0];
-    const raw = first.dataUrl || first.path;
-    if (!raw) return null;
-
-    if (raw.startsWith('http') || raw.startsWith('data:')) {
-      return raw;
+    if (!r.ok) {
+      firstImageCache.set(listingId, null);
+      return null;
     }
 
-    return `${API_BASE}${raw}`;
+    const imgs: { id: number; path?: string }[] = await r.json();
+    if (!Array.isArray(imgs) || imgs.length === 0) {
+      firstImageCache.set(listingId, null);
+      return null;
+    }
+
+    const raw = imgs[0]?.path ?? null;
+    const normalized = normalizeImgUrl(raw);
+    firstImageCache.set(listingId, normalized);
+    return normalized;
   } catch (e) {
     console.error('Błąd pobierania pierwszego zdjęcia:', e);
+    firstImageCache.set(listingId, null);
     return null;
   }
 }
@@ -64,13 +82,13 @@ const Profile: React.FC = () => {
 
   // 1 = sprzedaż, 2 = praca, 3 = pomoc
   const renderThumb = (item: Listing) => {
-    const imgSrc = item.primary_image || null;
+    const imgSrc = normalizeImgUrl(item.primary_image || null);
 
     // 1) jeśli mamy normalne zdjęcie
     if (imgSrc) {
       return (
         <div className="listing-thumb">
-          <img src={imgSrc} alt={item.title} />
+          <img src={imgSrc} alt={item.title} loading="lazy" decoding="async" />
         </div>
       );
     }
@@ -80,8 +98,8 @@ const Profile: React.FC = () => {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
-            src="/icons/hands-holding-heart-svgrepo-com.svg"
-            alt="Ogłoszenie pomocy"
+            src="/icons/work-case-filled-svgrepo-com.svg"
+            alt="Ogłoszenie pracy"
             className="listing-thumb-icon"
           />
         </div>
@@ -93,14 +111,13 @@ const Profile: React.FC = () => {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
-            src="/icons/work-case-filled-svgrepo-com.svg"
-            alt="Ogłoszenie pracy"
+            src="/icons/hands-holding-heart-svgrepo-com.svg"
+            alt="Ogłoszenie pomocy"
             className="listing-thumb-icon"
           />
-        </div>        
+        </div>
       );
     }
-
 
     // 4) domyślny placeholder X
     return (
@@ -197,9 +214,9 @@ const Profile: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!user) return; refreshMe();
+    if (!user) return;
+    refreshMe();
   
-
     // ---------- Twoje ogłoszenia ----------
     const fetchMyListings = async () => {
       try {
@@ -218,7 +235,7 @@ const Profile: React.FC = () => {
         const withImages: Listing[] = await Promise.all(
           data.map(async (item: any) => {
             const primary =
-              (item.primary_image as string | null) ??
+              normalizeImgUrl(item.primary_image as string | null) ??
               (await fetchFirstImageFor(item.id));
 
             return {
@@ -293,7 +310,7 @@ const Profile: React.FC = () => {
         const withImages: Listing[] = await Promise.all(
           data.map(async (item: any) => {
             const primary =
-              (item.primary_image as string | null) ??
+              normalizeImgUrl(item.primary_image as string | null) ??
               (await fetchFirstImageFor(item.id));
 
             return {

@@ -19,29 +19,47 @@ interface Listing {
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
 
+const normalizeImgUrl = (raw?: string | null): string | null => {
+  if (!raw) return null;
+  if (raw.startsWith('data:') || raw.startsWith('http')) return raw;
+  if (raw.startsWith('/')) return `${API_BASE}${raw}`;
+  return raw;
+};
+
+const firstImageCache = new Map<number, string | null>();
+
 const SOLD_STATUS_ID = 3;
 const HISTORY_STATUS_ID = 4;
 const RESUME_COST_POINTS = 5;
 
 async function fetchFirstImageFor(listingId: number): Promise<string | null> {
+  if (firstImageCache.has(listingId)) {
+    return firstImageCache.get(listingId) ?? null;
+  }
+
   try {
     const r = await fetch(`${API_BASE}/api/listings/${listingId}/images`, {
       credentials: 'include',
       headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      firstImageCache.set(listingId, null);
+      return null;
+    }
 
-    const imgs: { id: number; dataUrl?: string; path?: string }[] = await r.json();
-    if (!Array.isArray(imgs) || imgs.length === 0) return null;
+    const imgs: { id: number; path?: string }[] = await r.json();
+    if (!Array.isArray(imgs) || imgs.length === 0) {
+      firstImageCache.set(listingId, null);
+      return null;
+    }
 
-    const first = imgs[0];
-    const raw = first.dataUrl || first.path;
-    if (!raw) return null;
-
-    if (raw.startsWith('http') || raw.startsWith('data:')) return raw;
-    return `${API_BASE}${raw}`;
+    const raw = imgs[0]?.path ?? null;
+    const normalized = normalizeImgUrl(raw);
+    firstImageCache.set(listingId, normalized);
+    return normalized;
   } catch (e) {
     console.error('Błąd pobierania pierwszego zdjęcia:', e);
+    firstImageCache.set(listingId, null);
     return null;
   }
 }
@@ -81,7 +99,7 @@ const HistoryListingsPage: React.FC = () => {
           Promise.all(
             arr.map(async (item: any) => {
               const primary =
-                (item.primary_image as string | null) ??
+                normalizeImgUrl(item.primary_image as string | null) ??
                 (await fetchFirstImageFor(item.id));
               return { ...item, primary_image: primary ?? null };
             })
@@ -145,19 +163,29 @@ const HistoryListingsPage: React.FC = () => {
   };
 
   const renderThumb = (item: Listing) => {
-    const imgSrc = item.primary_image || null;
+    const imgSrc = normalizeImgUrl(item.primary_image || null);
   
-    // 1) jest zdjęcie -> normalnie
     if (imgSrc) {
       return (
         <div className="listing-thumb">
-          <img src={imgSrc} alt={item.title} />
+          <img src={imgSrc} alt={item.title} loading="lazy" decoding="async" />
         </div>
       );
     }
   
-    // 2) PRACA (type_id === 2) -> teczka
     if (item.type_id === 2) {
+      return (
+        <div className="listing-thumb-space listing-thumb-space--icon">
+          <img
+            src="/icons/work-case-filled-svgrepo-com.svg"
+            alt="Ogłoszenie pracy"
+            className="listing-thumb-icon"
+          />
+        </div>
+      );
+    }
+  
+    if (item.type_id === 3) {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
@@ -169,21 +197,6 @@ const HistoryListingsPage: React.FC = () => {
       );
     }
   
-    // 3) POMOC (type_id === 3) -> dłonie z sercem
-    if (item.type_id === 3) {
-      return (
-        <div className="listing-thumb
-        -space listing-thumb-space--icon">
-          <img
-            src="/icons/work-case-filled-svgrepo-com.svg"
-            alt="Ogłoszenie pracy"
-            className="listing-thumb-icon"
-          />
-        </div>
-      );
-    }
-  
-    // 4) SPRZEDAŻ (type_id === 1) -> koszyk (jeśli chcesz)
     if (item.type_id === 1) {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
@@ -196,7 +209,6 @@ const HistoryListingsPage: React.FC = () => {
       );
     }
   
-    // 5) fallback (X)
     return (
       <div className="listing-thumb-space">
         <svg
@@ -225,7 +237,6 @@ const HistoryListingsPage: React.FC = () => {
           <h2 className="profile-title" style={{ margin: 0 }}>Historia ogłoszeń</h2>
         </div>
 
-        {/* PANEL PUNKTÓW */}
         <div className="history-points-panel">
           <div style={{ fontSize: 14, color: "#6b7280" }}>Twoje punkty</div>
           <div style={{ fontSize: 44, fontWeight: 800, color: "#2f6fff", lineHeight: 1.1 }}>
@@ -242,7 +253,6 @@ const HistoryListingsPage: React.FC = () => {
         ) : (
           <>
 
-            {/* ---------------- Zakończone / Nieaktywne ---------------- */}
             <h3 className="profile-subtitle">Zakończone ogłoszenia</h3>
   
             {endedListings.length === 0 ? (
@@ -280,7 +290,6 @@ const HistoryListingsPage: React.FC = () => {
             )}
 
 
-            {/* ---------------- Sprzedane ---------------- */}
             <h3 className="profile-subtitle">Sprzedane ogłoszenia</h3>
   
             {soldListings.length === 0 ? (

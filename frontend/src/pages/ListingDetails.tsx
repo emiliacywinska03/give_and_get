@@ -1,9 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './ListingDetails.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
+const API_BASE_NO_SLASH = API_BASE.replace(/\/$/, '');
 const API_KEY = process.env.REACT_APP_API_KEY;
 
 type ListingDetails = {
@@ -206,13 +208,6 @@ function collectPairs(details: any): { key: string; label: string; value: string
     pairs.push({ key: k, label, value: formatVal(k, v) });
   };
 
-  const rawFree =
-    (details as any)?.is_free ??
-    (details as any)?.isFree ??
-    (details as any)?.free;
-
-  const isFreeListing =
-    typeof rawFree === 'string' ? rawFree === 'true' : Boolean(rawFree);
 
   Object.entries(details || {}).forEach(([origKey, v]) => {
     const mapped = ALIASES.hasOwnProperty(origKey) ? ALIASES[origKey] : origKey;
@@ -301,14 +296,32 @@ export default function ListingDetails() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const listingKey = useMemo(() => ['listing', String(id)], [id]);
+  const listingImagesKey = useMemo(() => ['listing', String(id), 'images'], [id]);
+  const favoritesKey = useMemo(() => ['listings', 'favorites'], []);
 
   const fromProfile = (location.state as any)?.fromProfile || false;
   const startInEdit = (location.state as any)?.editMode || false;
 
   const [data, setData] = useState<ListingDetails | null>(null);
-  const [loading, setLoading] = useState(true);
   const [images, setImages] = useState<ListingImage[]>([]);
   const [uiImages, setUiImages] = useState<UiImageItem[]>([]);
+  const lastNonEmptyImagesRef = useRef<ListingImage[]>([]);
+
+  const preloadImageSrcs = (srcs: string[]) => {
+    srcs.forEach((s) => {
+      try {
+        const im = new Image();
+        im.decoding = 'async';
+        im.loading = 'eager';
+        im.src = s;
+      } catch {
+        // ignore
+      }
+    });
+  };
   const [orderDirty, setOrderDirty] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -351,122 +364,235 @@ export default function ListingDetails() {
   const [offerLoading, setOfferLoading] = useState(false);
 
 
+const normalizePath = (p: string) => {
+  const s = String(p).trim().replace(/\\/g, '/');
+  return s;
+};
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/listings/${id}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-          },
-          credentials: 'include',
-        });
+const joinApiUrl = (p: string) => {
+  if (!p) return p;
+  const raw = normalizePath(p);
 
-        if (res.status === 404) {
-          navigate('/listings');
-          return;
-        }
-        if (!res.ok) throw new Error(await res.text());
 
-        const details = await res.json();
-        setData(details);
+  if (raw.startsWith('data:')) return raw;
 
-        const toSrc = (val: any): string | null => {
-          if (!val) return null;
-          if (typeof val === 'string') {
-            if (val.startsWith('data:') || val.startsWith('http')) return val;
-            return `${API_BASE}${val}`;
-          }
-          if (typeof val === 'object') {
-            if (val.dataUrl) return val.dataUrl as string;
-            if (val.url) {
-              const u = val.url as string;
-              return u.startsWith('http') || u.startsWith('data:')
-                ? u
-                : `${API_BASE}${u}`;
-            }
-            if (val.path) {
-              const p = val.path as string;
-              return p.startsWith('http') || p.startsWith('data:')
-                ? p
-                : `${API_BASE}${p}`;
-            }
-          }
-          return null;
-        };
 
-        let imagesList: ListingImage[] = [];
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
 
-        try {
-          const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-            headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-            credentials: 'include',
-          });
-          if (ri.ok) {
-            const imgs = await ri.json();
-            imagesList = Array.isArray(imgs)
-              ? imgs
-                  .map((it: any) => {
-                    const src = toSrc(it.dataUrl || it.url || it.path || null);
-                    if (!src) return null;
-                    return { id: it.id, src };
-                  })
-                  .filter(
-                    (x: ListingImage | null): x is ListingImage => Boolean(x),
-                  )
-              : [];
-          }
-        } catch (e) {
-          console.error('Błąd pobierania zdjęć:', e);
-        }
 
-        if (!imagesList.length && Array.isArray(details?.images)) {
-          imagesList = details.images
-            .map((it: any, idx: number) => {
-              const src = toSrc(it);
-              if (!src) return null;
-              return { id: idx, src };
-            })
-            .filter(
-              (x: ListingImage | null): x is ListingImage => Boolean(x),
-            );
-        }
+  try {
+    const base = `${API_BASE_NO_SLASH}/`;
+    const normalizedRelative = raw.replace(/^\/+/, '');
+    return new URL(normalizedRelative, base).toString();
+  } catch {
+    const normalizedRelative = raw.replace(/^\/+/, '');
+    return `${API_BASE_NO_SLASH}/${normalizedRelative}`;
+  }
+};
 
-        setImages(imagesList);
-        setUiImages(imagesList.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
-        setOrderDirty(false);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id, navigate]);
+const toSrc = (val: any): string | null => {
+  if (!val) return null;
 
-  useEffect(() => {
-    const checkFavorite = async () => {
-      if (!user || !id) {
-        setIsFavorite(false);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/listings/favorites`, {
-          credentials: 'include',
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-        });
-        const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
-          const found = data.some((it: any) => String(it.id) === String(id));
-          setIsFavorite(found);
-        }
-      } catch (e) {
-        console.error('Błąd sprawdzania ulubionych:', e);
-      }
-    };
-    checkFavorite();
-  }, [user, id]);
+  if (typeof val === 'string') {
+    return joinApiUrl(val);
+  }
+
+  if (typeof val === 'object') {
+    const raw =
+      (val as any).dataUrl ??
+      (val as any).url ??
+      (val as any).path ??
+      (val as any).image_url ??
+      (val as any).imageUrl ??
+      (val as any).src ??
+      (val as any).file ??
+      (val as any).filename ??
+      null;
+
+    if (typeof raw === 'string' && raw.trim()) return joinApiUrl(raw);
+
+    const nested = (val as any).image ?? (val as any).photo ?? null;
+    if (typeof nested === 'string' && nested.trim()) return joinApiUrl(nested);
+  }
+
+  return null;
+};
+
+const withCacheBust = (src: string) => {
+  if (!src) return src;
+  if (src.startsWith('data:')) return src;
+  const sep = src.includes('?') ? '&' : '?';
+  return `${src}${sep}v=${Date.now()}`;
+};
+
+const fallbackImagesFromDetails = (details: any): ListingImage[] => {
+  const arr = Array.isArray(details?.images) ? details.images : [];
+  if (!arr.length) return [];
+
+  return arr
+    .map((v: any, idx: number) => {
+      const src = toSrc(v);
+      if (!src) return null;
+      const iid = Number((v as any)?.id);
+      return { id: Number.isFinite(iid) ? iid : idx, src } as ListingImage;
+    })
+    .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
+};
+
+const listingQuery = useQuery<ListingDetails | any, Error>({
+  queryKey: listingKey,
+  enabled: !!id,
+  staleTime: 15_000,
+  queryFn: async () => {
+    const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      credentials: 'include',
+    });
+
+    if (res.status === 404) throw new Error('NOT_FOUND');
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      throw new Error(t || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  },
+});
+
+const listingImagesQuery = useQuery<ListingImage[], Error>({
+  queryKey: listingImagesKey,
+  enabled: !!id,
+  staleTime: 60_000,
+  gcTime: 30 * 60_000,
+  placeholderData: (prev) => {
+    if (Array.isArray(prev) && prev.length > 0) return prev;
+    const fb = fallbackImagesFromDetails(listingQuery.data as any);
+    return fb;
+  },
+  refetchOnWindowFocus: false,
+  refetchOnMount: 'always',
+  refetchOnReconnect: true,
+  retry: 2,
+  queryFn: async () => {
+    const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      credentials: 'include',
+    });
+
+    if (!ri.ok) {
+      const t = await ri.text().catch(() => '');
+      throw new Error(t || `HTTP ${ri.status}`);
+    }
+
+    const imgs = await ri.json().catch(() => []);
+    if (!Array.isArray(imgs)) return [];
+
+    return imgs
+      .map((it: any, idx: number) => {
+        const src = toSrc(it);
+        if (!src) return null;
+        const iid = Number((it as any)?.id);
+        return { id: Number.isFinite(iid) ? iid : idx, src } as ListingImage;
+      })
+      .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
+  },
+});
+
+useEffect(() => {
+  if (listingQuery.isError && (listingQuery.error as any)?.message === 'NOT_FOUND') {
+    navigate('/listings');
+  }
+}, [listingQuery.isError, listingQuery.error, navigate]);
+
+
+useEffect(() => {
+  const details = listingQuery.data as any;
+  if (!details) return;
+  setData(details);
+}, [listingQuery.data]);
+
+useEffect(() => {
+  const next = Array.isArray(listingImagesQuery.data) ? listingImagesQuery.data : [];
+
+  if (next.length > 0) {
+    lastNonEmptyImagesRef.current = next;
+    setImages(next);
+    setUiImages(next.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+    setOrderDirty(false);
+    return;
+  }
+
+  if (lastNonEmptyImagesRef.current.length > 0) {
+    const prev = lastNonEmptyImagesRef.current;
+    setImages(prev);
+    setUiImages(prev.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+    setOrderDirty(false);
+    return;
+  }
+
+  setImages([]);
+  setUiImages([]);
+  setOrderDirty(false);
+}, [listingImagesQuery.data]);
+ 
+const favoritesQuery = useQuery<number[], Error>({
+  queryKey: favoritesKey,
+  enabled: !!user,
+  staleTime: 20_000,
+  queryFn: async () => {
+    const res = await fetch(`${API_BASE}/api/listings/favorites`, {
+      credentials: 'include',
+      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !Array.isArray(data)) return [];
+    return data.map((it: any) => Number(it.id)).filter((x: any) => Number.isFinite(x));
+  },
+});
+
+useEffect(() => {
+  if (!user || !id) {
+    setIsFavorite(false);
+    return;
+  }
+  const ids = favoritesQuery.data || [];
+  setIsFavorite(ids.some((x) => String(x) === String(id)));
+}, [favoritesQuery.data, user, id]);
+
+const toggleFavoriteMutation = useMutation<void, Error, { listingId: string; isCurrentlyFavorite: boolean }>({
+  mutationFn: async ({ listingId, isCurrentlyFavorite }) => {
+    if (!user) throw new Error('Brak sesji');
+    const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
+    const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
+      method,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      throw new Error(t || 'Błąd zmiany ulubionych');
+    }
+  },
+  onMutate: async ({ listingId, isCurrentlyFavorite }) => {
+    await queryClient.cancelQueries({ queryKey: favoritesKey });
+    const prev = queryClient.getQueryData<number[]>(favoritesKey) || [];
+    const lid = Number(listingId);
+    const next = isCurrentlyFavorite ? prev.filter((x) => x !== lid) : [...prev, lid];
+    queryClient.setQueryData<number[]>(favoritesKey, next);
+    return { prev } as any;
+  },
+  onError: (_err, _vars, ctx: any) => {
+    if (ctx?.prev) queryClient.setQueryData<number[]>(favoritesKey, ctx.prev);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: favoritesKey });
+  },
+});
 
   const isSold = data?.status_id === 3;   
   const isOwnListing = user && data && user.id === data.user_id;
@@ -700,25 +826,6 @@ const handleSave = async () => {
       }
     }
 
-    const toSrc = (val: any): string | null => {
-      if (!val) return null;
-      if (typeof val === 'string') {
-        if (val.startsWith('data:') || val.startsWith('http')) return val;
-        return `${API_BASE}${val}`;
-      }
-      if (typeof val === 'object') {
-        if (val.dataUrl) return val.dataUrl as string;
-        if (val.url) {
-          const u = val.url as string;
-          return u.startsWith('http') || u.startsWith('data:') ? u : `${API_BASE}${u}`;
-        }
-        if (val.path) {
-          const p = val.path as string;
-          return p.startsWith('http') || p.startsWith('data:') ? p : `${API_BASE}${p}`;
-        }
-      }
-      return null;
-    };
 
     let normalized: ListingImage[] = [];
     try {
@@ -732,7 +839,7 @@ const handleSave = async () => {
         normalized = Array.isArray(imgs)
           ? imgs
               .map((it: any) => {
-                const src = toSrc(it.dataUrl || it.url || it.path || null);
+                const src = toSrc(it);
                 if (!src) return null;
                 return { id: it.id, src };
               })
@@ -783,9 +890,11 @@ const handleSave = async () => {
     setUiImages(normalized.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
     setOrderDirty(false);
     setNewImages([]);
+    queryClient.invalidateQueries({ queryKey: listingKey });
+    queryClient.invalidateQueries({ queryKey: listingImagesKey });
+    queryClient.invalidateQueries({ queryKey: favoritesKey });
     setEditMode(false);
     setEditCondition(((updated as any)?.condition ?? editCondition) as string);
-    window.location.reload();
   } catch (e) {
     console.error('Błąd podczas zapisu ogłoszenia', e);
     alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
@@ -793,32 +902,15 @@ const handleSave = async () => {
 };
 
   const handleToggleFavorite = async () => {
-    if (!user || !id) {
-      navigate('/auth');
-      return;
-    }
+  if (!user || !id) {
+    navigate('/auth');
+    return;
+  }
 
-    try {
-      const method = isFavorite ? 'DELETE' : 'POST';
-      const res = await fetch(`${API_BASE}/api/listings/favorites/${id}`, {
-        method,
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-      });
-
-      if (!res.ok) {
-        console.error('Błąd zmiany ulubionych:', await res.text());
-        return;
-      }
-
-      setIsFavorite((prev) => !prev);
-    } catch (e) {
-      console.error('Błąd podczas zmiany ulubionych:', e);
-    }
-  };
+  if (!toggleFavoriteMutation.isPending) {
+    toggleFavoriteMutation.mutate({ listingId: String(id), isCurrentlyFavorite: isFavorite });
+  }
+};
 
 
   const handleBuyNowClick = () => {
@@ -987,6 +1079,7 @@ const handleSave = async () => {
       setShowPayment(false);
       setBlikCode('');
       alert('Zakup udany');
+      queryClient.invalidateQueries({ queryKey: listingKey });
       
     } catch (e) {
       console.error('Błąd płatności:', e);
@@ -998,13 +1091,17 @@ const handleSave = async () => {
 
 
 
-  if (loading) {
-    return (
-      <div className="listing-details-container">
-        <p>Ładowanie…</p>
-      </div>
-    );
-  }
+ const isSaleFromQuery = (listingQuery.data as any)?.type_id === 1;
+ const imagesAreLoading = listingImagesQuery.isPending || listingImagesQuery.isFetching;
+ const shouldShowImageSkeleton = isSaleFromQuery && uiImages.length === 0;
+
+ if (listingQuery.isPending) {
+   return (
+     <div className="listing-details-container">
+       <p>Ładowanie…</p>
+     </div>
+   );
+ }
 
   if (!data) {
     return (
@@ -1212,7 +1309,7 @@ const handleSave = async () => {
           )}
         </div>
       )}
-      {isSale && (uiImages.length > 0 || (canEdit && editMode)) && (
+      {isSale && (
       <div className="listing-details-gallery">
           {isSale && canEdit && editMode && (
             <>
@@ -1235,67 +1332,99 @@ const handleSave = async () => {
               </button>
             </>
           )}
-            {uiImages.map((img, i) => {
-              const key = img.kind === 'existing' ? `ex-${img.id}` : `new-${img.tempId}`;
-              const src = img.src;
-
-              return (
-                <div key={key} className="listing-details-thumb">
-                  <img
-                    src={src}
-                    alt={`Zdjęcie ${i + 1}`}
+          {shouldShowImageSkeleton && (
+            <>
+              {[0, 1, 2].map((k) => (
+                <div key={`sk-${k}`} className="listing-details-thumb">
+                  <div
                     className="listing-details-image"
-                    onClick={() => {
-                      setLightboxIndex(i);
-                      setLightboxImage(src);
-                      setLightboxOpen(true);
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      height: '100%',
+                      opacity: 0.8,
                     }}
-                    style={{ cursor: 'pointer' }}
-                  />
+                  >
+                    Ładowanie zdjęć…
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {uiImages.map((img, i) => {
+            const key = img.kind === 'existing' ? `ex-${img.id}` : `new-${img.tempId}`;
+            const src = img.src;
 
-                  {canEdit && editMode && (
-                    <>
+            return (
+              <div key={key} className="listing-details-thumb">
+                <img
+                  src={src}
+                  alt={`Zdjęcie ${i + 1}`}
+                  className="listing-details-image"
+                  loading="eager"
+                  decoding="async"
+                  onError={(e) => {
+                    const imgEl = e.currentTarget;
+                    if (!imgEl.dataset.retried) {
+                      imgEl.dataset.retried = '1';
+                      imgEl.src = withCacheBust(src);
+                      return;
+                    }
+                    imgEl.style.display = 'none';
+                  }}
+                  onClick={() => {
+                    setLightboxIndex(i);
+                    setLightboxImage(src);
+                    setLightboxOpen(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+
+                {canEdit && editMode && (
+                  <>
+                    <button
+                      type="button"
+                      className="image-delete-x"
+                      onClick={() =>
+                        img.kind === 'existing'
+                          ? handleDeleteImage(img.id)
+                          : removeNewImage(img.tempId)
+                      }
+                      aria-label="Usuń zdjęcie"
+                      title="Usuń zdjęcie"
+                    >
+                      ✕
+                    </button>
+
+                    <div className="image-actions">
                       <button
                         type="button"
-                        className="image-delete-x"
-                        onClick={() =>
-                          img.kind === 'existing'
-                            ? handleDeleteImage(img.id)
-                            : removeNewImage(img.tempId)
-                        }
-                        aria-label="Usuń zdjęcie"
-                        title="Usuń zdjęcie"
+                        className="image-move-btn"
+                        onClick={() => moveUiImage(i, i - 1)}
+                        disabled={i === 0}
+                        title="Przesuń w lewo"
                       >
-                        ✕
+                        ◀
                       </button>
-
-                      <div className="image-actions">
-                        <button
-                          type="button"
-                          className="image-move-btn"
-                          onClick={() => moveUiImage(i, i - 1)}
-                          disabled={i === 0}
-                          title="Przesuń w lewo"
-                        >
-                          ◀
-                        </button>
-                        <button
-                          type="button"
-                          className="image-move-btn"
-                          onClick={() => moveUiImage(i, i + 1)}
-                          disabled={i === uiImages.length - 1}
-                          title="Przesuń w prawo"
-                        >
-                          ▶
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                      <button
+                        type="button"
+                        className="image-move-btn"
+                        onClick={() => moveUiImage(i, i + 1)}
+                        disabled={i === uiImages.length - 1}
+                        title="Przesuń w prawo"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
         <section className="listing-section">
   <h3 className="listing-section-title">Szczegóły ogłoszenia</h3>
@@ -1615,6 +1744,14 @@ const handleSave = async () => {
             src={lightboxImage}
             alt="Podgląd"
             className="lightbox-image"
+            onError={(e) => {
+              const imgEl = e.currentTarget;
+              if (!imgEl.dataset.retried) {
+                imgEl.dataset.retried = '1';
+                imgEl.src = withCacheBust(lightboxImage!);
+                return;
+              }
+            }}
             onClick={(e) => e.stopPropagation()}
           />
 

@@ -1,7 +1,8 @@
 import Profile from './pages/Profile';
 import ProtectedRoute from './auth/ProtectedRoute';
 import React from "react";
-import {Routes, Route} from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Footer from "./components/Footer";
 import Header from "./components/Header";
 import Main from "./components/Main"
@@ -18,12 +19,25 @@ import MessagesConversationPage from './pages/MessagesConversationPage';
 import HistoryListingsPage from './pages/HistoryListingsPage';
 
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 10_000, 
+      gcTime: 10 * 60 * 1000, 
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
+
 function App() {
   return (
-    <div>
-      <Header />
-      <Breadcrumbs />
-      <Routes>
+    <QueryClientProvider client={queryClient}>
+      <div>
+        <Header />
+        <Breadcrumbs />
+        <Routes>
           <Route path="/" element={<Main />}/>
           <Route path="/auth" element={<LoginRegiter />}/>
 
@@ -73,9 +87,10 @@ function App() {
           <Route path="/listing/:id" element={<ListingDetails />} />
           <Route path="/history" element={<HistoryListingsPage />} />
 
-      </Routes>
-      <Footer />
-    </div>
+        </Routes>
+        <Footer />
+      </div>
+    </QueryClientProvider>
   );
 }
 

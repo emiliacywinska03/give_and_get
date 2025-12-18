@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './MessagesPage.css';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { io } from 'socket.io-client';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -62,48 +64,69 @@ const MessagesPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [threads, setThreads] = useState<ThreadItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const socketRef = useRef<any>(null);
+
+  const inboxQueryKey = useMemo(() => ['messages', 'inbox'], []);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
+    if (!user) navigate('/auth');
+  }, [user, navigate]);
 
-    const fetchMessages = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const { data: threads = [], isPending: loading, error } = useQuery<ThreadItem[], Error>({
+    queryKey: inboxQueryKey,
+    enabled: !!user,
+    staleTime: 15_000, 
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/messages/inbox`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
 
-        const res = await fetch(`${API_BASE}/api/messages/inbox`, {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-          },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.ok) {
-          const msg = data?.error || 'Nie udało się pobrać wiadomości.';
-          throw new Error(msg);
-        }
-
-        const list = (data.threads || data.messages || []) as ThreadItem[];
-        setThreads(list);
-      } catch (err: any) {
-        console.error('Błąd pobierania wiadomości:', err);
-        setError(err.message || 'Wystąpił błąd podczas pobierania wiadomości.');
-      } finally {
-        setLoading(false);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        const msg = data?.error || 'Nie udało się pobrać wiadomości.';
+        throw new Error(msg);
       }
+
+      const list = (data.threads || data.messages || []) as ThreadItem[];
+      return list;
+    },
+  });
+
+  useEffect(() => {
+    if (!user) return;
+
+    const socket = io(API_BASE, {
+      withCredentials: true,
+      transports: ['websocket'],
+      upgrade: false,
+      timeout: 10000,
+      reconnectionAttempts: 5,
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('auth:join', user.id);
+    });
+
+    const refreshInbox = () => {
+      queryClient.invalidateQueries({ queryKey: inboxQueryKey });
     };
 
-    fetchMessages();
-  }, [user, navigate]);
+    socket.on('chat:new-message', refreshInbox);
+    socket.on('chat:read', refreshInbox);
+    socket.on('chat:unread-bump', refreshInbox);
+
+    return () => {
+      socketRef.current = null;
+      socket.disconnect();
+    };
+  }, [user, queryClient, inboxQueryKey]);
 
   const formatDate = (value: string) => {
     try {
@@ -131,7 +154,7 @@ const MessagesPage: React.FC = () => {
       {loading ? (
         <p className="messages-info">Ładowanie wiadomości...</p>
       ) : error ? (
-        <p className="messages-error">{error}</p>
+        <p className="messages-error">{error.message}</p>
       ) : threads.length === 0 ? (
         <p className="messages-info">Nie masz jeszcze żadnych wiadomości.</p>
       ) : (

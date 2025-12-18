@@ -27,6 +27,80 @@ function authRequired(req, res, next) {
   }
 }
 
+
+router.get('/avatar/:userId', async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+    if (!Number.isFinite(userId)) return res.status(400).json({ error: 'Nieprawidłowe userId' });
+
+    const { rows } = await pool.query(
+      `SELECT avatar_data, avatar_mime, avatar_url FROM "user" WHERE id = $1`,
+      [userId]
+    );
+
+    if (!rows.length) return res.status(404).end();
+
+    const u = rows[0];
+
+
+    if (u.avatar_data) {
+      const mime = u.avatar_mime || 'image/png';
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.status(200).send(u.avatar_data);
+    }
+
+
+    if (u.avatar_url) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      return res.redirect(302, u.avatar_url);
+    }
+
+    return res.status(404).end();
+  } catch (err) {
+    console.error('Błąd avatar endpoint:', err.message);
+    return res.status(500).end();
+  }
+});
+
+router.get('/image/:imageId', async (req, res) => {
+  try {
+    const imageId = Number(req.params.imageId);
+    if (!Number.isFinite(imageId)) return res.status(400).json({ error: 'Nieprawidłowe imageId' });
+
+    const { rows } = await pool.query(
+      `SELECT mime, data, path FROM listing_images WHERE id = $1`,
+      [imageId]
+    );
+
+    if (!rows.length) return res.status(404).end();
+
+    const img = rows[0];
+
+
+    if (img.data) {
+      const mime = img.mime || 'image/jpeg';
+      res.setHeader('Content-Type', mime);
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.status(200).send(img.data);
+    }
+
+
+    if (img.path) {
+      const filePath = path.join(process.cwd(), 'backend', img.path);
+      if (fs && fs.existsSync && fs.existsSync(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return res.sendFile(filePath);
+      }
+    }
+
+    return res.status(404).end();
+  } catch (err) {
+    console.error('Błąd image endpoint:', err.message);
+    return res.status(500).end();
+  }
+});
+
 router.get('/categories', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -346,14 +420,15 @@ router.get('/', async (req, res) => {
         l.*,
         u.username AS author_username,
         CASE
-          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          WHEN u.avatar_data IS NOT NULL THEN '/api/listings/avatar/' || u.id
           ELSE u.avatar_url
         END AS author_avatar_url,
         (
-          SELECT COALESCE(
-            'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
-            li.path
-          )
+          SELECT
+            CASE
+              WHEN li.id IS NOT NULL THEN '/api/listings/image/' || li.id
+              ELSE NULL
+            END
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
@@ -382,16 +457,17 @@ router.get('/my', authRequired, async (req, res) => {
         l.*,
         u.username AS author_username,
         CASE
-          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          WHEN u.avatar_data IS NOT NULL THEN '/api/listings/avatar/' || u.id
           ELSE u.avatar_url
         END AS author_avatar_url,
         c.name AS category_name,
         s.name AS subcategory_name,
         (
-          SELECT COALESCE(
-        'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
-        li.path
-      )
+          SELECT
+            CASE
+              WHEN li.id IS NOT NULL THEN '/api/listings/image/' || li.id
+              ELSE NULL
+            END
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
@@ -449,14 +525,15 @@ router.get('/featured', async (req, res) => {
         l.*,
         u.username AS author_username,
         CASE
-          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          WHEN u.avatar_data IS NOT NULL THEN '/api/listings/avatar/' || u.id
           ELSE u.avatar_url
         END AS author_avatar_url,
         (
-          SELECT COALESCE(
-            'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
-            li.path
-          )
+          SELECT
+            CASE
+              WHEN li.id IS NOT NULL THEN '/api/listings/image/' || li.id
+              ELSE NULL
+            END
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
@@ -489,14 +566,15 @@ router.get('/favorites', authRequired, async (req, res) => {
         l.*,
         u.username AS author_username,
         CASE
-          WHEN u.avatar_data IS NOT NULL THEN 'data:' || COALESCE(u.avatar_mime, 'image/png') || ';base64,' || encode(u.avatar_data,'base64')
+          WHEN u.avatar_data IS NOT NULL THEN '/api/listings/avatar/' || u.id
           ELSE u.avatar_url
         END AS author_avatar_url,
         (
-          SELECT COALESCE(
-            'data:' || li.mime || ';base64,' || encode(li.data,'base64'),
-            li.path
-          )
+          SELECT
+            CASE
+              WHEN li.id IS NOT NULL THEN '/api/listings/image/' || li.id
+              ELSE NULL
+            END
           FROM listing_images li
           WHERE li.listing_id = l.id
           ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
@@ -900,7 +978,6 @@ router.put('/:id', authRequired, async (req, res) => {
 });
 
 
-// Symulacja zakupu ogłoszenia (BLIK)
 router.post('/:id/purchase', authRequired, async (req, res) => {
   const listingId = Number(req.params.id);
   const { blikCode } = req.body || {};
@@ -937,7 +1014,6 @@ router.post('/:id/purchase', authRequired, async (req, res) => {
       return res.status(400).json({ error: 'Ogłoszenie jest darmowe – nie wymaga płatności' });
     }
 
-      // Ustawiamy status na "sprzedane"
       await pool.query(
          'UPDATE listing SET status_id = $1 WHERE id = $2',
         [SOLD_STATUS_ID, listingId]
@@ -997,9 +1073,7 @@ router.get('/:id/images', async (req, res) => {
 
     const { rows } = await pool.query(
       `
-      SELECT
-        id,
-        COALESCE('data:' || mime || ';base64,' || encode(data,'base64'), path) AS path
+      SELECT id, mime, data, path
       FROM listing_images
       WHERE listing_id = $1
       ORDER BY COALESCE(sort_order, id) ASC, id ASC
@@ -1007,7 +1081,15 @@ router.get('/:id/images', async (req, res) => {
       [listingId]
     );
 
-    const images = rows.map((r) => ({ id: r.id, path: r.path }));
+    const embed = String(req.query.embed || '') === '1';
+
+    const images = rows.map((r) => {
+      if (embed) {
+        const b64 = r.data ? `data:${r.mime};base64,${Buffer.from(r.data).toString('base64')}` : r.path;
+        return { id: r.id, path: b64 };
+      }
+      return { id: r.id, path: `/api/listings/image/${r.id}` };
+    });
     return res.json(images);
   } catch (err) {
     console.error('Błąd pobierania zdjęć ogłoszenia:', err.message);

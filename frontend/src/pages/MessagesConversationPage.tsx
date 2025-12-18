@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import './MessagesConversationPage.css';
 
@@ -169,34 +170,19 @@ const MessagesConversationPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [peerInfo, setPeerInfo] = useState<PeerInfo>(null);
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const [content, setContent] = useState('');
-  const [sending, setSending] = useState(false);
-
-  const [listingInfo, setListingInfo] = useState<ListingPreview | null>(null);
-
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<number | null>(null);
-
   const [remoteTyping, setRemoteTyping] = useState(false);
   const remoteTypingTimeoutRef = useRef<number | null>(null);
-
   const bottomRef = useRef<HTMLDivElement | null>(null);
-
-  // NEGOCJACJE
-  const [negotiation, setNegotiation] = useState<PriceNegotiation | null>(null);
-  const [offers, setOffers] = useState<PriceOffer[]>([]);
   const [offerInput, setOfferInput] = useState('');
   const [offerSending, setOfferSending] = useState(false);
-  const [negoLoading, setNegoLoading] = useState(false);
 
   const listingId = Number(id);
 
+
+  const queryClient = useQueryClient();
 
   const peerIdFromQuery = useMemo(() => {
     const v = searchParams.get('peer');
@@ -205,9 +191,44 @@ const MessagesConversationPage: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : null;
   }, [searchParams]);
 
+  const conversationQueryKey = useMemo(() => ['messages', 'conversation', listingId, peerIdFromQuery], [listingId, peerIdFromQuery]);
+  const inboxQueryKey = useMemo(() => ['messages', 'inbox'], []);
+
+  const { data: conversationData, isPending: loadingConversation, error: conversationError } = useQuery<
+    { messages: ChatMessage[]; peer: PeerInfo },
+    Error
+  >({
+    queryKey: conversationQueryKey,
+    enabled: !!user && !!listingId,
+    staleTime: 5_000,
+    queryFn: async () => {
+      const qs = new URLSearchParams();
+      qs.set('limit', '50');
+      if (peerIdFromQuery) qs.set('otherUserId', String(peerIdFromQuery));
+
+      const res = await fetch(`${API_BASE}/api/messages/listing/${listingId}?${qs.toString()}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        const msg = data?.error || 'Nie udało się pobrać wiadomości.';
+        throw new Error(msg);
+      }
+
+      return { messages: (data.messages || []) as ChatMessage[], peer: (data.peer ?? null) as PeerInfo };
+    },
+  });
+
+  const messages = conversationData?.messages ?? [];
+  const peerInfo = conversationData?.peer ?? null;
+
   const resolvedPeerId = useMemo(() => {
     if (peerIdFromQuery) return peerIdFromQuery;
-
     if (peerInfo?.id) return peerInfo.id;
 
     if (user && messages.length > 0) {
@@ -221,192 +242,132 @@ const MessagesConversationPage: React.FC = () => {
 
 
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    if (!listingId) {
-      setError('Nieprawidłowe ID ogłoszenia.');
-      setLoading(false);
-      return;
-    }
+    if (!user) navigate('/auth');
+  }, [user, navigate]);
 
-    const controller = new AbortController();
+  const { data: listingInfo } = useQuery<ListingPreview | null, Error>({
+    queryKey: ['listing', 'preview', listingId],
+    enabled: !!listingId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/listings/${listingId}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
 
-    const fetchConversation = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) return null;
 
-        const qs = new URLSearchParams();
-        qs.set('limit', '50');
-        if (peerIdFromQuery) qs.set('otherUserId', String(peerIdFromQuery));
+      const l = data?.listing ?? data?.data ?? data;
+      if (!l) return null;
 
-        const res = await fetch(`${API_BASE}/api/messages/listing/${listingId}?${qs.toString()}`, {
-          credentials: 'include',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-          },
-        });
+      const rawPrimary =
+        l.primary_image ??
+        l.primaryImage ??
+        l.listing_primary_image ??
+        l.listingPrimaryImage ??
+        (Array.isArray(l.images) && l.images.length ? l.images[0] : null);
 
-        const data = await res.json();
+      const resolvedImageUrl =
+        typeof rawPrimary === 'string'
+          ? rawPrimary.startsWith('data:') || rawPrimary.startsWith('http')
+            ? rawPrimary
+            : joinApiUrl(rawPrimary)
+          : rawPrimary && typeof rawPrimary === 'object'
+            ? rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path
+              ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('data:') ||
+                String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('http')
+                ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)
+                : joinApiUrl(String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path))
+              : null
+            : null;
 
-        if (!res.ok || !data.ok) {
-          const msg = data?.error || 'Nie udało się pobrać wiadomości.';
-          throw new Error(msg);
-        }
+      const typeIdValue =
+        typeof l.type_id === 'number' ? l.type_id : typeof l.typeId === 'number' ? l.typeId : null;
 
-        setMessages(data.messages || []);
-        setPeerInfo(data.peer ?? null);
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
-        console.error('Błąd pobierania konwersacji:', err);
-        setError(err.message || 'Wystąpił błąd podczas pobierania konwersacji.');
-      } finally {
-        setLoading(false);
-      }
-    };
+      let finalImageUrl = resolvedImageUrl;
 
-    fetchConversation();
-
-    return () => controller.abort();
-  }, [user, listingId, peerIdFromQuery, navigate]);
-
-  useEffect(() => {
-    if (!listingId) return;
-
-    const controller = new AbortController();
-
-    const fetchListing = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/listings/${listingId}`, {
-          credentials: 'include',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-          },
-        });
-
-        const data = await res.json();
-        if (!res.ok) return;
-
-        const l = data.listing ?? data.data ?? data;
-        if (!l) return;
-
-        const rawPrimary =
-          l.primary_image ??
-          l.primaryImage ??
-          l.listing_primary_image ??
-          l.listingPrimaryImage ??
-          (Array.isArray(l.images) && l.images.length ? l.images[0] : null);
-
-        const resolvedImageUrl =
-          typeof rawPrimary === 'string'
-            ? rawPrimary.startsWith('data:') || rawPrimary.startsWith('http')
-              ? rawPrimary
-              : joinApiUrl(rawPrimary)
-            : rawPrimary && typeof rawPrimary === 'object'
-              ? rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path
-                ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('data:') ||
-                  String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path).startsWith('http')
-                  ? String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path)
-                  : joinApiUrl(String(rawPrimary.dataUrl || rawPrimary.url || rawPrimary.path))
-                : null
-              : null;
-
-        const typeIdValue =
-          typeof l.type_id === 'number' ? l.type_id : typeof l.typeId === 'number' ? l.typeId : null;
-
-        let finalImageUrl = resolvedImageUrl;
-
-        if (!finalImageUrl && typeIdValue === 1) {
-          try {
-            const ri = await fetch(`${API_BASE_NO_SLASH}/api/listings/${listingId}/images`, {
-              credentials: 'include',
-              signal: controller.signal,
-              headers: {
-                ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-              },
-            });
-            if (ri.ok) {
-              const imgs = await ri.json();
-              if (Array.isArray(imgs) && imgs.length > 0) {
-                const first = imgs[0];
-                const raw =
-                  (first && (first.dataUrl || first.url || first.path)) ||
-                  (typeof first === 'string' ? first : null);
-                if (raw) finalImageUrl = joinApiUrl(String(raw));
-              }
+      if (!finalImageUrl && typeIdValue === 1) {
+        try {
+          const ri = await fetch(`${API_BASE_NO_SLASH}/api/listings/${listingId}/images`, {
+            credentials: 'include',
+            headers: {
+              ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+            },
+          });
+          if (ri.ok) {
+            const imgs = await ri.json();
+            if (Array.isArray(imgs) && imgs.length > 0) {
+              const first = imgs[0];
+              const raw =
+                (first && (first.dataUrl || first.url || first.path)) ||
+                (typeof first === 'string' ? first : null);
+              if (raw) finalImageUrl = joinApiUrl(String(raw));
             }
-          } catch (e: any) {
-            if (e?.name !== 'AbortError') console.error(e);
           }
+        } catch {
+          return {
+            id: Number(l.id),
+            title: l.title || '',
+            imageUrl: finalImageUrl,
+            thumbnailUrl: finalImageUrl,
+            typeId: typeIdValue,
+          };
         }
-
-        setListingInfo({
-          id: l.id,
-          title: l.title || '',
-          imageUrl: finalImageUrl,
-          thumbnailUrl: finalImageUrl,
-          typeId: typeIdValue,
-        });
-      } catch (e: any) {
-        if (e?.name === 'AbortError') return;
-        console.error('Błąd pobierania ogłoszenia do podglądu:', e);
       }
-    };
 
-    fetchListing();
-    return () => controller.abort();
-  }, [listingId]);
+      return {
+        id: Number(l.id),
+        title: l.title || '',
+        imageUrl: finalImageUrl,
+        thumbnailUrl: finalImageUrl,
+        typeId: typeIdValue,
+      };
+    },
+  });
 
-  useEffect(() => {
-    if (!user || !listingId || !resolvedPeerId) return;
+  const negotiationQueryKey = useMemo(
+    () => ['price-negotiation', listingId, resolvedPeerId],
+    [listingId, resolvedPeerId]
+  );
 
-    const controller = new AbortController();
+  const { data: negotiationData, isPending: negoLoading } = useQuery<
+    { negotiation: PriceNegotiation | null; offers: PriceOffer[] },
+    Error
+  >({
+    queryKey: negotiationQueryKey,
+    enabled: !!user && !!listingId && !!resolvedPeerId,
+    staleTime: 5_000,
+    queryFn: async () => {
+      const qs = new URLSearchParams();
+      qs.set('listingId', String(listingId));
+      qs.set('otherUserId', String(resolvedPeerId));
 
-    const fetchNegotiation = async () => {
-      try {
-        setNegoLoading(true);
+      const res = await fetch(`${API_BASE}/api/price-offers/negotiation?${qs.toString()}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
 
-        const qs = new URLSearchParams();
-        qs.set('listingId', String(listingId));
-        qs.set('otherUserId', String(resolvedPeerId));
-
-        const res = await fetch(`${API_BASE}/api/price-offers/negotiation?${qs.toString()}`, {
-          credentials: 'include',
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-          },
-        });
-
-        const data = await res.json().catch(() => null);
-
-        if (!res.ok || !data?.ok) {
-          setNegotiation(null);
-          setOffers([]);
-          return;
-        }
-
-        setNegotiation(normalizeNegotiation(data.negotiation));
-        setOffers(normalizeOffers(data.offers));
-      } catch (e: any) {
-        if (e?.name === 'AbortError') return;
-        setNegotiation(null);
-        setOffers([]);
-      } finally {
-        setNegoLoading(false);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        return { negotiation: null, offers: [] };
       }
-    };
 
-    fetchNegotiation();
-    return () => controller.abort();
-  }, [user, listingId, resolvedPeerId]);
+      return {
+        negotiation: normalizeNegotiation(data.negotiation),
+        offers: normalizeOffers(data.offers),
+      };
+    },
+  });
+
+  const negotiation = negotiationData?.negotiation ?? null;
+  const offers = negotiationData?.offers ?? [];
 
   const socketRef = useRef<any>(null);
 
@@ -428,12 +389,15 @@ const MessagesConversationPage: React.FC = () => {
     });
 
     socket.on('chat:new-message', (msg: any) => {
-      if (msg.listing_id !== listingId) return;
+      if (Number(msg?.listing_id) !== listingId) return;
 
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === msg.id)) return prev;
-        return [...prev, msg];
+      queryClient.setQueryData(conversationQueryKey, (prev: any) => {
+        const prevMessages: ChatMessage[] = prev?.messages || [];
+        if (prevMessages.some((m) => m.id === Number(msg.id))) return prev;
+        return { ...(prev || {}), messages: [...prevMessages, msg as ChatMessage], peer: prev?.peer ?? peerInfo ?? null };
       });
+
+      queryClient.invalidateQueries({ queryKey: inboxQueryKey });
     });
 
     socket.on('chat:typing', (payload: any) => {
@@ -460,11 +424,11 @@ const MessagesConversationPage: React.FC = () => {
       socketRef.current = null;
       socket.disconnect();
     };
-  }, [user, listingId]);
+  }, [user, listingId, conversationQueryKey, peerInfo, queryClient, inboxQueryKey]);
 
   useEffect(() => {
     if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length]);
 
   useEffect(() => {
     return () => {
@@ -514,17 +478,12 @@ const MessagesConversationPage: React.FC = () => {
     }
   };
 
-  const sendMessage = async () => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    if (!listingId) return;
-    if (!content.trim()) return;
+  const sendMutation = useMutation<ChatMessage, Error, void>({
+    mutationFn: async () => {
+      if (!user) throw new Error('Brak sesji');
+      if (!listingId) throw new Error('Brak listingId');
+      if (!content.trim()) throw new Error('Pusta wiadomość');
 
-    setSending(true);
-
-    try {
       const res = await fetch(`${API_BASE}/api/messages`, {
         method: 'POST',
         credentials: 'include',
@@ -539,22 +498,27 @@ const MessagesConversationPage: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.ok) {
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
         const msg = data?.error || 'Nie udało się wysłać wiadomości.';
         throw new Error(msg);
       }
 
-      setMessages((prev) => (prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]));
+      return data.message as ChatMessage;
+    },
+    onSuccess: (msg) => {
+      queryClient.setQueryData(conversationQueryKey, (prev: any) => {
+        const prevMessages: ChatMessage[] = prev?.messages || [];
+        if (prevMessages.some((m) => m.id === msg.id)) return prev;
+        return { ...(prev || {}), messages: [...prevMessages, msg], peer: prev?.peer ?? peerInfo ?? null };
+      });
+      queryClient.invalidateQueries({ queryKey: inboxQueryKey });
       setContent('');
       setIsTyping(false);
-    } catch (err) {
-      console.error('Błąd podczas wysyłania wiadomości:', err);
-    } finally {
-      setSending(false);
-    }
-  };
+    },
+  });
+
+  const sending = sendMutation.isPending;
 
   const formatPLN = (n: number) =>
     new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(n);
@@ -569,28 +533,6 @@ const MessagesConversationPage: React.FC = () => {
     if (s === 'open') return 'open';
     if (s === 'accepted') return 'accepted';
     return 'rejected';
-  };
-
-  const reloadNegotiation = async () => {
-    if (!user || !listingId || !resolvedPeerId) return;
-
-    const qs = new URLSearchParams();
-    qs.set('listingId', String(listingId));
-    qs.set('otherUserId', String(resolvedPeerId));
-
-    const res = await fetch(`${API_BASE}/api/price-offers/negotiation?${qs.toString()}`, {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-    });
-
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.ok) return;
-
-    setNegotiation(normalizeNegotiation(data.negotiation));
-    setOffers(normalizeOffers(data.offers));
   };
 
   const submitOffer = async () => {
@@ -629,7 +571,7 @@ const MessagesConversationPage: React.FC = () => {
       }
 
       setOfferInput('');
-      await reloadNegotiation();
+      queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
     } finally {
       setOfferSending(false);
     }
@@ -647,7 +589,8 @@ const MessagesConversationPage: React.FC = () => {
       alert(p?.error || 'Nie udało się zaakceptować oferty.');
       return;
     }
-    await reloadNegotiation();
+
+    queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
   };
 
   const rejectNegotiation = async () => {
@@ -664,12 +607,13 @@ const MessagesConversationPage: React.FC = () => {
       alert(p?.error || 'Nie udało się odrzucić negocjacji.');
       return;
     }
-    await reloadNegotiation();
+
+    queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
   };
 
-  const handleSend = async (e: React.FormEvent) => {
+  const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    await sendMessage();
+    if (!sending && content.trim()) sendMutation.mutate();
   };
 
   const handleTypingChange = (value: string) => {
@@ -866,10 +810,10 @@ const MessagesConversationPage: React.FC = () => {
         </div>
       ) : null}
 
-      {loading ? (
+      {loadingConversation ? (
         <p className="messages-conv-info">Ładowanie konwersacji...</p>
-      ) : error ? (
-        <p className="messages-conv-error">{error}</p>
+      ) : conversationError ? (
+        <p className="messages-conv-error">{conversationError.message}</p>
       ) : (
         <>
           <div className="messages-conv-thread">
@@ -926,7 +870,7 @@ const MessagesConversationPage: React.FC = () => {
             <div ref={bottomRef} />
           </div>
 
-          <form className="messages-conv-form" onSubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+          <form className="messages-conv-form" onSubmit={handleSend}>
             <div className="messages-conv-typing">
               {remoteTyping ? `${peerName || 'Użytkownik'} pisze…` : isTyping ? 'Piszesz…' : '\u00A0'}
             </div>
@@ -939,7 +883,7 @@ const MessagesConversationPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (!sending && content.trim()) sendMessage();
+                  if (!sending && content.trim()) sendMutation.mutate();
                 }
               }}
               rows={3}

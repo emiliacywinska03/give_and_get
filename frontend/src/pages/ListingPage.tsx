@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './ListingPage.css';
 import { useAuth } from '../auth/AuthContext';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
-
-
 
 type Category = { id: number; name: string };
 type Subcategory = { id: number; name: string };
@@ -29,196 +28,56 @@ interface Listing {
 type FilterType = '' | 'work' | 'help' | 'sales';
 
 const getDefaultIconForType = (typeId?: number) => {
-  if (typeId === 3) {
-    // PRACA
-    return "/icons/work-case-filled-svgrepo-com.svg";
-  }
-  if (typeId === 2) {
-    // POMOC
-    return "/icons/hands-holding-heart-svgrepo-com.svg";
-  }
+  if (typeId === 3) return '/icons/work-case-filled-svgrepo-com.svg';
+  if (typeId === 2) return '/icons/hands-holding-heart-svgrepo-com.svg';
   return null;
 };
-
 
 const ListingPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
-  const [subcategoryFilter, setSubcategoryFilter] = useState<number | ''>('');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
-  const [helpTypeFilter, setHelpTypeFilter] = useState<'all' | 'offer' | 'need'>('all');
+  const queryClient = useQueryClient();
 
-  const params = new URLSearchParams(location.search);
+  const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const urlType = params.get('type') as FilterType | null;
 
   const searchParamRaw = params.get('search');
   const searchParam = (searchParamRaw ?? '').trim().toLowerCase();
 
   const [typeFilter, setTypeFilter] = useState<FilterType>(
-    urlType === 'work' || urlType === 'sales' || urlType === 'help'
-      ? urlType
-      : ''
+    urlType === 'work' || urlType === 'sales' || urlType === 'help' ? urlType : ''
   );
+  const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
+  const [subcategoryFilter, setSubcategoryFilter] = useState<number | ''>('');
+  const [helpTypeFilter, setHelpTypeFilter] = useState<'all' | 'offer' | 'need'>('all');
 
+  const favoritesQueryKey = useMemo(() => ['listings', 'favorites'], []);
 
-  // Wczytanie ulubionych ogłoszeń (raz, po zalogowaniu)
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      if (!user) {
-        setFavoriteIds([]);
-        return;
-      }
-      try {
-        const res = await fetch(`${API_BASE}/api/listings/favorites`, {
-          credentials: 'include',
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-        });
-        const data = await res.json();
-        if (res.ok && Array.isArray(data)) {
-          setFavoriteIds(data.map((it: any) => it.id));
-        }
-      } catch (e) {
-        console.error('Błąd pobierania ulubionych:', e);
-      }
-    };
-    fetchFavorites();
-  }, [user]);
-
-
-
-
-  // Pobieranie kategorii po zmianie typu
-  useEffect(() => {
-    const run = async () => {
-      setCategories([]);
-      setCategoryFilter('');
-      setSubcategories([]);
-      setSubcategoryFilter('');
-
-      if (!typeFilter) return;
-
-      const res = await fetch(`${API_BASE}/api/listings/categories`, {
+  const { data: favoriteIds = [] } = useQuery<number[], Error>({
+    queryKey: favoritesQueryKey,
+    enabled: !!user,
+    staleTime: 20_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/listings/favorites`, {
+        credentials: 'include',
         headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
       });
-      const all: Category[] = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data)) return [];
+      return data.map((it: any) => Number(it.id)).filter((x: any) => Number.isFinite(x));
+    },
+  });
 
-      const map: Record<string, string> = {
-        work: 'Praca',
-        help: 'Pomoc',
-        sales: 'Sprzedaż',
-      };
-      const filtered = all.filter((c) => c.name === map[typeFilter]);
-
-      setCategories(filtered);
-      if (filtered.length) setCategoryFilter(filtered[0].id);
-    };
-    run().catch(console.error);
-  }, [typeFilter]);
-
-  // Pobieranie podkategorii po zmianie kategorii
-  useEffect(() => {
-    const run = async () => {
-      setSubcategories([]);
-      setSubcategoryFilter('');
-      if (!categoryFilter) return;
-
-      const res = await fetch(
-        `${API_BASE}/api/listings/subcategories?category_id=${categoryFilter}`,
-        {
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-        }
-      );
-      const data: Subcategory[] = await res.json();
-      setSubcategories(data);
-    };
-    run().catch(console.error);
-  }, [categoryFilter]);
-
-  // Pobieranie ogłoszeń na podstawie filtrów
-  useEffect(() => {
-    setLoading(true);
-    const q = new URLSearchParams();
-
-    const mapTypeToCategoryName: Record<string, string> = {
-      work: 'praca',
-      help: 'pomoc',
-      sales: 'sprzedaż',
-    };
-    if (typeFilter) q.set('category', mapTypeToCategoryName[typeFilter]);
-
-    if (categoryFilter) q.set('category_id', String(categoryFilter));
-    if (subcategoryFilter) q.set('subcategory_id', String(subcategoryFilter));
-
-    if (typeFilter === 'help' && helpTypeFilter !== 'all') {
-      q.set('help_type', helpTypeFilter);
-    }
-
-    const qs = q.toString();
-    const url = qs ? `${API_BASE}/api/listings?${qs}` : `${API_BASE}/api/listings`;
-
-    fetch(url, {
-      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-    })
-      .then((res) => {
-        if (!res.ok)
-          return res.text().then((t) => {
-            throw new Error(`HTTP ${res.status}: ${t}`);
-          });
-        return res.json();
-      })
-      .then((data) => {
-        const filled: Listing[] = data;
-
-        const filtered = searchParam
-          ? filled.filter((l: any) => {
-              const title = (l.title ?? '').toLowerCase();
-              const desc = (l.description ?? '').toLowerCase();
-              const loc = (l.location ?? '').toLowerCase();
-
-              return (
-                title.includes(searchParam) ||
-                desc.includes(searchParam) ||
-                loc.includes(searchParam)
-              );
-            })
-          : filled;
-
-        setListings(filtered);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Błąd przy pobieraniu ogłoszeń: ', err);
-        setLoading(false);
-      });
-  }, [typeFilter, categoryFilter, subcategoryFilter, helpTypeFilter, location.search]);
-
-
-
-  //Kliknięcie serduszka w kafelku
-  const handleToggleFavorite = async (
-    e: React.MouseEvent,
-    listingId: number,
-    isCurrentlyFavorite: boolean
-  ) => {
-    e.preventDefault(); 
-    e.stopPropagation();
-
-
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    try {
+  const toggleFavoriteMutation = useMutation<
+    void,
+    Error,
+    { listingId: number; isCurrentlyFavorite: boolean }
+  >({
+    mutationFn: async ({ listingId, isCurrentlyFavorite }) => {
+      if (!user) throw new Error('Brak sesji');
       const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
       const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
-
         method,
         credentials: 'include',
         headers: {
@@ -226,23 +85,150 @@ const ListingPage: React.FC = () => {
           ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
         },
       });
-
-
       if (!res.ok) {
-        console.error('Błąd zmiany ulubionych:', await res.text());
-        return;
+        const t = await res.text().catch(() => '');
+        throw new Error(t || 'Błąd zmiany ulubionych');
       }
+    },
+    onMutate: async ({ listingId, isCurrentlyFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: favoritesQueryKey });
+      const prev = queryClient.getQueryData<number[]>(favoritesQueryKey) || [];
+      const next = isCurrentlyFavorite ? prev.filter((id) => id !== listingId) : [...prev, listingId];
+      queryClient.setQueryData<number[]>(favoritesQueryKey, next);
+      return { prev } as any;
+    },
+    onError: (_err, _vars, ctx: any) => {
+      if (ctx?.prev) queryClient.setQueryData<number[]>(favoritesQueryKey, ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: favoritesQueryKey });
+    },
+  });
 
-      setFavoriteIds((prev) =>
-        isCurrentlyFavorite
-          ? prev.filter((id) => id !== listingId)
-          : [...prev, listingId]
-      );
-    } catch (err) {
-      console.error('Błąd podczas zmiany ulubionych:', err);
-    }
+  const { data: allCategories = [] } = useQuery<Category[], Error>({
+    queryKey: ['listings', 'categories'],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/listings/categories`, {
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+      const data = await res.json().catch(() => []);
+      return Array.isArray(data) ? (data as Category[]) : [];
+    },
+  });
+
+  const categories = useMemo(() => {
+    if (!typeFilter) return [];
+    const map: Record<string, string> = { work: 'Praca', help: 'Pomoc', sales: 'Sprzedaż' };
+    return allCategories.filter((c) => c.name === map[typeFilter]);
+  }, [allCategories, typeFilter]);
+
+  const effectiveCategoryId = categoryFilter || (categories.length ? categories[0].id : '');
+
+  const { data: subcategories = [] } = useQuery<Subcategory[], Error>({
+    queryKey: ['listings', 'subcategories', effectiveCategoryId],
+    enabled: !!effectiveCategoryId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/listings/subcategories?category_id=${effectiveCategoryId}`, {
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+      const data = await res.json().catch(() => []);
+      return Array.isArray(data) ? (data as Subcategory[]) : [];
+    },
+  });
+
+  const listingsQueryKey = useMemo(
+    () => ['listings', 'list', { typeFilter, effectiveCategoryId, subcategoryFilter, helpTypeFilter, searchParam }],
+    [typeFilter, effectiveCategoryId, subcategoryFilter, helpTypeFilter, searchParam]
+  );
+
+  const prefetchListingDetails = async (listingId: number) => {
+    const idStr = String(listingId);
+
+    await queryClient.prefetchQuery({
+      queryKey: ['listing', idStr],
+      staleTime: 15_000,
+      queryFn: async () => {
+        const res = await fetch(`${API_BASE}/api/listings/${idStr}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => '');
+          throw new Error(t || `HTTP ${res.status}`);
+        }
+        return await res.json();
+      },
+    });
   };
 
+  const { data: listings = [], isPending: loading } = useQuery<Listing[], Error>({
+    queryKey: listingsQueryKey,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const q = new URLSearchParams();
+
+      const mapTypeToCategoryName: Record<string, string> = {
+        work: 'praca',
+        help: 'pomoc',
+        sales: 'sprzedaż',
+      };
+      if (typeFilter) q.set('category', mapTypeToCategoryName[typeFilter]);
+
+      if (effectiveCategoryId) q.set('category_id', String(effectiveCategoryId));
+      if (subcategoryFilter) q.set('subcategory_id', String(subcategoryFilter));
+
+      if (typeFilter === 'help' && helpTypeFilter !== 'all') {
+        q.set('help_type', helpTypeFilter);
+      }
+
+      const qs = q.toString();
+      const url = qs ? `${API_BASE}/api/listings?${qs}` : `${API_BASE}/api/listings`;
+
+      const res = await fetch(url, {
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json().catch(() => []);
+      const filled: Listing[] = Array.isArray(data) ? data : [];
+
+      if (!searchParam) return filled;
+
+      return filled.filter((l: any) => {
+        const title = (l.title ?? '').toLowerCase();
+        const desc = (l.description ?? '').toLowerCase();
+        const loc = (l.location ?? '').toLowerCase();
+        return title.includes(searchParam) || desc.includes(searchParam) || loc.includes(searchParam);
+      });
+    },
+  });
+
+  const handleToggleFavorite = (
+    e: React.MouseEvent,
+    listingId: number,
+    isCurrentlyFavorite: boolean
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (!toggleFavoriteMutation.isPending) {
+      toggleFavoriteMutation.mutate({ listingId, isCurrentlyFavorite });
+    }
+  };
 
   return (
     <div className="listing-page">
@@ -258,7 +244,6 @@ const ListingPage: React.FC = () => {
 
       <div className="filters-shell">
         <div className="filters-bar">
-          {/* Typ ogłoszenia */}
           <div className="filter-group">
             <label className="filter-label" htmlFor="typeFilter">
               Typ
@@ -271,6 +256,8 @@ const ListingPage: React.FC = () => {
                 const v = e.target.value as FilterType;
                 setTypeFilter(v);
                 setHelpTypeFilter('all');
+                setCategoryFilter('');
+                setSubcategoryFilter('');
               }}
             >
               <option value="">Wszystkie typy</option>
@@ -280,7 +267,6 @@ const ListingPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Podkategoria */}
           <div className="filter-group">
             <label className="filter-label" htmlFor="subcategoryFilter">
               Podkategoria
@@ -289,9 +275,7 @@ const ListingPage: React.FC = () => {
               id="subcategoryFilter"
               className="filter-select"
               value={subcategoryFilter}
-              onChange={(e) =>
-                setSubcategoryFilter(Number(e.target.value) || '')
-              }
+              onChange={(e) => setSubcategoryFilter(Number(e.target.value) || '')}
             >
               <option value="">Wszystkie</option>
               {subcategories.map((s) => (
@@ -302,7 +286,6 @@ const ListingPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Rodzaj pomocy – tylko dla typu „Pomoc” */}
           {typeFilter === 'help' && (
             <div className="filter-group">
               <label className="filter-label" htmlFor="helpTypeFilter">
@@ -312,9 +295,7 @@ const ListingPage: React.FC = () => {
                 id="helpTypeFilter"
                 className="filter-select"
                 value={helpTypeFilter}
-                onChange={(e) =>
-                  setHelpTypeFilter(e.target.value as 'all' | 'offer' | 'need')
-                }
+                onChange={(e) => setHelpTypeFilter(e.target.value as 'all' | 'offer' | 'need')}
               >
                 <option value="all">Wszystkie</option>
                 <option value="offer">Oferuję pomoc</option>
@@ -325,14 +306,11 @@ const ListingPage: React.FC = () => {
         </div>
       </div>
 
-
       {loading ? (
-      <p style={{ textAlign: 'center', marginTop: '20px' }}>
-        Ładowanie ogłoszeń...
-      </p>
-    ) : listings.length === 0 ? (
-      <p>Brak ogłoszeń.</p>
-    ) : (
+        <p style={{ textAlign: 'center', marginTop: '20px' }}>Ładowanie ogłoszeń...</p>
+      ) : listings.length === 0 ? (
+        <p>Brak ogłoszeń.</p>
+      ) : (
         <div className="listing-grid">
           {listings.map((listing) => {
             const isFav = favoriteIds.includes(listing.id);
@@ -348,10 +326,13 @@ const ListingPage: React.FC = () => {
                   ? listing.author_avatar_url
                   : `${API_BASE}${listing.author_avatar_url}`
                 : null;
+
             return (
               <div
                 key={listing.id}
                 className="listing-card"
+                onMouseEnter={() => prefetchListingDetails(listing.id)}
+                onFocus={() => prefetchListingDetails(listing.id)}
                 onClick={() =>
                   navigate(`/listing/${listing.id}`, {
                     state: {
@@ -363,17 +344,10 @@ const ListingPage: React.FC = () => {
                 }
                 style={{ cursor: 'pointer' }}
               >
-                {/* ikona serduszka w rogu kafelka */}
                 <button
-                  className={`favorite-toggle ${
-                    isFav ? 'favorite-toggle--active' : ''
-                  }`}
-                  aria-label={
-                    isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'
-                  }
-                  onClick={(e) =>
-                    handleToggleFavorite(e, listing.id, isFav)
-                  }
+                  className={`favorite-toggle ${isFav ? 'favorite-toggle--active' : ''}`}
+                  aria-label={isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+                  onClick={(e) => handleToggleFavorite(e, listing.id, isFav)}
                 >
                   <svg
                     aria-hidden="true"
@@ -393,68 +367,45 @@ const ListingPage: React.FC = () => {
                   </svg>
                 </button>
 
-                  {/* znaczek WYRÓŻNIONE */}
-                  {listing.is_featured && (
-                    <div
-                      className="featured-badge"
-                      onClick={(e) => {
-                        e.stopPropagation();   
-                      }}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="#FACC15"     
-                      >
-                        <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
-                      </svg>
-                    </div>
-                  )}
+                {listing.is_featured && (
+                  <div
+                    className="featured-badge"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#FACC15">
+                      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.173L12 18.896l-7.336 3.874 1.402-8.173L.132 9.21l8.2-1.192z" />
+                    </svg>
+                  </div>
+                )}
 
-                <Link
-                  to={`/listing/${listing.id}`}
-                  state={{
-                    listingTitle: listing.title,
-                    categoryName: listing.category_name,
-                    subcategoryName: listing.subcategory_name,
-                  }}
+                <div
                   className="listing-link"
                   aria-label={`Zobacz ogłoszenie: ${listing.title}`}
                   style={{ textDecoration: 'none', color: 'inherit' }}
                 >
                   <div className="listing-thumb-wrapper">
-                  {imgSrc ? (
-                    <img
-                      className="listing-thumb"
-                      src={imgSrc}
-                      alt={listing.title}
-                    />
-                  ) : getDefaultIconForType(listing.type_id) ? (
-                    <div className="listing-thumb-space">
-                      <img
-                        className="listing-thumb"
-                        src={getDefaultIconForType(listing.type_id)!}
-                        alt="Ikona ogłoszenia"
-                        style={{ objectFit: "contain", padding: "12px" }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="listing-thumb-space">
-                      <svg
-                        className="listing-thumb-placeholder-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <rect x="4" y="4" width="16" height="16" rx="3" />
-                        <path d="M9 9l6 6M15 9l-6 6" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-
+                    {imgSrc ? (
+                      <img className="listing-thumb" src={imgSrc} alt={listing.title} />
+                    ) : getDefaultIconForType(listing.type_id) ? (
+                      <div className="listing-thumb-space">
+                        <img
+                          className="listing-thumb"
+                          src={getDefaultIconForType(listing.type_id)!}
+                          alt="Ikona ogłoszenia"
+                          style={{ objectFit: 'contain', padding: '12px' }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="listing-thumb-space">
+                        <svg className="listing-thumb-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <rect x="4" y="4" width="16" height="16" rx="3" />
+                          <path d="M9 9l6 6M15 9l-6 6" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
 
                   <h3 className="listing-title">{listing.title}</h3>
                   <p className="listing-author">
@@ -477,10 +428,8 @@ const ListingPage: React.FC = () => {
                     </span>
                     Autor: {listing.author_username ?? 'nieznany'}
                   </p>
-                  <p className="listing-location">
-                    Lokalizacja: {listing.location}
-                  </p>
-                </Link>
+                  <p className="listing-location">Lokalizacja: {listing.location}</p>
+                </div>
               </div>
             );
           })}
