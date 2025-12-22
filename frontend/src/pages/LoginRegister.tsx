@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './LoginRegister.css';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
@@ -80,6 +80,152 @@ const LoginRegister: React.FC = () => {
   const [touchedLogin, setTouchedLogin] = useState<{ login?: boolean; password?: boolean }>({});
   const [errorsLogin, setErrorsLogin] = useState<{ login?: string; password?: string; general?: string }>({});
   const [submittingLogin, setSubmittingLogin] = useState(false);
+
+  // --- ODZYSKIWANIE HASŁA (pytanie weryfikacyjne) ---
+  const [recoverOpen, setRecoverOpen] = useState(false);
+  const [recoverStep, setRecoverStep] = useState<1 | 2>(1);
+  const [recoverLogin, setRecoverLogin] = useState('');
+  const [recoverQuestion, setRecoverQuestion] = useState<{ id: number; text: string } | null>(null);
+  const [recoverAnswer, setRecoverAnswer] = useState('');
+  const [recoverNewPass, setRecoverNewPass] = useState('');
+  const [recoverConfirm, setRecoverConfirm] = useState('');
+  const [recoverBusy, setRecoverBusy] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState<string | null>(null);
+  const [recoverErr, setRecoverErr] = useState<string | null>(null);
+
+  const resetRecoverState = () => {
+    setRecoverStep(1);
+    setRecoverLogin('');
+    setRecoverQuestion(null);
+    setRecoverAnswer('');
+    setRecoverNewPass('');
+    setRecoverConfirm('');
+    setRecoverMsg(null);
+    setRecoverErr(null);
+    setRecoverBusy(false);
+  };
+
+  const openRecover = () => {
+    setRecoverOpen(true);
+    setRecoverMsg(null);
+    setRecoverErr(null);
+    setRecoverStep(1);
+    setRecoverLogin(loginValue.trim());
+    setRecoverQuestion(null);
+    setRecoverAnswer('');
+    setRecoverNewPass('');
+    setRecoverConfirm('');
+  };
+
+  const closeRecover = () => {
+    setRecoverOpen(false);
+    resetRecoverState();
+  };
+
+  const recoverLoginError = useMemo(() => {
+    const v = recoverLogin.trim();
+    if (!v || v.length < 3) return 'Wpisz e-mail lub nazwę (min. 3 znaki).';
+    if (v.includes('@')) {
+      if (!emailRegex.test(v)) return 'Wpisz poprawny adres e-mail.';
+    } else {
+      if (!usernameRegex.test(v)) return 'Wpisz nazwę 3–30 znaków (litery, cyfry, kropka, podkreślnik, myślnik).';
+    }
+    return null;
+  }, [recoverLogin]);
+
+  const recoverResetError = useMemo(() => {
+    if (!recoverQuestion) return 'Najpierw pobierz pytanie.';
+    if (!recoverAnswer.trim() || recoverAnswer.trim().length < 3) return 'Wpisz odpowiedź (min. 3 znaki).';
+    if (!recoverNewPass) return 'Wpisz nowe hasło.';
+    if (!passwordRegex.test(recoverNewPass)) return 'Wpisz mocniejsze hasło: min. 8 znaków, mała/DUŻA litera, cyfra, symbol.';
+    if (!recoverConfirm) return 'Potwierdź nowe hasło.';
+    if (recoverConfirm !== recoverNewPass) return 'Hasła muszą być identyczne.';
+    return null;
+  }, [recoverQuestion, recoverAnswer, recoverNewPass, recoverConfirm]);
+
+  const fetchRecoverQuestion = async () => {
+    setRecoverErr(null);
+    setRecoverMsg(null);
+    const e = recoverLoginError;
+    if (e) {
+      setRecoverErr(e);
+      return;
+    }
+
+    try {
+      setRecoverBusy(true);
+      const res = await fetch(`${API_BASE}/api/auth/recover/question`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ login: recoverLogin.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        const msg = (Array.isArray(data.errors) && data.errors[0]?.message) || data.message || 'Nie udało się pobrać pytania.';
+        setRecoverErr(msg);
+        return;
+      }
+
+      if (!data.question || typeof data.question.text !== 'string') {
+        setRecoverErr('Niepoprawna odpowiedź serwera (brak pytania).');
+        return;
+      }
+
+      setRecoverQuestion({ id: Number(data.question.id), text: String(data.question.text) });
+      setRecoverStep(2);
+    } catch (err) {
+      console.error(err);
+      setRecoverErr('Problem z połączeniem z serwerem.');
+    } finally {
+      setRecoverBusy(false);
+    }
+  };
+
+  const submitRecoverReset = async () => {
+    setRecoverErr(null);
+    setRecoverMsg(null);
+    const e = recoverResetError;
+    if (e) {
+      setRecoverErr(e);
+      return;
+    }
+
+    try {
+      setRecoverBusy(true);
+      const res = await fetch(`${API_BASE}/api/auth/recover/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          login: recoverLogin.trim(),
+          security_answer: recoverAnswer.trim(),
+          new_password: recoverNewPass,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        const msg = (Array.isArray(data.errors) && data.errors[0]?.message) || data.message || 'Nie udało się zresetować hasła.';
+        setRecoverErr(msg);
+        return;
+      }
+
+      setRecoverMsg(data.message || 'Hasło zostało zmienione. Możesz się zalogować.');
+      setRecoverAnswer('');
+      setRecoverNewPass('');
+      setRecoverConfirm('');
+      setRecoverStep(1);
+      setRecoverQuestion(null);
+      setRecoverOpen(false);
+    } catch (err) {
+      console.error(err);
+      setRecoverErr('Problem z połączeniem z serwerem.');
+    } finally {
+      setRecoverBusy(false);
+    }
+  };
 
   const validateLogin = (login: string, password: string) => {
     const e: { login?: string; password?: string } = {};
@@ -283,6 +429,7 @@ const LoginRegister: React.FC = () => {
       </div>
 
       {activeTab === 'login' ? (
+        <>
         <form className="auth-form" onSubmit={onSubmitLogin} noValidate>
           <h2>Zaloguj się</h2>
 
@@ -319,7 +466,114 @@ const LoginRegister: React.FC = () => {
           </label>
 
           <button type="submit" disabled={submittingLogin}>{submittingLogin ? 'Logowanie…' : 'Zaloguj się'}</button>
+
+          <div className="forgot-row">
+          <button
+            type="button"
+            onClick={openRecover}
+            disabled={submittingLogin}
+            className="forgot-link"
+          >
+            Zapomniałeś hasła?
+          </button>
+        </div>
         </form>
+        {recoverOpen ? (
+          <div className="recover-box">
+            <div className="recover-header">
+            <h2 style={{ margin: 0 }}>Odzyskiwanie hasła</h2>
+            <button
+              type="button"
+              onClick={closeRecover}
+              disabled={recoverBusy}
+              className="recover-close"
+            >
+              Zamknij
+            </button>
+          </div>
+
+            {recoverErr && <div className="form-error" role="alert">{recoverErr}</div>}
+            {recoverMsg && <div className="form-success" role="status">{recoverMsg}</div>}
+
+            {recoverStep === 1 ? (
+              <>
+                <label>
+                  Email lub nazwa użytkownika
+                  <input
+                    type="text"
+                    value={recoverLogin}
+                    onChange={(e) => setRecoverLogin(e.target.value)}
+                    disabled={recoverBusy}
+                  />
+                </label>
+
+                <button type="button" onClick={fetchRecoverQuestion} disabled={recoverBusy || !!recoverLoginError}>
+                  {recoverBusy ? 'Pobieranie pytania…' : 'Dalej'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="recover-question">{recoverQuestion?.text}</div>
+
+                <label>
+                  Odpowiedź
+                  <input
+                    type="text"
+                    value={recoverAnswer}
+                    onChange={(e) => setRecoverAnswer(e.target.value)}
+                    disabled={recoverBusy}
+                  />
+                </label>
+
+                <label>
+                  Nowe hasło
+                  <input
+                    type="password"
+                    value={recoverNewPass}
+                    onChange={(e) => setRecoverNewPass(e.target.value)}
+                    disabled={recoverBusy}
+                  />
+                </label>
+
+                <label>
+                  Potwierdź nowe hasło
+                  <input
+                    type="password"
+                    value={recoverConfirm}
+                    onChange={(e) => setRecoverConfirm(e.target.value)}
+                    disabled={recoverBusy}
+                  />
+                </label>
+
+                <div className="recover-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoverStep(1);
+                      setRecoverQuestion(null);
+                      setRecoverErr(null);
+                      setRecoverMsg(null);
+                    }}
+                    disabled={recoverBusy}
+                    style={{ flex: 1 }}
+                  >
+                    Wstecz
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={submitRecoverReset}
+                    disabled={recoverBusy || !!recoverResetError}
+                    style={{ flex: 2 }}
+                  >
+                    {recoverBusy ? 'Zmieniam hasło…' : 'Zmień hasło'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
+        </>
       ) : (
         <form className="auth-form" onSubmit={onSubmitRegister} noValidate>
           <h2>Zarejestruj się</h2>

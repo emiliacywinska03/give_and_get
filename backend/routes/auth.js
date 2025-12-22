@@ -1,12 +1,26 @@
 const express = require('express');
 const { pool } = require('../db');
 const { registerSchema, loginSchema, validate } = require('../validation/authSchemas.js');
+const { z } = require('zod');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
-//sprawdzanie sesji na podstawie ciasteczka gg_token
+const recoverQuestionSchema = z.object({
+  login: z.string().trim().min(3, 'Wpisz nazwę użytkownika lub e-mail.'),
+});
+
+const recoverResetSchema = z.object({
+  login: z.string().trim().min(3, 'Wpisz nazwę użytkownika lub e-mail.'),
+  security_answer: z
+    .string()
+    .trim()
+    .min(3, 'Wpisz odpowiedź (min. 3 znaki).')
+    .max(100, 'Wpisz krótszą odpowiedź (max 100 znaków).'),
+  new_password: z.string().min(8, 'Hasło musi mieć min. 8 znaków.'),
+});
+
 function authRequired(req, res, next) {
   try {
     const token = req.cookies?.gg_token;
@@ -19,7 +33,6 @@ function authRequired(req, res, next) {
   }
 }
 
-// GET /api/auth/questions – lista pytań bezpieczeństwa
 router.get('/questions', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -35,20 +48,84 @@ router.get('/questions', async (req, res) => {
   }
 });
 
-// POST /api/auth/register – rejestracja
+router.post('/recover/question', validate(recoverQuestionSchema), async (req, res) => {
+  const { login } = req.valid;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.security_question_id AS id, q.text
+       FROM "user" u
+       JOIN security_question q ON q.id = u.security_question_id AND q.active = TRUE
+       WHERE (u.username = $1 OR u.email = $1)
+       LIMIT 1`,
+      [login]
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({ ok: false, errors: [{ message: 'Nie znaleziono użytkownika lub brak pytania weryfikacyjnego' }] });
+    }
+
+    return res.json({ ok: true, question: { id: rows[0].id, text: rows[0].text } });
+  } catch (err) {
+    console.error('Błąd recover/question:', err);
+    return res.status(500).json({ ok: false, message: 'Błąd serwera' });
+  }
+});
+
+router.post('/recover/reset', validate(recoverResetSchema), async (req, res) => {
+  const { login, security_answer, new_password } = req.valid;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, security_answer_hash
+       FROM "user"
+       WHERE username = $1 OR email = $1
+       LIMIT 1`,
+      [login]
+    );
+
+    const user = rows[0];
+    if (!user || !user.security_answer_hash) {
+      return res.status(400).json({ ok: false, errors: [{ message: 'Nieprawidłowe dane odzyskiwania' }] });
+    }
+
+    const ok = await bcrypt.compare(security_answer, user.security_answer_hash);
+    if (!ok) {
+      return res.status(400).json({ ok: false, errors: [{ message: 'Nieprawidłowa odpowiedź' }] });
+    }
+
+    const hash = await bcrypt.hash(new_password, 10);
+    await pool.query(
+      `UPDATE "user" SET password_hash = $1 WHERE id = $2`,
+      [hash, user.id]
+    );
+
+    res.clearCookie('gg_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+
+    return res.json({ ok: true, message: 'Hasło zostało zmienione. Możesz się zalogować.' });
+  } catch (err) {
+    console.error('Błąd recover/reset:', err);
+    return res.status(500).json({ ok: false, message: 'Błąd serwera' });
+  }
+});
+
 router.post('/register', validate(registerSchema), async (req, res) => {
   const {
     username,
-    email,  
+    email,
     password,
     first_name,
     last_name,
     security_question_id,
     security_answer,
-  } = req.valid; 
+  } = req.valid;
 
   try {
-    // unikalność username / email
     const exists = await pool.query(
       `SELECT 1 FROM "user" WHERE username = $1 OR email = $2 LIMIT 1`,
       [username, email]
@@ -57,7 +134,6 @@ router.post('/register', validate(registerSchema), async (req, res) => {
       return res.status(400).json({ ok: false, errors: [{ message: 'Użytkownik lub e-mail już istnieje' }] });
     }
 
-    // hash hasła i odpowiedzi weryfikacyjnej
     const hash = await bcrypt.hash(password, 10);
     const answerHash = await bcrypt.hash(security_answer, 10);
 
@@ -84,7 +160,6 @@ router.post('/register', validate(registerSchema), async (req, res) => {
   }
 });
 
-// POST /api/auth/login – logowanie (login = username lub email)
 router.post('/login', validate(loginSchema), async (req, res) => {
   const { login, password } = req.valid;
 
@@ -98,6 +173,10 @@ router.post('/login', validate(loginSchema), async (req, res) => {
     );
 
     const user = rows[0];
+    if (!user) {
+      return res.status(400).json({ ok: false, errors: [{ message: 'Nieprawidłowy login lub hasło' }] });
+    }
+
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
       return res.status(400).json({ ok: false, errors: [{ message: 'Nieprawidłowy login lub hasło' }] });
@@ -124,7 +203,7 @@ router.post('/login', validate(loginSchema), async (req, res) => {
     res.cookie('gg_token', token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: false,             
+      secure: false,
       path: '/',
     });
 
@@ -143,7 +222,6 @@ router.post('/login', validate(loginSchema), async (req, res) => {
   }
 });
 
-// GET /api/auth/me – dane aktualnie zalogowanego użytkownika (do zakładki „Moje konto”)
 router.get('/me', authRequired, async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -152,7 +230,7 @@ router.get('/me', authRequired, async (req, res) => {
        WHERE id = $1`,
       [req.user.id]
     );
-    
+
     if (!rows[0]) {
       return res.status(404).json({ ok: false, message: 'Nie znaleziono użytkownika' });
     }
@@ -169,14 +247,12 @@ router.get('/me', authRequired, async (req, res) => {
         avatar_url: avatarUrl,
       },
     });
-
   } catch (err) {
     console.error('Błąd /me:', err);
     return res.status(500).json({ ok: false, message: 'Błąd serwera' });
   }
 });
 
-// POST /api/auth/logout – wylogowanie 
 router.post('/logout', (req, res) => {
   res.clearCookie('gg_token', {
     httpOnly: true,
