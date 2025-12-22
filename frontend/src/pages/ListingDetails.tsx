@@ -344,6 +344,39 @@ export default function ListingDetails() {
   const [editJobCategory, setEditJobCategory] = useState('');
   const [editRequirements, setEditRequirements] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cvInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingCvFile, setPendingCvFile] = useState<File | null>(null);
+  const [pendingCvError, setPendingCvError] = useState('');
+  const pickCvFile = () => {
+    setPendingCvError('');
+    setPendingCvFile(null);
+    cvInputRef.current?.click();
+  };
+
+  const validateCv = (file: File | null) => {
+    setPendingCvError('');
+    if (!file) {
+      setPendingCvFile(null);
+      return null;
+    }
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      setPendingCvError('Możesz dodać tylko plik PDF.');
+      setPendingCvFile(null);
+      return null;
+    }
+
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setPendingCvError('Plik jest za duży (max 10 MB).');
+      setPendingCvFile(null);
+      return null;
+    }
+
+    setPendingCvFile(file);
+    return file;
+  };
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -1002,6 +1035,11 @@ const handleSave = async () => {
     }
   
     if (data.type_id === 1) return;
+
+    if (data.type_id === 3) {
+      pickCvFile();
+      return;
+    }
   
     setActionLoading(true);
     setActionError('');
@@ -1230,6 +1268,26 @@ const handleSave = async () => {
               Zaloguj się, aby napisać
             </button>
           )}
+        <input
+          ref={cvInputRef}
+          type="file"
+          accept="application/pdf"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+            const okFile = validateCv(f);
+            e.target.value = '';
+            if (!okFile || !data) return;
+
+            const content = `Aplikuję na Twoje ogłoszenie: "${data.title}".`;
+            navigate(`/messages/listing/${data.id}?peer=${data.user_id}`, {
+              state: {
+                prefillText: content,
+                prefillAttachment: okFile,
+              },
+            });
+          }}
+        />
         </div>
 
         <p className="listing-details-meta">

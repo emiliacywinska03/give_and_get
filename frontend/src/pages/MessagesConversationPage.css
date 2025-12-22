@@ -385,6 +385,43 @@ body.dark-mode .messages-conv-status-badge.rejected {
   white-space: pre-wrap;
 }
 
+.messages-conv-attachment {
+  margin-top: 8px;
+}
+
+.messages-conv-attachment a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messages-conv-attachment a:hover {
+  background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.messages-conv-bubble.mine .messages-conv-attachment a {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.messages-conv-bubble.mine .messages-conv-attachment a:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* =========================
    Form (textarea)
    ========================= */
@@ -421,6 +458,94 @@ body.dark-mode .messages-conv-status-badge.rejected {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+.messages-conv-attach-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.messages-conv-attach-row input[type="file"] {
+  max-width: 100%;
+  font-size: 13px;
+  color: inherit;
+}
+
+.messages-conv-attach-row input[type="file"]::file-selector-button{
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.messages-conv-attach-row input[type="file"]::file-selector-button:hover{
+  background: rgba(37, 99, 235, 0.12);
+}
+
+body.dark-mode .messages-conv-attach-row input[type="file"]{
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-attach-row input[type="file"]::file-selector-button{
+  border-color: rgba(147, 197, 253, 0.35);
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+}
+
+body.dark-mode .messages-conv-attach-row input[type="file"]::file-selector-button:hover{
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.messages-conv-attach-clear {
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.08);
+  color: #991b1b;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.messages-conv-attach-clear:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.messages-conv-attach-clear:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.messages-conv-attach-error {
+  font-size: 13px;
+  color: #b91c1c;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(185, 28, 28, 0.25);
+  background: rgba(185, 28, 28, 0.06);
+}
+
+.messages-conv-attach-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px dashed rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.06);
+  color: #1d4ed8;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .messages-conv-submit {
@@ -472,6 +597,16 @@ body.dark-mode .messages-conv-status-badge.rejected {
 
   .messages-conv-offer-actions button {
     width: 100%;
+  }
+
+  .messages-conv-attach-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .messages-conv-attach-clear {
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -620,6 +755,93 @@ body.dark-mode .messages-conv-submit {
 
 body.dark-mode .messages-conv-submit:hover:not(:disabled) {
   background: #1d4ed8;
+}
+
+body.dark-mode .messages-conv-attachment a {
+  border-color: rgba(147, 197, 253, 0.28);
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+}
+
+body.dark-mode .messages-conv-attachment a:hover {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(147, 197, 253, 0.4);
+}
+
+body.dark-mode .messages-conv-bubble.mine .messages-conv-attachment a {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.14);
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-conv-attach-clear {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(220, 38, 38, 0.14);
+  color: #fecaca;
+}
+
+body.dark-mode .messages-conv-attach-clear:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.2);
+}
+
+body.dark-mode .messages-conv-attach-error {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.28);
+  background: rgba(220, 38, 38, 0.12);
+}
+
+body.dark-mode .messages-conv-attach-selected {
+  border-color: rgba(147, 197, 253, 0.35);
+  background: rgba(59, 130, 246, 0.14);
+  color: #93c5fd;
+}
+
+body.dark-mode .messages-conv-system-card{
+  background: #0b1220;
+  border-color: #1f2937;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .messages-conv-system-title{
+  color: #f9fafb;
+}
+
+body.dark-mode .messages-conv-system-text{
+  color: #9ca3af;
+}
+
+body.dark-mode .messages-conv-system-actions{
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-buy-now{
+  background: rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+}
+
+body.dark-mode .messages-conv-buy-now:hover:not(:disabled){
+  background: rgba(59, 130, 246, 0.22);
+}
+
+body.dark-mode .messages-conv-buy-now:disabled{
+  opacity: 0.6;
+}
+
+body.dark-mode .messages-conv-blik-modal{
+  background: #0b1220;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-blik-input{
+  background: #020617;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+body.dark-mode .messages-conv-blik-error{
+  color: #fecaca;
 }
 
 .messages-conv-waiting-info {

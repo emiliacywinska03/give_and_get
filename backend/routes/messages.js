@@ -1,8 +1,24 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
 const { pool } = require('../db');
 
 const router = express.Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+function maybeUploadSingle(field) {
+  return (req, res, next) => {
+    const ct = String(req.headers['content-type'] || '');
+    if (ct.startsWith('multipart/form-data')) {
+      return upload.single(field)(req, res, next);
+    }
+    return next();
+  };
+}
 
 const avatarSql = (alias) => `CASE
   WHEN ${alias}.avatar_url IS NOT NULL THEN ${alias}.avatar_url
@@ -26,12 +42,33 @@ function authRequired(req, res, next) {
   }
 }
 
-router.post('/', authRequired, async (req, res) => {
+router.post('/', authRequired, maybeUploadSingle('attachment'), async (req, res) => {
   try {
     const { listingId, content, receiverId } = req.body;
 
-    if (!listingId || !content || !String(content).trim()) {
+    const trimmed = String(content || '').trim();
+    const file = req.file || null;
+
+    if (!listingId || (!trimmed && !file)) {
       return res.status(400).json({ ok: false, error: 'Brak ID ogłoszenia lub treści wiadomości.' });
+    }
+
+    let attachmentData = null;
+    let attachmentMime = null;
+    let attachmentName = null;
+    let attachmentSize = null;
+
+    if (file) {
+      const name = String(file.originalname || '');
+      const lower = name.toLowerCase();
+      const isPdf = file.mimetype === 'application/pdf' || lower.endsWith('.pdf');
+      if (!isPdf) {
+        return res.status(400).json({ ok: false, error: 'Dozwolony jest tylko PDF.' });
+      }
+      attachmentData = file.buffer;
+      attachmentMime = 'application/pdf';
+      attachmentName = name || 'CV.pdf';
+      attachmentSize = Number(file.size || 0);
     }
 
     const listingRes = await pool.query('SELECT id, user_id FROM listing WHERE id = $1', [listingId]);
@@ -61,9 +98,21 @@ router.post('/', authRequired, async (req, res) => {
 
     const insert = await pool.query(
       `WITH ins AS (
-         INSERT INTO message (sender_id, receiver_id, listing_id, content)
+         INSERT INTO message (
+           sender_id,
+           receiver_id,
+           listing_id,
+           content
+         )
          VALUES ($1, $2, $3, $4)
-         RETURNING id, sender_id, receiver_id, listing_id, content, created_at, is_read
+         RETURNING
+           id,
+           sender_id,
+           receiver_id,
+           listing_id,
+           content,
+           created_at,
+           is_read
        )
        SELECT
          ins.id,
@@ -80,10 +129,28 @@ router.post('/', authRequired, async (req, res) => {
        FROM ins
        JOIN "user" su ON su.id = ins.sender_id
        JOIN "user" ru ON ru.id = ins.receiver_id`,
-      [senderId, finalReceiverId, listingId, content.trim()]
+      [senderId, finalReceiverId, listingId, trimmed]
     );
 
     const message = insert.rows[0];
+
+    if (message && attachmentData && attachmentMime && attachmentName) {
+      await pool.query(
+        `INSERT INTO message_attachment (message_id, data, mime, name, size)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [message.id, attachmentData, attachmentMime, attachmentName, attachmentSize || 0]
+      );
+
+      message.attachment_url = `/api/messages/attachment/${message.id}`;
+      message.attachment_name = attachmentName;
+      message.attachment_mime = attachmentMime;
+      message.attachment_size = attachmentSize || 0;
+    } else {
+      message.attachment_url = null;
+      message.attachment_name = null;
+      message.attachment_mime = null;
+      message.attachment_size = null;
+    }
 
     const io = req.app.get('io');
     if (io && message) {
@@ -315,7 +382,11 @@ router.get('/listing/:id', authRequired, async (req, res) => {
         x.sender_username,
         x.receiver_username,
         x.sender_avatar_url,
-        x.receiver_avatar_url
+        x.receiver_avatar_url,
+        x.attachment_url,
+        x.attachment_name,
+        x.attachment_mime,
+        x.attachment_size
       FROM (
         SELECT
           m.id,
@@ -325,6 +396,10 @@ router.get('/listing/:id', authRequired, async (req, res) => {
           m.content,
           m.created_at,
           m.is_read,
+          CASE WHEN ma.message_id IS NOT NULL THEN '/api/messages/attachment/' || m.id ELSE NULL END AS attachment_url,
+          ma.name AS attachment_name,
+          ma.mime AS attachment_mime,
+          ma.size AS attachment_size,
           su.username AS sender_username,
           ru.username AS receiver_username,
           ${avatarSql('su')} AS sender_avatar_url,
@@ -332,6 +407,7 @@ router.get('/listing/:id', authRequired, async (req, res) => {
         FROM message m
         JOIN "user" su ON su.id = m.sender_id
         JOIN "user" ru ON ru.id = m.receiver_id
+        LEFT JOIN message_attachment ma ON ma.message_id = m.id
         WHERE ${senderSide.join(' AND ')}
 
         UNION ALL
@@ -344,6 +420,10 @@ router.get('/listing/:id', authRequired, async (req, res) => {
           m.content,
           m.created_at,
           m.is_read,
+          CASE WHEN ma.message_id IS NOT NULL THEN '/api/messages/attachment/' || m.id ELSE NULL END AS attachment_url,
+          ma.name AS attachment_name,
+          ma.mime AS attachment_mime,
+          ma.size AS attachment_size,
           su.username AS sender_username,
           ru.username AS receiver_username,
           ${avatarSql('su')} AS sender_avatar_url,
@@ -351,6 +431,7 @@ router.get('/listing/:id', authRequired, async (req, res) => {
         FROM message m
         JOIN "user" su ON su.id = m.sender_id
         JOIN "user" ru ON ru.id = m.receiver_id
+        LEFT JOIN message_attachment ma ON ma.message_id = m.id
         WHERE ${receiverSide.join(' AND ')}
       ) x
       ORDER BY x.id DESC
@@ -426,6 +507,56 @@ router.get('/listing/:id', authRequired, async (req, res) => {
   } catch (err) {
     console.error('Błąd przy pobieraniu wiadomości (listing):', err);
     return res.status(500).json({ ok: false, error: 'Błąd serwera przy pobieraniu wiadomości.' });
+  }
+});
+
+router.get('/attachment/:id', authRequired, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) {
+      return res.status(400).send('Nieprawidłowe ID');
+    }
+
+    const userId = req.user.id;
+
+    const r = await pool.query(
+      `SELECT
+         m.id,
+         m.sender_id,
+         m.receiver_id,
+         ma.data AS attachment_data,
+         ma.mime AS attachment_mime,
+         ma.name AS attachment_name
+       FROM message m
+       JOIN message_attachment ma ON ma.message_id = m.id
+       WHERE m.id = $1
+       LIMIT 1`,
+      [id]
+    );
+
+    if (r.rowCount === 0) {
+      return res.status(404).send('Nie znaleziono');
+    }
+
+    const row = r.rows[0];
+
+    const allowed = Number(row.sender_id) === Number(userId) || Number(row.receiver_id) === Number(userId);
+    if (!allowed) {
+      return res.status(403).send('Brak dostępu');
+    }
+
+    if (!row.attachment_data || !row.attachment_mime) {
+      return res.status(404).send('Brak załącznika');
+    }
+
+    const name = row.attachment_name || 'Zalacznik.pdf';
+
+    res.setHeader('Content-Type', row.attachment_mime);
+    res.setHeader('Content-Disposition', `inline; filename="${String(name).replace(/"/g, '')}"`);
+    return res.status(200).send(row.attachment_data);
+  } catch (err) {
+    console.error('Błąd przy pobieraniu załącznika:', err);
+    return res.status(500).send('Błąd serwera');
   }
 });
 

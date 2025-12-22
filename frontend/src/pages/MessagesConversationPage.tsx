@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import './MessagesConversationPage.css';
-import { useLocation } from 'react-router-dom';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -30,6 +29,10 @@ type ChatMessage = {
   receiver_username?: string;
   sender_avatar_url?: string | null;
   receiver_avatar_url?: string | null;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_mime?: string | null;
+  attachment_size?: number | null;
 };
 
 type ListingPreview = {
@@ -203,6 +206,10 @@ const MessagesConversationPage: React.FC = () => {
   const [blikError, setBlikError] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [isPurchased, setIsPurchased] = useState(false);
+
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentError, setAttachmentError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
 
   const listingId = Number(id);
@@ -527,31 +534,56 @@ const MessagesConversationPage: React.FC = () => {
     }
   };
 
-  const sendMutation = useMutation<ChatMessage, Error, { text: string }>({
-    mutationFn: async ({ text }) => {
+  const sendMutation = useMutation<ChatMessage, Error, { text: string; file?: File | null }>({
+    mutationFn: async ({ text, file }) => {
       if (!user) throw new Error('Brak sesji');
       if (!listingId) throw new Error('Brak listingId');
-      if (!text.trim()) throw new Error('Pusta wiadomość');
-  
-      const res = await fetch(`${API_BASE}/api/messages`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-        body: JSON.stringify({
-          listingId,
-          content: text.trim(),
-          receiverId: resolvedPeerId || undefined,
-        }),
-      });
-  
+
+      const trimmed = (text || '').trim();
+      const hasFile = !!file;
+
+      if (!trimmed && !hasFile) throw new Error('Pusta wiadomość');
+
+      const url = `${API_BASE}/api/messages`;
+
+      let res: Response;
+
+      if (hasFile) {
+        const form = new FormData();
+        form.append('listingId', String(listingId));
+        form.append('receiverId', String(resolvedPeerId || ''));
+        form.append('content', trimmed);
+        form.append('attachment', file as File);
+
+        res = await fetch(url, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+          body: form,
+        });
+      } else {
+        res = await fetch(url, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+          body: JSON.stringify({
+            listingId,
+            content: trimmed,
+            receiverId: resolvedPeerId || undefined,
+          }),
+        });
+      }
+
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
         throw new Error(data?.error || 'Nie udało się wysłać wiadomości.');
       }
-  
+
       return data.message as ChatMessage;
     },
     onSuccess: (msg) => {
@@ -561,8 +593,11 @@ const MessagesConversationPage: React.FC = () => {
         return { ...(prev || {}), messages: [...prevMessages, msg], peer: prev?.peer ?? peerInfo ?? null };
       });
       queryClient.invalidateQueries({ queryKey: inboxQueryKey });
-      setContent('');       // czyścimy pole
+      setContent('');
       setIsTyping(false);
+      setAttachmentFile(null);
+      setAttachmentError('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     },
   });
   
@@ -723,10 +758,54 @@ const MessagesConversationPage: React.FC = () => {
   };
   
 
+  const handlePickPdf = (file: File | null) => {
+    setAttachmentError('');
+    if (!file) {
+      setAttachmentFile(null);
+      return;
+    }
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      setAttachmentError('Możesz dodać tylko plik PDF.');
+      setAttachmentFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setAttachmentError('Plik jest za duży (max 10 MB).');
+      setAttachmentFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setAttachmentFile(file);
+  };
+
+  useEffect(() => {
+    const st: any = (location as any)?.state;
+    if (!st) return;
+
+    const t = typeof st.prefillText === 'string' ? st.prefillText : '';
+    const f = st.prefillAttachment instanceof File ? st.prefillAttachment : null;
+
+    if (t) setContent(t);
+    if (f) handlePickPdf(f);
+
+    try {
+      navigate(location.pathname + location.search, { replace: true, state: {} } as any);
+    } catch {
+    }
+  }, []);
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    const text = content.trim();
-    if (!sending && text) sendMutation.mutate({ text });
+    const text = content;
+    if (sending) return;
+    if (!text.trim() && !attachmentFile) return;
+    sendMutation.mutate({ text, file: attachmentFile });
   };
   
 
@@ -1023,6 +1102,17 @@ const MessagesConversationPage: React.FC = () => {
                         <span className="messages-conv-date">{formatDate(m.created_at)}</span>
                       </div>
                       <div className="messages-conv-text">{m.content}</div>
+                      {(m.attachment_url || (m as any).attachmentUrl) ? (
+                        <div className="messages-conv-attachment">
+                          <a
+                            href={joinApiUrl(String(m.attachment_url || (m as any).attachmentUrl))}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            📄 {String(m.attachment_name || (m as any).attachmentName || 'Załącznik.pdf')}
+                          </a>
+                        </div>
+                      ) : null}
                     </div>
 
                     {mine && (
@@ -1058,14 +1148,48 @@ const MessagesConversationPage: React.FC = () => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  if (!sending && content.trim()) sendMutation.mutate({ text: content.trim() });
+                  if (!sending && (content.trim() || attachmentFile)) sendMutation.mutate({ text: content, file: attachmentFile });
                 }
               }}
               rows={3}
               disabled={sending}
             />
 
-            <button type="submit" className="messages-conv-submit" disabled={sending || !content.trim()}>
+            <div className="messages-conv-attach-row">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handlePickPdf(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                disabled={sending}
+              />
+              {attachmentFile ? (
+                <button
+                  type="button"
+                  className="messages-conv-attach-clear"
+                  onClick={() => {
+                    setAttachmentFile(null);
+                    setAttachmentError('');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  disabled={sending}
+                >
+                  Usuń PDF
+                </button>
+              ) : null}
+            </div>
+
+            {attachmentError ? <div className="messages-conv-attach-error">{attachmentError}</div> : null}
+
+            {attachmentFile ? (
+              <div className="messages-conv-attach-selected">📎 {attachmentFile.name}</div>
+            ) : null}
+
+            <button
+              type="submit"
+              className="messages-conv-submit"
+              disabled={sending || (!content.trim() && !attachmentFile)}
+            >
               {sending ? 'Wysyłanie...' : 'Wyślij'}
             </button>
           </form>
