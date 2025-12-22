@@ -25,6 +25,8 @@ type ChatMessage = {
   content: string;
   created_at: string;
   is_read: boolean;
+  delivered_at?: string | null;
+  read_at?: string | null;
   sender_username?: string;
   receiver_username?: string;
   sender_avatar_url?: string | null;
@@ -471,6 +473,52 @@ const MessagesConversationPage: React.FC = () => {
       }, 2000);
     });
 
+    socket.on('chat:delivered', (payload: any) => {
+  const { listingId: msgListingId, byUserId } = payload || {};
+  if (!user) return;
+  if (Number(msgListingId) !== listingId) return;
+  if (!byUserId) return;
+
+  queryClient.setQueryData(conversationQueryKey, (prev: any) => {
+    const prevMessages: ChatMessage[] = prev?.messages || [];
+    const next = prevMessages.map((m) => {
+      if (m.sender_id === user.id && m.receiver_id === Number(byUserId) && Number(m.listing_id) === listingId) {
+        if (!m.delivered_at) return { ...m, delivered_at: new Date().toISOString() };
+      }
+      return m;
+    });
+    return { ...(prev || {}), messages: next, peer: prev?.peer ?? peerInfo ?? null };
+  });
+
+  queryClient.invalidateQueries({ queryKey: inboxQueryKey });
+});
+
+socket.on('chat:read', (payload: any) => {
+  const { listingId: msgListingId, byUserId } = payload || {};
+  if (!user) return;
+  if (Number(msgListingId) !== listingId) return;
+  if (!byUserId) return;
+
+  queryClient.setQueryData(conversationQueryKey, (prev: any) => {
+    const prevMessages: ChatMessage[] = prev?.messages || [];
+    const nowIso = new Date().toISOString();
+    const next = prevMessages.map((m) => {
+      if (m.sender_id === user.id && m.receiver_id === Number(byUserId) && Number(m.listing_id) === listingId) {
+        return {
+          ...m,
+          is_read: true,
+          delivered_at: m.delivered_at || nowIso,
+          read_at: m.read_at || nowIso,
+        };
+      }
+      return m;
+    });
+    return { ...(prev || {}), messages: next, peer: prev?.peer ?? peerInfo ?? null };
+  });
+
+  queryClient.invalidateQueries({ queryKey: inboxQueryKey });
+});
+
     socket.on('disconnect', () => {
       socketRef.current = null;
     });
@@ -533,6 +581,15 @@ const MessagesConversationPage: React.FC = () => {
       return value;
     }
   };
+
+  const getMyMessageStatus = (m: ChatMessage) => {
+  const read = !!(m.read_at || m.is_read);
+  const delivered = !!m.delivered_at;
+
+  if (read) return { text: 'Odczytana', kind: 'read' as const, icon: '✓✓' };
+  if (delivered) return { text: 'Dostarczona', kind: 'delivered' as const, icon: '✓✓' };
+  return { text: 'Wysłana', kind: 'sent' as const, icon: '✓' };
+}
 
   const sendMutation = useMutation<ChatMessage, Error, { text: string; file?: File | null }>({
     mutationFn: async ({ text, file }) => {
@@ -758,20 +815,14 @@ const MessagesConversationPage: React.FC = () => {
   };
   
 
-  const handlePickPdf = (file: File | null) => {
+  const handlePickAttachment = (file: File | null) => {
     setAttachmentError('');
     if (!file) {
       setAttachmentFile(null);
       return;
     }
 
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-    if (!isPdf) {
-      setAttachmentError('Możesz dodać tylko plik PDF.');
-      setAttachmentFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
+    const typeId = listingInfo?.typeId ?? null;
 
     const maxBytes = 10 * 1024 * 1024;
     if (file.size > maxBytes) {
@@ -781,7 +832,33 @@ const MessagesConversationPage: React.FC = () => {
       return;
     }
 
-    setAttachmentFile(file);
+    if (typeId === 3) {
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        setAttachmentError('W ogłoszeniach o pracę możesz dodać tylko CV w PDF.');
+        setAttachmentFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+      setAttachmentFile(file);
+      return;
+    }
+
+    if (typeId === 1 || typeId === 2) {
+      const isImage = String(file.type || '').startsWith('image/');
+      if (!isImage) {
+        setAttachmentError('W tych ogłoszeniach możesz dodać tylko zdjęcie.');
+        setAttachmentFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+      setAttachmentFile(file);
+      return;
+    }
+
+    setAttachmentError('Załączniki są dostępne tylko dla ogłoszeń Praca/Pomoc/Sprzedaż.');
+    setAttachmentFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   useEffect(() => {
@@ -792,7 +869,7 @@ const MessagesConversationPage: React.FC = () => {
     const f = st.prefillAttachment instanceof File ? st.prefillAttachment : null;
 
     if (t) setContent(t);
-    if (f) handlePickPdf(f);
+    if (f) handlePickAttachment(f);
 
     try {
       navigate(location.pathname + location.search, { replace: true, state: {} } as any);
@@ -1099,20 +1176,52 @@ const MessagesConversationPage: React.FC = () => {
                     <div className={`messages-conv-bubble ${mine ? 'mine' : 'theirs'}`}>
                       <div className="messages-conv-bubble-header">
                         <span className="messages-conv-author">{mine ? 'Ty' : m.sender_username}</span>
-                        <span className="messages-conv-date">{formatDate(m.created_at)}</span>
+
+                        <span className="messages-conv-meta">
+                          <span className="messages-conv-date">{formatDate(m.created_at)}</span>
+                        </span>
                       </div>
                       <div className="messages-conv-text">{m.content}</div>
                       {(m.attachment_url || (m as any).attachmentUrl) ? (
                         <div className="messages-conv-attachment">
-                          <a
-                            href={joinApiUrl(String(m.attachment_url || (m as any).attachmentUrl))}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            📄 {String(m.attachment_name || (m as any).attachmentName || 'Załącznik.pdf')}
-                          </a>
+                          {String(m.attachment_mime || (m as any).attachmentMime || '').startsWith('image/') ? (
+                            <a
+                              href={joinApiUrl(String(m.attachment_url || (m as any).attachmentUrl))}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="messages-conv-attachment-image-link"
+                            >
+                              <img
+                                src={joinApiUrl(String(m.attachment_url || (m as any).attachmentUrl))}
+                                alt={String(m.attachment_name || (m as any).attachmentName || 'Zdjęcie')}
+                                className="messages-conv-attachment-image"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={joinApiUrl(String(m.attachment_url || (m as any).attachmentUrl))}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              📄 {String(m.attachment_name || (m as any).attachmentName || 'Załącznik.pdf')}
+                            </a>
+                          )}
                         </div>
                       ) : null}
+                      {mine ? (() => {
+                        const st = getMyMessageStatus(m);
+                        return (
+                          <span
+                            className={`messages-conv-status-corner ${st.kind}`}
+                            title={st.text}
+                            aria-label={st.text}
+                          >
+                            {st.icon}
+                          </span>
+                        );
+                      })() : null}
                     </div>
 
                     {mine && (
@@ -1159,8 +1268,8 @@ const MessagesConversationPage: React.FC = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="application/pdf"
-                onChange={(e) => handlePickPdf(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                accept={listingInfo?.typeId === 3 ? 'application/pdf' : 'image/*'}
+                onChange={(e) => handlePickAttachment(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
                 disabled={sending}
               />
               {attachmentFile ? (
@@ -1174,7 +1283,7 @@ const MessagesConversationPage: React.FC = () => {
                   }}
                   disabled={sending}
                 >
-                  Usuń PDF
+                  Usuń {listingInfo?.typeId === 3 ? 'PDF' : 'załącznik'}
                 </button>
               ) : null}
             </div>

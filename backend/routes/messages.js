@@ -52,6 +52,8 @@ router.post('/', authRequired, maybeUploadSingle('attachment'), async (req, res)
     if (!listingId || (!trimmed && !file)) {
       return res.status(400).json({ ok: false, error: 'Brak ID ogłoszenia lub treści wiadomości.' });
     }
+    const lr = await pool.query('SELECT type_id FROM listing WHERE id = $1 LIMIT 1', [listingId]);
+    const listingTypeId = lr.rowCount ? Number(lr.rows[0].type_id) : null;
 
     let attachmentData = null;
     let attachmentMime = null;
@@ -61,14 +63,27 @@ router.post('/', authRequired, maybeUploadSingle('attachment'), async (req, res)
     if (file) {
       const name = String(file.originalname || '');
       const lower = name.toLowerCase();
-      const isPdf = file.mimetype === 'application/pdf' || lower.endsWith('.pdf');
-      if (!isPdf) {
-        return res.status(400).json({ ok: false, error: 'Dozwolony jest tylko PDF.' });
+      const mime = String(file.mimetype || '');
+
+      if (Number(listingTypeId) === 3) {
+        const isPdf = mime === 'application/pdf' || lower.endsWith('.pdf');
+        if (!isPdf) {
+          return res.status(400).json({ ok: false, error: 'W ogłoszeniach o pracę dozwolony jest tylko PDF.' });
+        }
+        attachmentData = file.buffer;
+        attachmentMime = 'application/pdf';
+        attachmentName = name || 'CV.pdf';
+        attachmentSize = Number(file.size || 0);
+      } else {
+        const isImage = mime.startsWith('image/');
+        if (!isImage) {
+          return res.status(400).json({ ok: false, error: 'W tym ogłoszeniu dozwolone są tylko zdjęcia.' });
+        }
+        attachmentData = file.buffer;
+        attachmentMime = mime || 'image/jpeg';
+        attachmentName = name || 'Zdjęcie';
+        attachmentSize = Number(file.size || 0);
       }
-      attachmentData = file.buffer;
-      attachmentMime = 'application/pdf';
-      attachmentName = name || 'CV.pdf';
-      attachmentSize = Number(file.size || 0);
     }
 
     const listingRes = await pool.query('SELECT id, user_id FROM listing WHERE id = $1', [listingId]);
