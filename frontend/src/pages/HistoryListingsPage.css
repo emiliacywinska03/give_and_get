@@ -369,3 +369,25 @@ body.dark-mode .listing-card--sold .listing-thumb-icon {
   filter: grayscale(10%) brightness(0.95);
   opacity: 0.85;
 }
+
+.history-tabs{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  margin: 18px 0 24px;
+}
+
+.history-tab{
+  border:1px solid #dbe3ff;
+  background:#fff;
+  padding:10px 14px;
+  border-radius:999px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.history-tab.is-active{
+  background:#2f6fff;
+  color:#fff;
+  border-color:#2f6fff;
+}

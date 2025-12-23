@@ -14,6 +14,9 @@ interface Listing {
   is_featured?: boolean;
   status_id?: number | null;
   type_id?: number | null;
+  purchase_id?: number;
+  purchased_price?: number;
+  purchased_at?: string;
 }
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
@@ -72,7 +75,46 @@ const HistoryListingsPage: React.FC = () => {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [soldListings, setSoldListings] = useState<Listing[]>([]);
   const [endedListings, setEndedListings] = useState<Listing[]>([]);
+  const [purchases, setPurchases] = useState<Listing[]>([]);
+  const [loadingPurchases, setLoadingPurchases] = useState(true);
 
+  type TabKey = 'ended' | 'sold' | 'bought';
+  const [activeTab, setActiveTab] = useState<TabKey>('ended');
+
+
+  const fetchPurchases = async () => {
+    setLoadingPurchases(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/price-offers/my-purchases`, {
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok || !Array.isArray(data)) {
+        console.error('Niepoprawna odpowiedź API (my purchases):', data);
+        return;
+      }
+  
+      const withImages: Listing[] = await Promise.all(
+        data.map(async (item: any) => {
+          const primary =
+            normalizeImgUrl(item.primary_image as string | null) ??
+            (await fetchFirstImageFor(item.id));
+  
+          return { ...item, primary_image: primary ?? null };
+        })
+      );
+  
+      setPurchases(withImages);
+    } catch (err) {
+      console.error('Błąd pobierania historii zakupów:', err);
+    } finally {
+      setLoadingPurchases(false);
+    }
+  };
+  
 
   useEffect(() => {
     if (!user) return;
@@ -119,6 +161,7 @@ const HistoryListingsPage: React.FC = () => {
     };
 
     fetchHistory();
+    fetchPurchases();
   }, [user]);
 
   const handleResume = async (id: number) => {
@@ -247,79 +290,153 @@ const HistoryListingsPage: React.FC = () => {
           </div>
         </div>
 
+        <div className="history-tabs">
+          <button
+            className={`history-tab ${activeTab === 'ended' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('ended')}
+          >
+            Zakończone
+          </button>
+
+          <button
+            className={`history-tab ${activeTab === 'sold' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('sold')}
+          >
+            Sprzedane
+          </button>
+
+          <button
+            className={`history-tab ${activeTab === 'bought' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('bought')}
+          >
+            Kupione
+          </button>
+        </div>
+
   
         {loadingHistory ? (
           <p>Ładowanie historii…</p>
         ) : (
           <>
+            {/* ===== ZAKOŃCZONE ===== */}
+            {activeTab === 'ended' && (
+              <>
+                <h3 className="profile-subtitle">Zakończone ogłoszenia</h3>
 
-            <h3 className="profile-subtitle">Zakończone ogłoszenia</h3>
-  
-            {endedListings.length === 0 ? (
-              <p>Nie masz zakończonych ogłoszeń.</p>
-            ) : (
-              <div className="listing-grid">
-                {endedListings.map((l) => (
-                  <div key={l.id} className="listing-card listing-card--history">
-                    <div
-                      className="listing-main"
-                      onClick={() => navigate(`/listing/${l.id}`)}
-                      style={{ cursor: 'pointer', position: 'relative' }}
-                    >
-                      <span className="sold-badge-corner">NIEAKTYWNE</span>
-  
-                      {renderThumb(l)}
-  
-                      <div className="listing-content">
-                        <h4 className="listing-title">{l.title}</h4>
-                        <p className="listing-desc">{l.description}</p>
-                        <small className="listing-date">
-                          Dodano: {new Date(l.created_at).toLocaleDateString()}
-                        </small>
+                {endedListings.length === 0 ? (
+                  <p>Nie masz zakończonych ogłoszeń.</p>
+                ) : (
+                  <div className="listing-grid">
+                    {endedListings.map((l) => (
+                      <div key={l.id} className="listing-card listing-card--history">
+                        <div
+                          className="listing-main"
+                          onClick={() => navigate(`/listing/${l.id}`)}
+                          style={{ cursor: 'pointer', position: 'relative' }}
+                        >
+                          <span className="sold-badge-corner">NIEAKTYWNE</span>
+
+                          {renderThumb(l)}
+
+                          <div className="listing-content">
+                            <h4 className="listing-title">{l.title}</h4>
+                            <p className="listing-desc">{l.description}</p>
+                            <small className="listing-date">
+                              Dodano: {new Date(l.created_at).toLocaleDateString()}
+                            </small>
+                          </div>
+                        </div>
+
+                        <div className="listing-actions">
+                          <button className="resume-button" onClick={() => handleResume(l.id)}>
+                            Wznów
+                          </button>
+                        </div>
                       </div>
-                    </div>
-  
-                    <div className="listing-actions">
-                      <button className="resume-button" onClick={() => handleResume(l.id)}>
-                        Wznów
-                      </button>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
 
+            {/* ===== SPRZEDANE ===== */}
+            {activeTab === 'sold' && (
+              <>
+                <h3 className="profile-subtitle">Sprzedane ogłoszenia</h3>
 
-            <h3 className="profile-subtitle">Sprzedane ogłoszenia</h3>
-  
-            {soldListings.length === 0 ? (
-              <p>Nie masz sprzedanych ogłoszeń.</p>
-            ) : (
-              <div className="listing-grid">
-                {soldListings.map((l) => (
-                  <div key={l.id} className="listing-card listing-card--sold">
-                    <div
-                      className="listing-main"
-                      onClick={() => navigate(`/listing/${l.id}`)}
-                      style={{ cursor: 'pointer', position: 'relative' }}
-                    >
-                      <span className="sold-badge-corner">SPRZEDANO</span>
-  
-                      {renderThumb(l)}
-  
-                      <div className="listing-content">
-                        <h4 className="listing-title">{l.title}</h4>
-                        <p className="listing-desc">{l.description}</p>
-                        <small className="listing-date">
-                          Dodano: {new Date(l.created_at).toLocaleDateString()}
-                        </small>
+                {soldListings.length === 0 ? (
+                  <p>Nie masz sprzedanych ogłoszeń.</p>
+                ) : (
+                  <div className="listing-grid">
+                    {soldListings.map((l) => (
+                      <div key={l.id} className="listing-card listing-card--sold">
+                        <div
+                          className="listing-main"
+                          onClick={() => navigate(`/listing/${l.id}`)}
+                          style={{ cursor: 'pointer', position: 'relative' }}
+                        >
+                          <span className="sold-badge-corner">SPRZEDANO</span>
+
+                          {renderThumb(l)}
+
+                          <div className="listing-content">
+                            <h4 className="listing-title">{l.title}</h4>
+                            <p className="listing-desc">{l.description}</p>
+                            <small className="listing-date">
+                              Dodano: {new Date(l.created_at).toLocaleDateString()}
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {activeTab === 'bought' && (
+            <>
+              <h3 className="profile-subtitle">Kupione</h3>
+
+              {loadingPurchases ? (
+                <p>Ładowanie zakupów…</p>
+              ) : purchases.length === 0 ? (
+                <p>Nie masz jeszcze żadnych zakupów.</p>
+              ) : (
+                <div className="listing-grid">
+                  {purchases.map((p) => (
+                    <div key={p.purchase_id ?? p.id} className="listing-card listing-card--bought">
+                      <div
+                        className="listing-main"
+                        onClick={() => navigate(`/listing/${p.id}`)}
+                        style={{ cursor: 'pointer', position: 'relative' }}
+                      >
+                        <span className="sold-badge-corner">KUPIONO</span>
+
+                        {renderThumb(p)}
+
+                        <div className="listing-content">
+                          <h4 className="listing-title">{p.title}</h4>
+                          <p className="listing-desc">{p.description}</p>
+
+                          {typeof p.purchased_price === 'number' && (
+                            <p><strong>Kupiono za:</strong> {p.purchased_price} zł</p>
+                          )}
+
+                          {p.purchased_at && (
+                            <small className="listing-date">
+                              Kupiono: {new Date(p.purchased_at).toLocaleDateString()}
+                            </small>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-  
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           </>
         )}
       </div>

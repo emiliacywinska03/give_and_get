@@ -74,8 +74,6 @@ const Profile: React.FC = () => {
   const [loadingListings, setLoadingListings] = useState(true);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
-  const [purchases, setPurchases] = useState<Listing[]>([]);
-  const [loadingPurchases, setLoadingPurchases] = useState(true);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarBuster, setAvatarBuster] = useState<number>(Date.now());
@@ -336,44 +334,9 @@ const Profile: React.FC = () => {
 
     fetchMyListings();
     fetchFavorites();
-    fetchPurchases();
   }, [user]);
 
-      // ---------- Historia zakupów (kupujący) ----------
-    const fetchPurchases = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/price-offers/my-purchases`, {
-          credentials: 'include',
-          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !Array.isArray(data)) {
-          console.error('Niepoprawna odpowiedź API (my purchases):', data);
-          return;
-        }
-
-        const withImages: Listing[] = await Promise.all(
-          data.map(async (item: any) => {
-            const primary =
-              normalizeImgUrl(item.primary_image as string | null) ??
-              (await fetchFirstImageFor(item.id));
-
-            return {
-              ...item,
-              primary_image: primary ?? null,
-            };
-          })
-        );
-
-        setPurchases(withImages);
-      } catch (err) {
-        console.error('Błąd pobierania historii zakupów:', err);
-      } finally {
-        setLoadingPurchases(false);
-      }
-    };
+     
 
 
   const handleDelete = async (id: number) => {
@@ -864,45 +827,7 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-                {/* ---------------- Historia zakupów ---------------- */}
-        <h3 className="profile-subtitle">Historia zakupów</h3>
-
-        {loadingPurchases ? (
-          <p>Ładowanie zakupów…</p>
-        ) : purchases.length === 0 ? (
-          <p>Nie masz jeszcze żadnych zakupów.</p>
-        ) : (
-          <div className="listing-grid">
-            {purchases.map((p) => (
-              <div key={p.purchase_id ?? p.id} className="listing-card">
-                <div
-                  className="listing-main"
-                  onClick={() => navigate(`/listing/${p.id}`)}
-                  style={{ cursor: 'pointer', position: 'relative' }}
-                >
-                  <div className="thumb-wrap">{renderThumb(p)}</div>
-
-                  <div className="listing-content">
-                    <h4 className="listing-title">{p.title}</h4>
-                    <p className="listing-desc">{p.description}</p>
-
-                    {typeof p.purchased_price === 'number' && (
-                      <p>
-                        <strong>Kupiono za:</strong> {p.purchased_price} zł
-                      </p>
-                    )}
-
-                    {p.purchased_at && (
-                      <small className="listing-date">
-                        Kupiono: {new Date(p.purchased_at).toLocaleDateString()}
-                      </small>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        
 
 
       </div>
