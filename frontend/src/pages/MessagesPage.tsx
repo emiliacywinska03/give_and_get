@@ -186,8 +186,10 @@ const MessagesPage: React.FC = () => {
       ) : (
         <div className="messages-list">
           {threads.map((t) => {
-            const incoming = t.receiver_id === user?.id;
-            const peerId = t.other_user_id;
+
+            const myId = Number(user?.id);
+            const incoming = Number(t.receiver_id) === myId;
+            const peerId = Number(t.other_user_id);
             const peerName = t.other_username;
 
             const listingTitle =
@@ -217,14 +219,28 @@ const MessagesPage: React.FC = () => {
 
             const previewText = makePreviewText(t.content);
 
+            const isUnread = incoming && ((t.unread_count ?? 0) > 0 || t.is_read === false);
+
             return (
               <div
                 key={`${t.listing_id}-${peerId}`}
-                className={`messages-item ${incoming ? 'incoming' : 'outgoing'}`}
+                className={`messages-item ${incoming ? 'incoming' : 'outgoing'} ${isUnread ? 'unread' : ''}`}
                 onClick={() => navigate(`/messages/listing/${t.listing_id}?peer=${peerId}`)}
               >
                 <div className="messages-item-top">
-                  <span className="messages-direction">{incoming ? 'Odebrana' : 'Wysłana'}</span>
+                <span className={`messages-direction ${isUnread ? 'unread' : ''}`}>
+                  {incoming
+                    ? isUnread
+                      ? 'Nieprzeczytana'
+                      : 'Odebrana'
+                    : 'Wysłana'}
+                </span>
+
+                  {isUnread && (
+                    <span className="messages-unread-badge">
+                      NOWE{(t.unread_count ?? 0) > 0 ? ` • ${t.unread_count}` : ''}
+                    </span>
+                  )}
                   <span className="messages-date">{formatDate(t.created_at)}</span>
                 </div>
 

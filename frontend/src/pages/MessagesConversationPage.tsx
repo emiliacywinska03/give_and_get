@@ -314,6 +314,34 @@ const MessagesConversationPage: React.FC = () => {
   }, [peerIdFromQuery, peerInfo, messages, user]);
 
 
+  // OZNACZ WĄTEK JAKO PRZECZYTANY (gdy otwierasz czat)
+  useEffect(() => {
+    if (!user) return;
+    if (!listingId) return;
+    if (!resolvedPeerId) return;
+
+    fetch(`${API_BASE}/api/messages/mark-read`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        listingId,
+        otherUserId: resolvedPeerId,
+      }),
+    })
+      .then((r) => r.json().catch(() => null))
+      .then((data) => {
+        if (data?.ok) {
+          queryClient.invalidateQueries({ queryKey: inboxQueryKey });
+        }
+      })
+      .catch(() => {});
+  }, [user, listingId, resolvedPeerId, queryClient, inboxQueryKey]);
+
+
   useEffect(() => {
     if (!user) navigate('/auth');
   }, [user, navigate]);

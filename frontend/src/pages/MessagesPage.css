@@ -325,3 +325,69 @@ body.dark-mode .messages-conv-msg-avatar {
   border-color: #1f2937;
   color: #e5e7eb;
 }
+
+/* NIEPRZECZYTANE */
+.messages-item.unread {
+  border-color: #e5e7eb;       
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); 
+}
+
+
+.messages-item.unread .messages-listing-link,
+.messages-item.unread .messages-peer-name,
+.messages-item.unread .messages-content {
+  font-weight: 700;
+}
+
+.messages-unread-badge {
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+body.dark-mode .messages-item.unread {
+  border-color: #60a5fa;
+  box-shadow: 0 6px 16px rgba(96, 165, 250, 0.22);
+}
+
+body.dark-mode .messages-unread-badge {
+  background: #3f1d1d;
+  color: #fecaca;
+}
+.messages-direction.unread {
+  background: #fee2e2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.messages-direction {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.messages-direction.incoming {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.messages-direction.outgoing {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.messages-item.unread .messages-direction {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+.messages-item.unread {
+  border-left: 3px solid #f87171 !important;
+}

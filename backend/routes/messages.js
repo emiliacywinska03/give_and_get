@@ -648,4 +648,48 @@ router.get('/attachment/:id', authRequired, async (req, res) => {
   }
 });
 
+
+router.post('/mark-read', authRequired, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const listingId = Number(req.body.listingId);
+    const otherUserId = Number(req.body.otherUserId);
+
+    if (!Number.isFinite(listingId) || listingId <= 0) {
+      return res.status(400).json({ ok: false, error: 'Nieprawidłowe listingId.' });
+    }
+    if (!Number.isFinite(otherUserId) || otherUserId <= 0) {
+      return res.status(400).json({ ok: false, error: 'Nieprawidłowe otherUserId.' });
+    }
+
+    const r = await pool.query(
+      `
+      UPDATE message
+      SET is_read = TRUE
+      WHERE receiver_id = $1
+        AND listing_id = $2
+        AND sender_id = $3
+        AND is_read = FALSE
+      RETURNING id
+      `,
+      [userId, listingId, otherUserId]
+    );
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${userId}`).emit('chat:read', {
+        listingId,
+        byUserId: userId,
+        otherUserId,
+      });
+    }
+
+    return res.json({ ok: true, updated: r.rowCount });
+  } catch (err) {
+    console.error('mark-read error:', err);
+    return res.status(500).json({ ok: false, error: 'Błąd serwera.' });
+  }
+});
+
+
 module.exports = router;
