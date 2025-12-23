@@ -1070,6 +1070,7 @@ router.put('/:id', authRequired, async (req, res) => {
 });
 
 
+
 router.post('/:id/purchase', authRequired, async (req, res) => {
   const listingId = Number(req.params.id);
   const { blikCode } = req.body || {};
@@ -1082,42 +1083,98 @@ router.post('/:id/purchase', authRequired, async (req, res) => {
     return res.status(400).json({ error: 'Kod BLIK musi mieć dokładnie 6 cyfr' });
   }
 
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
-      'SELECT id, type_id, user_id, is_free FROM listing WHERE id = $1',
+    await client.query('BEGIN');
+
+    const lr = await client.query(
+      `
+      SELECT id, type_id, user_id, is_free, price, status_id
+      FROM listing
+      WHERE id = $1
+      FOR UPDATE
+      `,
       [listingId]
     );
 
-    if (rows.length === 0) {
+    if (lr.rowCount === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Ogłoszenie nie istnieje' });
     }
 
-    const listing = rows[0];
+    const listing = lr.rows[0];
 
-    if (listing.user_id === req.user.id) {
+    if (Number(listing.user_id) === req.user.id) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Nie możesz kupić własnego ogłoszenia' });
     }
 
-    if (listing.type_id !== 1) {
+    if (Number(listing.type_id) !== 1) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'To ogłoszenie nie jest ofertą sprzedaży' });
     }
 
     if (listing.is_free) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Ogłoszenie jest darmowe – nie wymaga płatności' });
     }
 
-      await pool.query(
-         'UPDATE listing SET status_id = $1 WHERE id = $2',
-        [SOLD_STATUS_ID, listingId]
+    if (Number(listing.status_id) === SOLD_STATUS_ID) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'To ogłoszenie jest już sprzedane' });
+    }
+
+    if (Number(listing.status_id) === 4) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'To ogłoszenie jest w historii i nie można go kupić' });
+    }
+
+    const sellerId = Number(listing.user_id);
+    const finalPrice = Number(listing.price);
+
+    if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Nieprawidłowa cena ogłoszenia' });
+    }
+
+    await client.query(
+      'UPDATE listing SET status_id = $1 WHERE id = $2',
+      [SOLD_STATUS_ID, listingId]
+    );
+
+    // zapis do historii zakupów (używamy price_offer jako źródła prawdy)
+    const existing = await client.query(
+      `
+      SELECT id
+      FROM price_offer
+      WHERE listing_id = $1 AND buyer_id = $2 AND status = 'accepted'
+      LIMIT 1
+      `,
+      [listingId, req.user.id]
+    );
+
+    if (existing.rowCount === 0) {
+      await client.query(
+        `
+        INSERT INTO price_offer (negotiation_id, listing_id, buyer_id, seller_id, price, status, proposed_by)
+        VALUES (NULL, $1, $2, $3, $4, 'accepted', 'buyer')
+        `,
+        [listingId, req.user.id, sellerId, finalPrice]
       );
-    
-      return res.json({
-        ok: true,
-        message: 'Zakup udany'
-      });    
+    }
+
+    await client.query('COMMIT');
+
+    return res.json({
+      ok: true,
+      message: 'Zakup udany',
+    });
   } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
     console.error('Błąd przy symulacji zakupu:', err.message);
     return res.status(500).json({ error: 'Błąd serwera podczas zakupu' });
+  } finally {
+    client.release();
   }
 });
 

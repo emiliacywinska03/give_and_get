@@ -222,6 +222,50 @@ router.post('/:negotiationId/offer', authRequired, async (req, res) => {
   }
 });
 
+router.get('/my-purchases', authRequired, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const { rows } = await pool.query(
+      `
+      SELECT DISTINCT ON (po.listing_id)
+        po.id           AS purchase_id,
+        po.price        AS purchased_price,
+        po.created_at   AS purchased_at,
+
+        l.*,
+        u.username AS author_username,
+        CASE
+          WHEN u.avatar_data IS NOT NULL THEN '/api/listings/avatar/' || u.id
+          ELSE u.avatar_url
+        END AS author_avatar_url,
+        (
+          SELECT
+            CASE
+              WHEN li.id IS NOT NULL THEN '/api/listings/image/' || li.id
+              ELSE NULL
+            END
+          FROM listing_images li
+          WHERE li.listing_id = l.id
+          ORDER BY COALESCE(li.sort_order, li.id) ASC, li.id ASC
+          LIMIT 1
+        ) AS primary_image
+      FROM price_offer po
+      JOIN listing l ON l.id = po.listing_id
+      JOIN "user" u  ON u.id = l.user_id
+      WHERE po.buyer_id = $1
+        AND po.status = 'accepted'
+      ORDER BY po.listing_id, po.created_at DESC, po.id DESC
+      `,
+      [userId]
+    );
+
+    return res.json(rows);
+  } catch (e) {
+    console.error('GET /price-offers/my-purchases error', e);
+    return res.status(500).json({ ok: false, error: 'Błąd serwera.' });
+  }
+});
 
 router.get('/negotiation', authRequired, async (req, res) => {
   try {
