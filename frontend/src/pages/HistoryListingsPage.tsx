@@ -67,6 +67,44 @@ async function fetchFirstImageFor(listingId: number): Promise<string | null> {
   }
 }
 
+const PackageIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <path d="M3.27 6.96L12 12.01l8.73-5.05"/>
+    <path d="M12 22.08V12"/>
+  </svg>
+);
+
+const TruckIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="1" y="3" width="15" height="13"/>
+    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+    <circle cx="5.5" cy="18.5" r="2.5"/>
+    <circle cx="18.5" cy="18.5" r="2.5"/>
+  </svg>
+);
+
+
 const HistoryListingsPage: React.FC = () => {
   const { user, loading, setUser } = useAuth();
   const navigate = useNavigate();
@@ -77,6 +115,9 @@ const HistoryListingsPage: React.FC = () => {
   const [endedListings, setEndedListings] = useState<Listing[]>([]);
   const [purchases, setPurchases] = useState<Listing[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
+  const [shippingStatus, setShippingStatus] = useState<Record<number, 'none' | 'packed' | 'sent'>>({});
+  const getShippingStatus = (id: number) => shippingStatus[id] ?? 'none';
+
 
   type TabKey = 'ended' | 'sold' | 'bought';
   const [activeTab, setActiveTab] = useState<TabKey>('ended');
@@ -370,24 +411,59 @@ const HistoryListingsPage: React.FC = () => {
                   <div className="listing-grid">
                     {soldListings.map((l) => (
                       <div key={l.id} className="listing-card listing-card--sold">
-                        <div
-                          className="listing-main"
-                          onClick={() => navigate(`/listing/${l.id}`)}
-                          style={{ cursor: 'pointer', position: 'relative' }}
-                        >
-                          <span className="sold-badge-corner">SPRZEDANO</span>
-
-                          {renderThumb(l)}
-
-                          <div className="listing-content">
-                            <h4 className="listing-title">{l.title}</h4>
-                            <p className="listing-desc">{l.description}</p>
-                            <small className="listing-date">
-                              Dodano: {new Date(l.created_at).toLocaleDateString()}
-                            </small>
-                          </div>
+                      <div
+                        className="listing-main"
+                        onClick={() => navigate(`/listing/${l.id}`)}
+                        style={{ cursor: 'pointer', position: 'relative' }}
+                      >
+                        <span className="sold-badge-corner">SPRZEDANO</span>
+                        {renderThumb(l)}
+                    
+                        <div className="listing-content">
+                          <h4 className="listing-title">{l.title}</h4>
+                          <p className="listing-desc">{l.description}</p>
+                          <small className="listing-date">
+                            Dodano: {new Date(l.created_at).toLocaleDateString()}
+                          </small>
                         </div>
                       </div>
+                    
+                      {/* PRAWA KOLUMNA */}
+                      <div className="listing-actions listing-actions--right">
+                        <div className="shipping-actions shipping-actions--right">
+                          <button
+                            className={`ship-btn ${getShippingStatus(l.id) !== 'none' ? 'ship-btn--done' : 'ship-btn--primary'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const ok = window.confirm('Czy chcesz oznaczyć jako spakowane?');
+                              if (!ok) return;
+                              setShippingStatus(prev => ({ ...prev, [l.id]: 'packed' }));
+                            }}
+                            
+                            disabled={getShippingStatus(l.id) !== 'none'}
+                          >
+                            <PackageIcon />
+                            <span>Spakowano</span>
+                          </button>
+                    
+                          <button
+                            className={`ship-btn ${getShippingStatus(l.id) === 'sent' ? 'ship-btn--done' : 'ship-btn--primary'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const ok = window.confirm('Czy chcesz oznaczyć jako wysłane?');
+                              if (!ok) return;
+                              setShippingStatus(prev => ({ ...prev, [l.id]: 'sent' }));
+                            }}
+                            
+                            disabled={getShippingStatus(l.id) !== 'packed'}
+                            title={getShippingStatus(l.id) !== 'packed' ? 'Najpierw oznacz jako spakowane' : ''}
+                          >
+                            <TruckIcon />
+                            <span>Wysłano</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                     ))}
                   </div>
                 )}

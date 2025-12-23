@@ -370,24 +370,134 @@ body.dark-mode .listing-card--sold .listing-thumb-icon {
   opacity: 0.85;
 }
 
-.history-tabs{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  margin: 18px 0 24px;
+.history-tabs {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin: 26px 0 36px;
 }
 
-.history-tab{
-  border:1px solid #dbe3ff;
-  background:#fff;
-  padding:10px 14px;
-  border-radius:999px;
-  font-weight:600;
-  cursor:pointer;
+.history-tab {
+  padding: 12px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 2px solid #e0e7ff;
+  background: #fff;
+  color: #2f3a5f;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
 }
 
-.history-tab.is-active{
-  background:#2f6fff;
-  color:#fff;
-  border-color:#2f6fff;
+.history-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(47,111,255,0.15);
+  border-color: #2f6fff;
+}
+
+.history-tab.is-active {
+  background: linear-gradient(135deg, #2f6fff, #5b8cff);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 10px 22px rgba(47,111,255,0.35);
+}
+
+.shipping-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ship-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.ship-btn--packed {
+  background: #facc15;
+  color: #422006;
+}
+
+.ship-btn--packed:hover {
+  background: #fde047;
+}
+
+.ship-btn--sent {
+  background: #22c55e;
+  color: #064e3b;
+}
+
+.ship-btn--sent:hover {
+  background: #4ade80;
+}
+
+.ship-status-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+}
+/* prawa kolumna na przyciski */
+.listing-actions--right{
+  min-width: 220px;
+  padding: 18px 20px 0 0;
+  justify-content: flex-end;
+}
+
+/* przyciski jeden pod drugim */
+.shipping-actions--right{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+/* wspólne */
+.ship-btn{
+  width: 170px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+/* NIEBIESKIE */
+.ship-btn--primary{
+  background: #eaf2ff;
+  color: #2f6fff;
+  border-color: #2f6fff;
+}
+
+.ship-btn--primary:hover{
+  background: #dbe9ff;
+  box-shadow: 0 10px 24px rgba(47,111,255,0.18);
+  transform: translateY(-1px);
+}
+
+.ship-btn--done{
+  background: #2f6fff;
+  color: #fff;
+  border-color: #2f6fff;
+  box-shadow: 0 10px 22px rgba(47,111,255,0.28);
+}
+
+.ship-btn:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
