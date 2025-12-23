@@ -637,6 +637,76 @@ const toggleFavoriteMutation = useMutation<void, Error, { listingId: string; isC
   const isWork = data?.type_id === 3;
 
   const actionLabel = isWork ? 'Aplikuj' : isHelp ? 'Zgłoś się' : null;
+
+  const [helpApplyOpen, setHelpApplyOpen] = useState(false);
+  const [helpChoice, setHelpChoice] = useState<'direct' | 'exchange' | ''>('');
+  const [helpAvailability, setHelpAvailability] = useState<string[]>([]);
+  const [helpContactPref, setHelpContactPref] = useState<string[]>([]);
+  const [helpContactPhone, setHelpContactPhone] = useState('');
+  const [helpContactEmail, setHelpContactEmail] = useState('');
+  const [helpExchangeNote, setHelpExchangeNote] = useState('');
+
+  const directLabel = data?.help_type === 'need' ? 'Chcę pomóc' : 'Potrzebuję pomocy';
+
+const toggleInList = (arr: string[], v: string) =>
+  arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+
+const openHelpApply = () => {
+  setActionError('');
+  setActionSent(false);
+  setHelpChoice('direct');
+  setHelpAvailability([]);
+  setHelpContactPref([]);
+  setHelpContactPhone('');
+  setHelpContactEmail('');
+  setHelpExchangeNote('');
+  setHelpApplyOpen(true);
+};
+
+const closeHelpApply = () => setHelpApplyOpen(false);
+
+const buildHelpTemplate = () => {
+  const choiceLabel =
+    helpChoice === 'exchange'
+      ? 'Pomoc za pomoc'
+      : data?.help_type === 'need'
+      ? 'Chcę pomóc'
+      : 'Potrzebuję pomocy';
+
+  const avail = helpAvailability.length ? `Dostępność: ${helpAvailability.join(', ')}` : '';
+  const contact = helpContactPref.length ? `Preferowany kontakt: ${helpContactPref.join(', ')}` : '';
+
+  const phoneLine =
+    helpContactPref.includes('Telefon') && helpContactPhone.trim()
+      ? `Telefon: ${helpContactPhone.trim()}`
+      : '';
+
+  const emailLine =
+    helpContactPref.includes('E-mail') && helpContactEmail.trim()
+      ? `E-mail: ${helpContactEmail.trim()}`
+      : '';
+
+  const exchangeLine =
+    helpChoice === 'exchange' && helpExchangeNote.trim()
+      ? `Czego potrzebuję: ${helpExchangeNote.trim()}`
+      : '';
+
+  return [
+    `Zgłoszenie do ogłoszenia: "${data?.title ?? ''}"`,
+    `• ${choiceLabel}`,
+    avail ? `• ${avail}` : '',
+    contact ? `• ${contact}` : '',
+    phoneLine ? `• ${phoneLine}` : '',
+    emailLine ? `• ${emailLine}` : '',
+    exchangeLine ? `• ${exchangeLine}` : '',
+    '',
+    helpChoice === 'exchange'
+      ? 'Jeśli pasuje Ci pomoc za pomoc, opisz proszę w czym potrzebujesz wsparcia 🙂'
+      : 'Napisz proszę szczegóły – przejdźmy na czat 🙂',
+  ]
+    .filter(Boolean)
+    .join('\n');
+};
   
   const infoPairs = collectPairs(data);
   const infoPairsWithoutPrice = infoPairs.filter(
@@ -1019,66 +1089,67 @@ const handleSave = async () => {
 };
   
   
+const handleApplyClick = async () => {
+  if (!data) return;
 
+  if (!user) {
+    navigate('/auth');
+    return;
+  }
 
-  const handleApplyClick = async () => {
-    if (!data) return;
-  
-    if (!user) {
-      navigate('/auth');
+  if (user.id === data.user_id) {
+    alert('Nie możesz zgłosić się do własnego ogłoszenia.');
+    return;
+  }
+
+  if (data.type_id === 1) return;
+
+  if (data.type_id === 3) {
+    pickCvFile();
+    return;
+  }
+
+  if (data.type_id === 2) {
+    openHelpApply();
+    return;
+  }
+
+  setActionLoading(true);
+  setActionError('');
+
+  const content = `Jestem chętny(a) w sprawie ogłoszenia: "${data.title}".`;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/messages`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        listingId: data.id,
+        receiverId: data.user_id,
+        content,
+      }),
+    });
+
+    const payload = await res.json().catch(() => null);
+
+    if (!res.ok || !payload?.ok) {
+      setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
       return;
     }
-  
-    if (user.id === data.user_id) {
-      alert('Nie możesz zgłosić się do własnego ogłoszenia.');
-      return;
-    }
-  
-    if (data.type_id === 1) return;
 
-    if (data.type_id === 3) {
-      pickCvFile();
-      return;
-    }
-  
-    setActionLoading(true);
-    setActionError('');
-  
-    const content =
-      data.type_id === 3
-        ? `Aplikuję na Twoje ogłoszenie: "${data.title}".`
-        : `Jestem chętny(a) w sprawie ogłoszenia: "${data.title}".`;
-  
-    try {
-      const res = await fetch(`${API_BASE}/api/messages/apply`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-        body: JSON.stringify({
-          listingId: data.id,
-          content,
-        }),
-      });
-  
-      const payload = await res.json().catch(() => null);
-  
-      if (!res.ok || !payload?.ok) {
-        setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
-        return;
-      }
-  
-      setActionSent(true);
-      navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
-    } catch (e) {
-      console.error(e);
-      setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+    setActionSent(true);
+    navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+  } catch (e) {
+    console.error(e);
+    setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
+  } finally {
+    setActionLoading(false);
+  }
+};
   
 
   const handleConfirmBlik = async () => {
@@ -1695,6 +1766,172 @@ const handleSave = async () => {
         </div>
       )}
 
+
+{helpApplyOpen && isHelp && !isOwnListing && (
+  <div className="help-apply-backdrop" onClick={closeHelpApply}>
+    <div className="help-apply-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="help-apply-head">
+        <div className="help-apply-title">Zgłoszenie</div>
+        <button type="button" className="help-apply-close" onClick={closeHelpApply} aria-label="Zamknij">
+          ✕
+        </button>
+      </div>
+
+      <div className="help-apply-section">
+        <div className="help-apply-label">Co chcesz zrobić?</div>
+        <div className="help-apply-seg">
+          <button
+            type="button"
+            className={`help-apply-seg-btn ${helpChoice === 'direct' ? 'is-active' : ''}`}
+            onClick={() => setHelpChoice('direct')}
+          >
+            {directLabel}
+          </button>
+          <button
+            type="button"
+            className={`help-apply-seg-btn ${helpChoice === 'exchange' ? 'is-active' : ''}`}
+            onClick={() => setHelpChoice('exchange')}
+          >
+            Pomoc za pomoc
+          </button>
+        </div>
+      </div>
+
+      <div className="help-apply-grid">
+        <div className="help-apply-section">
+          <div className="help-apply-label">Dostępność (opcjonalnie)</div>
+          <div className="help-apply-chips">
+            {['Rano', 'Po południu', 'Wieczorem', 'Weekend'].map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`help-apply-chip ${helpAvailability.includes(v) ? 'is-active' : ''}`}
+                onClick={() => setHelpAvailability((prev) => toggleInList(prev, v))}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="help-apply-section">
+          <div className="help-apply-label">Preferowany kontakt (opcjonalnie)</div>
+          <div className="help-apply-chips">
+            {['Czat', 'Telefon', 'E-mail'].map((v) => (
+              <button
+                key={v}
+                type="button"
+                className={`help-apply-chip ${helpContactPref.includes(v) ? 'is-active' : ''}`}
+                onClick={() => setHelpContactPref((prev) => toggleInList(prev, v))}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <div className="help-apply-contact-extra">
+            {helpContactPref.includes('Telefon') && (
+              <div className="help-apply-field">
+                <label className="help-apply-field-label">Numer telefonu</label>
+                <input
+                  className="help-apply-input"
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={helpContactPhone}
+                  onChange={(e) =>
+                    setHelpContactPhone(e.target.value.replace(/[^0-9]/g, ''))
+                  }
+                  placeholder="np. 500600700"
+                />
+              </div>
+            )}
+
+            {helpContactPref.includes('E-mail') && (
+              <div className="help-apply-field">
+                <label className="help-apply-field-label">Adres e-mail</label>
+                <input
+                  className="help-apply-input"
+                  type="email"
+                  inputMode="email"
+                  value={helpContactEmail}
+                  onChange={(e) => setHelpContactEmail(e.target.value)}
+                  placeholder="np. imie@gmail.com"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {helpChoice === 'exchange' && (
+        <div className="help-apply-section">
+          <div className="help-apply-label">W czym potrzebujesz pomocy? (krótko)</div>
+          <textarea
+            className="help-apply-textarea"
+            value={helpExchangeNote}
+            onChange={(e) => setHelpExchangeNote(e.target.value)}
+            rows={3}
+            placeholder="Np. potrzebuję pomocy z wniesieniem szafy, a w zamian mogę pomóc w zakupach"
+          />
+        </div>
+      )}
+
+      {actionError && <div className="help-apply-error">{actionError}</div>}
+
+      <div className="help-apply-actions">
+        <button type="button" className="help-apply-secondary" onClick={closeHelpApply}>
+          Anuluj
+        </button>
+        <button
+          type="button"
+          className="help-apply-primary"
+          disabled={
+            actionLoading ||
+            !helpChoice ||
+            (helpChoice === 'exchange' && !helpExchangeNote.trim())
+          }
+          onClick={async () => {
+            if (!data) return;
+            setActionLoading(true);
+            setActionError('');
+
+            try {
+              const content = buildHelpTemplate();
+              const res = await fetch(`${API_BASE}/api/listings/${data.id}/help-apply`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+                },
+                body: JSON.stringify({
+                  content,
+                }),
+              });
+
+              const payload = await res.json().catch(() => null);
+              if (!res.ok || !payload?.ok) {
+                setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
+                return;
+              }
+
+              setHelpApplyOpen(false);
+              setActionSent(true);
+              navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+            } catch (e) {
+              console.error(e);
+              setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
+            } finally {
+              setActionLoading(false);
+            }
+          }}
+        >
+          {actionLoading ? 'Wysyłanie…' : 'Wyślij zgłoszenie'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
 {showPayment && (
         <div

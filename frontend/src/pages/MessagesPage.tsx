@@ -38,6 +38,32 @@ const stripOfferMeta = (text: string) =>
     .replace(/\n?\[OFFER_PRICE:[0-9]+(?:\.[0-9]+)?\]\s*/g, '')
     .trim();
 
+const makePreviewText = (raw: string) => {
+  const cleaned = stripOfferMeta(raw || '');
+
+  const looksLikeHelpApplication =
+    /Zgłoszenie do ogłoszenia:/i.test(cleaned) ||
+    /Potrzebuj[eę]\s+pomocy/i.test(cleaned) ||
+    /Chc[eę]\s+pom[oó]c/i.test(cleaned) ||
+    /Dost[eę]pno[śs]ć:/i.test(cleaned) ||
+    /Preferowany kontakt:/i.test(cleaned) ||
+    /Telefon:/i.test(cleaned);
+
+  if (looksLikeHelpApplication) {
+    return 'Zgłoszenie pomocy — otwórz czat, by zobaczyć szczegóły. 🙂';
+  }
+
+  const oneLine = cleaned
+    .replace(/\s*\n\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  if (!oneLine) return 'Otwórz czat, aby zobaczyć szczegóły.';
+
+  const MAX = 140;
+  if (oneLine.length <= MAX) return oneLine;
+  return oneLine.slice(0, MAX - 1).trimEnd() + '…';
+};
 
 const toSrc = (val: any): string | null => {
   if (!val) return null;
@@ -189,15 +215,13 @@ const MessagesPage: React.FC = () => {
               typeof listingTypeId === 'string' ? Number(listingTypeId) : listingTypeId
             );
 
-            const cleaned = stripOfferMeta(t.content);
-            const previewText = cleaned || 'Negocjacja ceny — otwórz czat, aby odpowiedzieć.';
+            const previewText = makePreviewText(t.content);
 
             return (
               <div
                 key={`${t.listing_id}-${peerId}`}
                 className={`messages-item ${incoming ? 'incoming' : 'outgoing'}`}
                 onClick={() => navigate(`/messages/listing/${t.listing_id}?peer=${peerId}`)}
-                style={{ cursor: 'pointer' }}
               >
                 <div className="messages-item-top">
                   <span className="messages-direction">{incoming ? 'Odebrana' : 'Wysłana'}</span>

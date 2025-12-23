@@ -49,6 +49,8 @@ router.post('/', authRequired, maybeUploadSingle('attachment'), async (req, res)
     const trimmed = String(content || '').trim();
     const file = req.file || null;
 
+    const isHelpApply = trimmed.startsWith('Zgłoszenie do ogłoszenia:');
+
     if (!listingId || (!trimmed && !file)) {
       return res.status(400).json({ ok: false, error: 'Brak ID ogłoszenia lub treści wiadomości.' });
     }
@@ -109,6 +111,77 @@ router.post('/', authRequired, maybeUploadSingle('attachment'), async (req, res)
 
     if (finalReceiverId === senderId) {
       return res.status(400).json({ ok: false, error: 'Nie możesz wysłać wiadomości do siebie.' });
+    }
+
+    if (isHelpApply && !file) {
+      const existing = await pool.query(
+        `
+        SELECT id
+        FROM message
+        WHERE listing_id = $1
+          AND sender_id = $2
+          AND receiver_id = $3
+          AND content LIKE 'Zgłoszenie do ogłoszenia:%'
+        ORDER BY created_at DESC
+        LIMIT 1
+        `,
+        [listingId, senderId, finalReceiverId]
+      );
+
+      if (existing.rowCount) {
+        const mid = existing.rows[0].id;
+
+        const upd = await pool.query(
+          `WITH upd AS (
+             UPDATE message
+             SET content = $4
+             WHERE id = $1
+             RETURNING
+               id,
+               sender_id,
+               receiver_id,
+               listing_id,
+               content,
+               created_at,
+               is_read
+           )
+           SELECT
+             upd.id,
+             upd.sender_id,
+             upd.receiver_id,
+             upd.listing_id,
+             upd.content,
+             upd.created_at,
+             upd.is_read,
+             su.username AS sender_username,
+             ru.username AS receiver_username,
+             ${avatarSql('su')} AS sender_avatar_url,
+             ${avatarSql('ru')} AS receiver_avatar_url
+           FROM upd
+           JOIN "user" su ON su.id = upd.sender_id
+           JOIN "user" ru ON ru.id = upd.receiver_id`,
+          [mid, senderId, finalReceiverId, trimmed]
+        );
+
+        const message = upd.rows[0];
+        message.attachment_url = null;
+        message.attachment_name = null;
+        message.attachment_mime = null;
+        message.attachment_size = null;
+
+        const io = req.app.get('io');
+        if (io && message) {
+          io.to(`user_${finalReceiverId}`).emit('chat:new-message', message);
+          io.to(`user_${senderId}`).emit('chat:new-message', message);
+
+          io.to(`user_${finalReceiverId}`).emit('chat:unread-bump', {
+            listingId: Number(message.listing_id),
+            fromUserId: Number(message.sender_id),
+          });
+        }
+
+        return res.status(200).json({ ok: true, message, updated: true });
+      }
     }
 
     const insert = await pool.query(

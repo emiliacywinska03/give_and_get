@@ -27,6 +27,98 @@ function authRequired(req, res, next) {
   }
 }
 
+router.post('/:id/help-apply', authRequired, express.json(), async (req, res) => {
+  try {
+    const listingId = Number(req.params.id);
+    if (!Number.isFinite(listingId)) {
+      return res.status(400).json({ ok: false, error: 'Nieprawidłowe ID ogłoszenia' });
+    }
+
+    const { content } = req.body || {};
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ ok: false, error: 'Brak treści zgłoszenia' });
+    }
+
+    const isHelpApply = content.trim().startsWith('Zgłoszenie do ogłoszenia:');
+    if (!isHelpApply) {
+      return res.status(400).json({ ok: false, error: 'Nieprawidłowy format zgłoszenia' });
+    }
+
+
+    const lq = await pool.query('SELECT id, user_id FROM listing WHERE id = $1', [listingId]);
+    if (!lq.rows.length) {
+      return res.status(404).json({ ok: false, error: 'Ogłoszenie nie istnieje' });
+    }
+
+    const receiverId = Number(lq.rows[0].user_id);
+    if (!Number.isFinite(receiverId)) {
+      return res.status(500).json({ ok: false, error: 'Błąd danych ogłoszenia' });
+    }
+
+    if (receiverId === req.user.id) {
+      return res.status(400).json({ ok: false, error: 'Nie możesz zgłosić się do własnego ogłoszenia' });
+    }
+
+    const existing = await pool.query(
+      `
+      SELECT id
+      FROM message
+      WHERE listing_id = $1
+        AND sender_id = $2
+        AND receiver_id = $3
+        AND content LIKE 'Zgłoszenie do ogłoszenia:%'
+      ORDER BY created_at DESC
+      LIMIT 1
+      `,
+      [listingId, req.user.id, receiverId]
+    );
+
+    let msg;
+
+    if (existing.rows.length) {
+      const mid = existing.rows[0].id;
+      const updated = await pool.query(
+        `
+        UPDATE message
+        SET content = $1
+        WHERE id = $2
+        RETURNING *
+        `,
+        [content, mid]
+      );
+      msg = updated.rows[0];
+
+      if (req.io) {
+        req.io.to(`user_${receiverId}`).emit('chat:new-message', msg);
+        req.io.to(`user_${req.user.id}`).emit('chat:new-message', msg);
+      }
+
+      return res.json({ ok: true, message: msg, updated: true, receiverId });
+    }
+
+    const inserted = await pool.query(
+      `
+      INSERT INTO message (listing_id, sender_id, receiver_id, content)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+      `,
+      [listingId, req.user.id, receiverId, content]
+    );
+
+    msg = inserted.rows[0];
+
+    if (req.io) {
+      req.io.to(`user_${receiverId}`).emit('chat:new-message', msg);
+      req.io.to(`user_${req.user.id}`).emit('chat:new-message', msg);
+    }
+
+    return res.status(201).json({ ok: true, message: msg, updated: false, receiverId });
+  } catch (err) {
+    console.error('Błąd zgłoszenia pomocy:', err);
+    return res.status(500).json({ ok: false, error: 'Błąd serwera' });
+  }
+});
+
 
 router.get('/avatar/:userId', async (req, res) => {
   try {
