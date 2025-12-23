@@ -1081,5 +1081,66 @@ body.dark-mode .profile-history-button:focus-visible{
     width: 100%;
   }
 }
+.profile-edit-button{
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #cfd8ea;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.profile-edit-panel{
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid #e6eaf2;
+  border-radius: 16px;
+  background: #f9fbff;
+}
+
+.profile-edit-title{
+  margin: 0 0 10px 0;
+}
+
+.profile-edit-field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.profile-edit-field input{
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d7deea;
+  outline: none;
+}
+
+.profile-edit-actions{
+  display: flex;
+  gap: 10px;
+}
+
+.profile-save-button{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #2f6fff;
+  background: #2f6fff;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-save-button:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.profile-edit-sep{
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #e6eaf2;
+}
 
 

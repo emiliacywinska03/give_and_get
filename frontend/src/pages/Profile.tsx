@@ -83,7 +83,107 @@ const Profile: React.FC = () => {
   const avatarUrl = (user as any)?.avatar_url as string | undefined;
   const historyRef = useRef<HTMLHeadingElement | null>(null);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
+  const [form, setForm] = useState({
+    username: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_new_password: '',
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    if (isEditing) return; 
+  
+    setForm({
+      username: (user as any).username ?? '',
+      first_name: (user as any).first_name ?? '',
+      last_name: (user as any).last_name ?? '',
+      email: (user as any).email ?? '',
+    });
+  }, [user, isEditing]);
+  
+
+  const changePassword = async () => {
+    if (passwordForm.new_password !== passwordForm.confirm_new_password) {
+      alert('Nowe hasła nie są takie same.');
+      return;
+    }
+  
+    try {
+      const res = (await fetch(`${API_BASE}/api/users/change-password`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          current_password: passwordForm.current_password,
+          new_password: passwordForm.new_password,
+        }),
+      }));
+  
+      const data = await res.json().catch(() => null);
+  
+      if (!res.ok) {
+        alert(data?.error || data?.message || 'Nie udało się zmienić hasła.');
+        return;
+      }
+  
+      alert('Hasło zostało zmienione.');
+      setPasswordForm({ current_password: '', new_password: '', confirm_new_password: '' });
+    } catch (e) {
+      console.error(e);
+      alert('Błąd zmiany hasła.');
+    }
+  };
+  
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/users/me`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          username: form.username,
+          first_name: form.first_name,
+          last_name: form.last_name,
+          email: form.email,
+        }),
+      });
+  
+      const data = await res.json().catch(() => null);
+  
+      if (!res.ok) {
+        alert(data?.error || data?.message || 'Nie udało się zapisać zmian.');
+        return;
+      }
+  
+      setUser(data); 
+  
+      setIsEditing(false);
+    } catch (e) {
+      console.error(e);
+      alert('Błąd zapisu danych profilu.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+  
   // 1 = sprzedaż, 2 = praca, 3 = pomoc
   const renderThumb = (item: Listing) => {
     const imgSrc = normalizeImgUrl(item.primary_image || null);
@@ -636,7 +736,24 @@ const Profile: React.FC = () => {
               <p>
                 <strong>Punkty:</strong> {user.points ?? 0}
               </p>
-             
+              <button
+                className="profile-edit-button"
+                type="button"
+                onClick={() => {
+                  if (!isEditing) {
+                    setForm({
+                      username: (user as any).username ?? '',
+                      first_name: (user as any).first_name ?? '',
+                      last_name: (user as any).last_name ?? '',
+                      email: (user as any).email ?? '',
+                    });
+                  }
+                  setIsEditing(v => !v);
+                }}
+                
+              >
+                {isEditing ? 'Anuluj edycję' : 'Edytuj dane'}
+              </button>
             </div>
           </div>
 
@@ -679,6 +796,92 @@ const Profile: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {isEditing && (
+                <div className="profile-edit-panel">
+                  <h4 className="profile-edit-title">Edytuj dane osobowe</h4>
+
+                  <label className="profile-edit-field">
+                    <span>Nazwa użytkownika</span>
+                    <input
+                      value={form.username}
+                      onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="profile-edit-field">
+                    <span>Imię</span>
+                    <input
+                      value={form.first_name}
+                      onChange={(e) => setForm((p) => ({ ...p, first_name: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="profile-edit-field">
+                    <span>Nazwisko</span>
+                    <input
+                      value={form.last_name}
+                      onChange={(e) => setForm((p) => ({ ...p, last_name: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="profile-edit-field">
+                    <span>Email</span>
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    />
+                  </label>
+
+                  <div className="profile-edit-actions">
+                    <button
+                      type="button"
+                      className="profile-save-button"
+                      onClick={saveProfile}
+                      disabled={savingProfile}
+                    >
+                      {savingProfile ? 'Zapisywanie...' : 'Zapisz zmiany'}
+                    </button>
+                  </div>
+
+                  <hr className="profile-edit-sep" />
+
+                  <h4 className="profile-edit-title">Zmień hasło</h4>
+
+                  <label className="profile-edit-field">
+                    <span>Aktualne hasło</span>
+                    <input
+                      type="password"
+                      value={passwordForm.current_password}
+                      onChange={(e) => setPasswordForm((p) => ({ ...p, current_password: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="profile-edit-field">
+                    <span>Nowe hasło</span>
+                    <input
+                      type="password"
+                      value={passwordForm.new_password}
+                      onChange={(e) => setPasswordForm((p) => ({ ...p, new_password: e.target.value }))}
+                    />
+                  </label>
+
+                  <label className="profile-edit-field">
+                    <span>Powtórz nowe hasło</span>
+                    <input
+                      type="password"
+                      value={passwordForm.confirm_new_password}
+                      onChange={(e) => setPasswordForm((p) => ({ ...p, confirm_new_password: e.target.value }))}
+                    />
+                  </label>
+
+                  <button type="button" className="profile-save-button" onClick={changePassword}>
+                    Zmień hasło
+                  </button>
+                </div>
+              )}
+
 
         {/* ---------------- Twoje ogłoszenia ---------------- */}
         <h3 className="profile-subtitle">Moje ogłoszenia</h3>
