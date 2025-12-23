@@ -45,6 +45,7 @@ type ListingPreview = {
   typeId?: number | null;
   price?: number | null;
   currency?: string | null;
+  isSold?: boolean | null;
 };
 
 type PriceNegotiation = {
@@ -411,6 +412,10 @@ const MessagesConversationPage: React.FC = () => {
           
         }
       }
+      
+      const rawIsSold =
+        l.is_sold ?? l.isSold ?? l.sold ?? l.is_purchased ?? l.isPurchased ?? l.purchased ?? null;
+
 
       return {
         id: Number(l.id),
@@ -420,10 +425,20 @@ const MessagesConversationPage: React.FC = () => {
         typeId: typeIdValue,
         price: Number.isFinite(rawPrice as number) ? (rawPrice as number) : null,
         currency: rawCurrency,
+        isSold: rawIsSold != null ? Boolean(rawIsSold) : null,
       };
       
     },
   });
+
+  useEffect(() => {
+    if (!listingInfo) return;
+    if (listingInfo.typeId !== 1) return; 
+    if (listingInfo.isSold == null) return; 
+  
+    setIsPurchased(Boolean(listingInfo.isSold));
+  }, [listingInfo]);
+  
 
   const negotiationQueryKey = useMemo(
     () => ['price-negotiation', listingId, resolvedPeerId],
@@ -804,6 +819,7 @@ const parseShippingMessage = (content: string): ShippingCard | null => {
 };
 
 
+
 const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
   const raw = (content || '').replace(/\r\n/g, '\n');
   const lines = raw
@@ -1048,11 +1064,15 @@ const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
       navigate('/auth');
       return;
     }
-    if (myRole !== 'buyer') return; 
+    if (myRole !== 'buyer') return;
+  
+    if (isPurchased) return;
+  
     setBlikError('');
     setBlikCode('');
     setShowPayment(true);
   };
+  
   
   const handleConfirmBlik = async () => {
     if (!/^\d{6}$/.test(blikCode)) {

@@ -1339,3 +1339,8 @@ body.dark-mode .messages-conv-bubble.theirs .messages-conv-apply-need{
 .messages-conv-shipping-text{
   line-height: 1.2;
 }
+.messages-conv-buy-now:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
