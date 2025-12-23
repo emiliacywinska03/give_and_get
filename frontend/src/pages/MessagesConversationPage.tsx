@@ -412,7 +412,7 @@ const MessagesConversationPage: React.FC = () => {
           
         }
       }
-      
+
       const rawIsSold =
         l.is_sold ?? l.isSold ?? l.sold ?? l.is_purchased ?? l.isPurchased ?? l.purchased ?? null;
 
@@ -807,9 +807,6 @@ type ShippingCard = { kind: 'packed' | 'sent'; label: string };
 const parseShippingMessage = (content: string): ShippingCard | null => {
   const c = (content || '').trim();
 
-  if (c === 'Paczka została spakowana.' || c === 'Paczka została spakowana') {
-    return { kind: 'packed', label: 'Paczka została spakowana.' };
-  }
 
   if (c === 'Paczka została wysłana.' || c === 'Paczka została wysłana') {
     return { kind: 'sent', label: 'Paczka została wysłana.' };

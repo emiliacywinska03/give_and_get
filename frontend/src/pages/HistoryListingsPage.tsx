@@ -105,7 +105,7 @@ const TruckIcon = () => (
 );
 
 const SHIPPING_LS_KEY = 'gg_shipping_status_v1';
-type ShipState = 'none' | 'packed' | 'sent';
+type ShipState = 'none' | 'sent';
 
 const loadShippingFromLS = (): Record<string, ShipState> => {
   try {
@@ -116,7 +116,7 @@ const loadShippingFromLS = (): Record<string, ShipState> => {
 
     const out: Record<string, ShipState> = {};
     for (const [k, v] of Object.entries(parsed)) {
-      if (v === 'none' || v === 'packed' || v === 'sent') out[String(k)] = v;
+      if (v === 'none' || v === 'sent') out[String(k)] = v;
     }
     return out;
   } catch {
@@ -143,7 +143,6 @@ const HistoryListingsPage: React.FC = () => {
   const [endedListings, setEndedListings] = useState<Listing[]>([]);
   const [purchases, setPurchases] = useState<Listing[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
-  type ShipState = 'none' | 'packed' | 'sent';
   const [shippingStatus, setShippingStatus] = useState<Record<string, ShipState>>(() => loadShippingFromLS());
   const getShippingStatus = (id: number) => shippingStatus[String(id)] ?? 'none';
 
@@ -328,7 +327,7 @@ const HistoryListingsPage: React.FC = () => {
     if (!res.ok || !data?.ok) return 'none';
   
     const s = data.status;
-    if (s === 'packed' || s === 'sent') return s;
+    if (s === 'sent') return 'sent';
     return 'none';
   };
   
@@ -505,6 +504,13 @@ const HistoryListingsPage: React.FC = () => {
                         style={{ cursor: 'pointer', position: 'relative' }}
                       >
                         <span className="sold-badge-corner">SPRZEDANO</span>
+
+                        {getShippingStatus(l.id) !== 'sent' && (
+                          <span className="ship-alert-corner">
+                            Wyślij paczkę!
+                          </span>
+                        )}
+
                         {renderThumb(l)}
                     
                         <div className="listing-content">
@@ -519,28 +525,6 @@ const HistoryListingsPage: React.FC = () => {
                       {/* PRAWA KOLUMNA */}
                       <div className="listing-actions listing-actions--right">
                         <div className="shipping-actions shipping-actions--right">
-                          <button
-                            className={`ship-btn ${getShippingStatus(l.id) !== 'none' ? 'ship-btn--done' : 'ship-btn--primary'}`}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              const ok = window.confirm('Czy chcesz oznaczyć jako spakowane?');
-                              if (!ok) return;
-                            
-                              try {
-                                await updateShipping(l.id, 'packed');
-                                setShippingStatus(prev => ({ ...prev, [String(l.id)]: 'packed' }));
-
-                              } catch (err: any) {
-                                alert(err?.message || 'Błąd');
-                              }
-                            }}
-                            
-                            
-                            disabled={getShippingStatus(l.id) !== 'none'}
-                          >
-                            <PackageIcon />
-                            <span>Spakowano</span>
-                          </button>
                     
                           <button
                             className={`ship-btn ${getShippingStatus(l.id) === 'sent' ? 'ship-btn--done' : 'ship-btn--primary'}`}
@@ -552,17 +536,21 @@ const HistoryListingsPage: React.FC = () => {
                               try {
                                 await updateShipping(l.id, 'sent');
                                 setShippingStatus(prev => ({ ...prev, [String(l.id)]: 'sent' }));
+                                setSoldListings(prev => prev.filter(x => x.id !== l.id));
+                                setEndedListings(prev => [{ ...l }, ...prev]);
+                                setActiveTab('ended');
                               } catch (err: any) {
                                 alert(err?.message || 'Błąd');
                               }
                             }}
                             
                             
-                            disabled={getShippingStatus(l.id) !== 'packed'}
-                            title={getShippingStatus(l.id) !== 'packed' ? 'Najpierw oznacz jako spakowane' : ''}
+                            disabled={getShippingStatus(l.id) === 'sent'}
+                            title={getShippingStatus(l.id) === 'sent' ? 'Już oznaczone jako wysłane' : ''}
+
                           >
                             <TruckIcon />
-                            <span>Wysłano</span>
+                            <span>Oznacz jako wysłane</span>
                           </button>
                         </div>
                       </div>
