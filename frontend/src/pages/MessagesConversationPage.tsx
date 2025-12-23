@@ -85,6 +85,42 @@ const getTypeIconSrc = (typeId?: number | null): string | null => {
   return null;
 };
 
+const PackageIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    <path d="M3.27 6.96L12 12.01l8.73-5.05"/>
+    <path d="M12 22.08V12"/>
+  </svg>
+);
+
+const TruckIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="1" y="3" width="15" height="13"/>
+    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+    <circle cx="5.5" cy="18.5" r="2.5"/>
+    <circle cx="18.5" cy="18.5" r="2.5"/>
+  </svg>
+);
 
 const AcceptedIcon: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -584,8 +620,20 @@ socket.on('chat:read', (payload: any) => {
     }
   };
 
+  const renderShippingCard = (ship: ShippingCard) => {
+    return (
+      <div className="messages-conv-shipping" role="status" aria-label="Status wysyłki">
+        <span className="messages-conv-shipping-ico" aria-hidden="true">
+          {ship.kind === 'packed' ? <PackageIcon /> : <TruckIcon />}
+        </span>
+        <span className="messages-conv-shipping-text">{ship.label}</span>
+      </div>
+    );
+  };
+
   const renderHelpApplyCard = (m: ChatMessage, parsed: HelpApplyCardData) => {
   const expanded = !!helpApplyExpanded[m.id];
+
 
   const chips = (arr?: string[]) =>
     (arr || []).map((t) => (
@@ -738,6 +786,23 @@ type HelpApplyCardData = {
   needText?: string;
   note?: string;
 };
+
+type ShippingCard = { kind: 'packed' | 'sent'; label: string };
+
+const parseShippingMessage = (content: string): ShippingCard | null => {
+  const c = (content || '').trim();
+
+  if (c === 'Paczka została spakowana.' || c === 'Paczka została spakowana') {
+    return { kind: 'packed', label: 'Paczka została spakowana.' };
+  }
+
+  if (c === 'Paczka została wysłana.' || c === 'Paczka została wysłana') {
+    return { kind: 'sent', label: 'Paczka została wysłana.' };
+  }
+
+  return null;
+};
+
 
 const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
   const raw = (content || '').replace(/\r\n/g, '\n');
@@ -934,6 +999,7 @@ const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
     }
   };
 
+  
   const acceptPriceOffer = async (offerId: number) => {
     const res = await fetch(`${API_BASE}/api/price-offers/offer/${offerId}/accept`, {
       method: 'POST',
@@ -1398,10 +1464,12 @@ const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
                         </span>
                       </div>
                       {(() => {
-                        const parsed = parseHelpApplyMessage(m.content);
-                        if (parsed) return renderHelpApplyCard(m, parsed);
+                        const parsedApply = parseHelpApplyMessage(m.content);
+                        if (parsedApply) return renderHelpApplyCard(m, parsedApply);
                         return <div className="messages-conv-text">{m.content}</div>;
+
                       })()}
+
                       {(m.attachment_url || (m as any).attachmentUrl) ? (
                         <div className="messages-conv-attachment">
                           {String(m.attachment_mime || (m as any).attachmentMime || '').startsWith('image/') ? (

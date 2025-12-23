@@ -104,6 +104,34 @@ const TruckIcon = () => (
   </svg>
 );
 
+const SHIPPING_LS_KEY = 'gg_shipping_status_v1';
+type ShipState = 'none' | 'packed' | 'sent';
+
+const loadShippingFromLS = (): Record<string, ShipState> => {
+  try {
+    const raw = localStorage.getItem(SHIPPING_LS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+
+    const out: Record<string, ShipState> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      if (v === 'none' || v === 'packed' || v === 'sent') out[String(k)] = v;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+};
+
+const saveShippingToLS = (data: Record<string, ShipState>) => {
+  try {
+    localStorage.setItem(SHIPPING_LS_KEY, JSON.stringify(data));
+  } catch {}
+};
+
+
+
 
 const HistoryListingsPage: React.FC = () => {
   const { user, loading, setUser } = useAuth();
@@ -115,10 +143,14 @@ const HistoryListingsPage: React.FC = () => {
   const [endedListings, setEndedListings] = useState<Listing[]>([]);
   const [purchases, setPurchases] = useState<Listing[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
-  const [shippingStatus, setShippingStatus] = useState<Record<number, 'none' | 'packed' | 'sent'>>({});
-  const getShippingStatus = (id: number) => shippingStatus[id] ?? 'none';
+  type ShipState = 'none' | 'packed' | 'sent';
+  const [shippingStatus, setShippingStatus] = useState<Record<string, ShipState>>(() => loadShippingFromLS());
+  const getShippingStatus = (id: number) => shippingStatus[String(id)] ?? 'none';
 
-
+  useEffect(() => {
+    saveShippingToLS(shippingStatus);
+  }, [shippingStatus]);
+  
   type TabKey = 'ended' | 'sold' | 'bought';
   const [activeTab, setActiveTab] = useState<TabKey>('ended');
 
@@ -192,6 +224,25 @@ const HistoryListingsPage: React.FC = () => {
         const endedWithImages: Listing[] = await mapWithImages(ended);
 
         setSoldListings(soldWithImages);
+
+        try {
+          const pairs = await Promise.all(
+            soldWithImages.map(async (l) => {
+              const st = await fetchShippingStatus(l.id);
+              return [String(l.id), st] as const;
+            })
+          );
+
+          setShippingStatus(prev => {
+            const next = { ...prev };
+            for (const [id, st] of pairs) next[id] = st;
+            return next;
+          });
+        } catch (e) {
+          console.error('Błąd pobierania statusów wysyłki:', e);
+        }
+
+
         setEndedListings(endedWithImages);
 
       } catch (e) {
@@ -246,6 +297,43 @@ const HistoryListingsPage: React.FC = () => {
     }
   };
 
+
+  const updateShipping = async (listingId: number, status: 'packed' | 'sent') => {
+    const res = await fetch(`${API_BASE}/api/shipping/${listingId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({ status }),
+    });
+  
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || 'Nie udało się ustawić statusu wysyłki.');
+    }
+    return data;
+  };
+
+  const fetchShippingStatus = async (listingId: number): Promise<ShipState> => {
+    const res = await fetch(`${API_BASE}/api/shipping/${listingId}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+    });
+  
+    const data = await res.json().catch(() => null);
+  
+    if (!res.ok || !data?.ok) return 'none';
+  
+    const s = data.status;
+    if (s === 'packed' || s === 'sent') return s;
+    return 'none';
+  };
+  
+
+  
   const renderThumb = (item: Listing) => {
     const imgSrc = normalizeImgUrl(item.primary_image || null);
   
@@ -433,12 +521,20 @@ const HistoryListingsPage: React.FC = () => {
                         <div className="shipping-actions shipping-actions--right">
                           <button
                             className={`ship-btn ${getShippingStatus(l.id) !== 'none' ? 'ship-btn--done' : 'ship-btn--primary'}`}
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
                               const ok = window.confirm('Czy chcesz oznaczyć jako spakowane?');
                               if (!ok) return;
-                              setShippingStatus(prev => ({ ...prev, [l.id]: 'packed' }));
+                            
+                              try {
+                                await updateShipping(l.id, 'packed');
+                                setShippingStatus(prev => ({ ...prev, [String(l.id)]: 'packed' }));
+
+                              } catch (err: any) {
+                                alert(err?.message || 'Błąd');
+                              }
                             }}
+                            
                             
                             disabled={getShippingStatus(l.id) !== 'none'}
                           >
@@ -448,12 +544,19 @@ const HistoryListingsPage: React.FC = () => {
                     
                           <button
                             className={`ship-btn ${getShippingStatus(l.id) === 'sent' ? 'ship-btn--done' : 'ship-btn--primary'}`}
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
                               const ok = window.confirm('Czy chcesz oznaczyć jako wysłane?');
                               if (!ok) return;
-                              setShippingStatus(prev => ({ ...prev, [l.id]: 'sent' }));
+                            
+                              try {
+                                await updateShipping(l.id, 'sent');
+                                setShippingStatus(prev => ({ ...prev, [String(l.id)]: 'sent' }));
+                              } catch (err: any) {
+                                alert(err?.message || 'Błąd');
+                              }
                             }}
+                            
                             
                             disabled={getShippingStatus(l.id) !== 'packed'}
                             title={getShippingStatus(l.id) !== 'packed' ? 'Najpierw oznacz jako spakowane' : ''}

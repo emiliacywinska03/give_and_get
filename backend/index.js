@@ -57,6 +57,8 @@ app.use('/api/listings', require('./routes/listing'));
 app.use('/api/auth', authRoutes);
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/messages', messagesRouter);
+app.use('/api/shipping', require('./routes/shipping'));
+
 if (typeof usersRouter !== 'function') {
   throw new TypeError("routes/users must export an Express router (module.exports = router)");
 }

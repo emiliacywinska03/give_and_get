@@ -1302,3 +1302,40 @@ body.dark-mode .messages-conv-bubble.theirs .messages-conv-apply-need{
   background: rgba(255,255,255,0.04);
 }
 
+.messages-conv-shipping{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f5f7ff;
+  border:1px solid #dbe3ff;
+  font-weight:600;
+}
+
+.messages-conv-shipping-ico{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.messages-conv-shipping{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(0,0,0,0.04);
+  font-weight: 600;
+}
+
+.messages-conv-shipping-ico{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.messages-conv-shipping-text{
+  line-height: 1.2;
+}
