@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import './Main.css'
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 import "../pages/ListingPage.css"; 
 
 const API_BASE =
@@ -48,6 +49,7 @@ const resolveImgSrc = (primary?: string | null) => {
 };
 
 const Main: React.FC = () => {
+    const { user } = useAuth();
     const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
     const [loadingFeatured, setLoadingFeatured] = useState(true);
 
@@ -129,7 +131,12 @@ const Main: React.FC = () => {
                         Przeglądaj tysiące ogłoszeń w kategoriach: praca, sprzedaż i usługi.
                     </p>
                     <div className="about-buttons">
-                         <Link to="/listings/create" className="button-add-listing">Dodaj ogłoszenie</Link>
+                         <Link
+                           to={user ? "/listings/create" : "/auth"}
+                           className="button-add-listing"
+                         >
+                           Dodaj ogłoszenie
+                         </Link>
                          <Link to="/listings" className="button-search-listings">Przeglądaj ogłoszenia</Link>
                     </div>
                 </div>
