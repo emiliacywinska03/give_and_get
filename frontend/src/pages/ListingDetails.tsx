@@ -16,12 +16,12 @@ type ListingDetails = {
   created_at: string;
   user_id: number;
   author_username?: string;
-  author_avatar_url?: string | null; 
+  author_avatar_url?: string | null;
   category_name?: string;
   subcategory_name?: string;
   images?: string[];
   help_type?: 'offer' | 'need' | null;
-  type_id?: number;          
+  type_id?: number;
   price?: number | null;
   is_free?: boolean;
   negotiable?: boolean;
@@ -36,6 +36,15 @@ type ListingImage = {
 type UiImageItem =
   | { kind: 'existing'; id: number; src: string }
   | { kind: 'new'; tempId: string; src: string; file: File };
+
+type ShippingAddress = {
+  fullName: string;
+  phone: string;
+  email: string;
+  street: string;
+  zip: string;
+  city: string;
+};
 
 const HIDDEN_KEYS = new Set<string>([
   'id',
@@ -146,7 +155,6 @@ const PREFERRED_ORDER = [
   'tags',
 ];
 
-
 function isPlainObject(v: any) {
   return v && typeof v === 'object' && !Array.isArray(v);
 }
@@ -173,9 +181,7 @@ function formatVal(key: string, val: any): string {
     const trimmed = val.trim();
     if (!trimmed) return '—';
     if (/(price|salary)/i.test(key)) {
-      const num = Number(
-        trimmed.replace(/[^0-9.,-]/g, '').replace(',', '.'),
-      );
+      const num = Number(trimmed.replace(/[^0-9.,-]/g, '').replace(',', '.'));
       if (!Number.isNaN(num) && Number.isFinite(num)) {
         return new Intl.NumberFormat('pl-PL', {
           style: 'currency',
@@ -208,7 +214,6 @@ function collectPairs(details: any): { key: string; label: string; value: string
     pairs.push({ key: k, label, value: formatVal(k, v) });
   };
 
-
   Object.entries(details || {}).forEach(([origKey, v]) => {
     const mapped = ALIASES.hasOwnProperty(origKey) ? ALIASES[origKey] : origKey;
     if (mapped === '__hide') return;
@@ -226,7 +231,6 @@ function collectPairs(details: any): { key: string; label: string; value: string
         return;
       }
     }
-
 
     const k = mapped;
 
@@ -310,23 +314,10 @@ export default function ListingDetails() {
   const [uiImages, setUiImages] = useState<UiImageItem[]>([]);
   const lastNonEmptyImagesRef = useRef<ListingImage[]>([]);
 
-  const preloadImageSrcs = (srcs: string[]) => {
-    srcs.forEach((s) => {
-      try {
-        const im = new Image();
-        im.decoding = 'async';
-        im.loading = 'eager';
-        im.src = s;
-      } catch {
-        // ignore
-      }
-    });
-  };
   const [orderDirty, setOrderDirty] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-
   const [lightboxIndex, setLightboxIndex] = useState<number>(0);
 
   const [editMode, setEditMode] = useState<boolean>(false);
@@ -338,7 +329,6 @@ export default function ListingDetails() {
   const [editIsFree, setEditIsFree] = useState(false);
   const [editNegotiable, setEditNegotiable] = useState(false);
   const [editHelpType, setEditHelpType] = useState<'offer' | 'need' | ''>('');
-  // PRACA (work) edit fields
   const [editSalary, setEditSalary] = useState('');
   const [editWorkMode, setEditWorkMode] = useState('');
   const [editJobCategory, setEditJobCategory] = useState('');
@@ -347,6 +337,7 @@ export default function ListingDetails() {
   const cvInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingCvFile, setPendingCvFile] = useState<File | null>(null);
   const [pendingCvError, setPendingCvError] = useState('');
+
   const pickCvFile = () => {
     setPendingCvError('');
     setPendingCvFile(null);
@@ -382,6 +373,18 @@ export default function ListingDetails() {
   const [newImages, setNewImages] = useState<File[]>([]);
 
   const [showPayment, setShowPayment] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
+
+  const [shipping, setShipping] = useState<ShippingAddress>({
+    fullName: '',
+    phone: '',
+    email: '',
+    street: '',
+    zip: '',
+    city: '',
+  });
+  const [shippingError, setShippingError] = useState('');
+
   const [blikCode, setBlikCode] = useState('');
   const [blikError, setBlikError] = useState('');
   const [isPurchased, setIsPurchased] = useState(false);
@@ -396,241 +399,235 @@ export default function ListingDetails() {
   const [offerError, setOfferError] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
 
+  const normalizePath = (p: string) => {
+    const s = String(p).trim().replace(/\\/g, '/');
+    return s;
+  };
 
-const normalizePath = (p: string) => {
-  const s = String(p).trim().replace(/\\/g, '/');
-  return s;
-};
+  const joinApiUrl = (p: string) => {
+    if (!p) return p;
+    const raw = normalizePath(p);
 
-const joinApiUrl = (p: string) => {
-  if (!p) return p;
-  const raw = normalizePath(p);
+    if (raw.startsWith('data:')) return raw;
 
+    if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
 
-  if (raw.startsWith('data:')) return raw;
-
-
-  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
-
-
-  try {
-    const base = `${API_BASE_NO_SLASH}/`;
-    const normalizedRelative = raw.replace(/^\/+/, '');
-    return new URL(normalizedRelative, base).toString();
-  } catch {
-    const normalizedRelative = raw.replace(/^\/+/, '');
-    return `${API_BASE_NO_SLASH}/${normalizedRelative}`;
-  }
-};
-
-const toSrc = (val: any): string | null => {
-  if (!val) return null;
-
-  if (typeof val === 'string') {
-    return joinApiUrl(val);
-  }
-
-  if (typeof val === 'object') {
-    const raw =
-      (val as any).dataUrl ??
-      (val as any).url ??
-      (val as any).path ??
-      (val as any).image_url ??
-      (val as any).imageUrl ??
-      (val as any).src ??
-      (val as any).file ??
-      (val as any).filename ??
-      null;
-
-    if (typeof raw === 'string' && raw.trim()) return joinApiUrl(raw);
-
-    const nested = (val as any).image ?? (val as any).photo ?? null;
-    if (typeof nested === 'string' && nested.trim()) return joinApiUrl(nested);
-  }
-
-  return null;
-};
-
-const withCacheBust = (src: string) => {
-  if (!src) return src;
-  if (src.startsWith('data:')) return src;
-  const sep = src.includes('?') ? '&' : '?';
-  return `${src}${sep}v=${Date.now()}`;
-};
-
-const fallbackImagesFromDetails = (details: any): ListingImage[] => {
-  const arr = Array.isArray(details?.images) ? details.images : [];
-  if (!arr.length) return [];
-
-  return arr
-    .map((v: any, idx: number) => {
-      const src = toSrc(v);
-      if (!src) return null;
-      const iid = Number((v as any)?.id);
-      return { id: Number.isFinite(iid) ? iid : idx, src } as ListingImage;
-    })
-    .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
-};
-
-const listingQuery = useQuery<ListingDetails | any, Error>({
-  queryKey: listingKey,
-  enabled: !!id,
-  staleTime: 15_000,
-  queryFn: async () => {
-    const res = await fetch(`${API_BASE}/api/listings/${id}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-      credentials: 'include',
-    });
-
-    if (res.status === 404) throw new Error('NOT_FOUND');
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(t || `HTTP ${res.status}`);
+    try {
+      const base = `${API_BASE_NO_SLASH}/`;
+      const normalizedRelative = raw.replace(/^\/+/, '');
+      return new URL(normalizedRelative, base).toString();
+    } catch {
+      const normalizedRelative = raw.replace(/^\/+/, '');
+      return `${API_BASE_NO_SLASH}/${normalizedRelative}`;
     }
-    return await res.json();
-  },
-});
+  };
 
-const listingImagesQuery = useQuery<ListingImage[], Error>({
-  queryKey: listingImagesKey,
-  enabled: !!id,
-  staleTime: 60_000,
-  gcTime: 30 * 60_000,
-  placeholderData: (prev) => {
-    if (Array.isArray(prev) && prev.length > 0) return prev;
-    const fb = fallbackImagesFromDetails(listingQuery.data as any);
-    return fb;
-  },
-  refetchOnWindowFocus: false,
-  refetchOnMount: 'always',
-  refetchOnReconnect: true,
-  retry: 2,
-  queryFn: async () => {
-    const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-      credentials: 'include',
-    });
+  const toSrc = (val: any): string | null => {
+    if (!val) return null;
 
-    if (!ri.ok) {
-      const t = await ri.text().catch(() => '');
-      throw new Error(t || `HTTP ${ri.status}`);
+    if (typeof val === 'string') {
+      return joinApiUrl(val);
     }
 
-    const imgs = await ri.json().catch(() => []);
-    if (!Array.isArray(imgs)) return [];
+    if (typeof val === 'object') {
+      const raw =
+        (val as any).dataUrl ??
+        (val as any).url ??
+        (val as any).path ??
+        (val as any).image_url ??
+        (val as any).imageUrl ??
+        (val as any).src ??
+        (val as any).file ??
+        (val as any).filename ??
+        null;
 
-    return imgs
-      .map((it: any, idx: number) => {
-        const src = toSrc(it);
+      if (typeof raw === 'string' && raw.trim()) return joinApiUrl(raw);
+
+      const nested = (val as any).image ?? (val as any).photo ?? null;
+      if (typeof nested === 'string' && nested.trim()) return joinApiUrl(nested);
+    }
+
+    return null;
+  };
+
+  const withCacheBust = (src: string) => {
+    if (!src) return src;
+    if (src.startsWith('data:')) return src;
+    const sep = src.includes('?') ? '&' : '?';
+    return `${src}${sep}v=${Date.now()}`;
+  };
+
+  const fallbackImagesFromDetails = (details: any): ListingImage[] => {
+    const arr = Array.isArray(details?.images) ? details.images : [];
+    if (!arr.length) return [];
+
+    return arr
+      .map((v: any, idx: number) => {
+        const src = toSrc(v);
         if (!src) return null;
-        const iid = Number((it as any)?.id);
+        const iid = Number((v as any)?.id);
         return { id: Number.isFinite(iid) ? iid : idx, src } as ListingImage;
       })
       .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
-  },
-});
+  };
 
-useEffect(() => {
-  if (listingQuery.isError && (listingQuery.error as any)?.message === 'NOT_FOUND') {
-    navigate('/listings');
-  }
-}, [listingQuery.isError, listingQuery.error, navigate]);
+  const listingQuery = useQuery<ListingDetails | any, Error>({
+    queryKey: listingKey,
+    enabled: !!id,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        credentials: 'include',
+      });
 
+      if (res.status === 404) throw new Error('NOT_FOUND');
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(t || `HTTP ${res.status}`);
+      }
+      return await res.json();
+    },
+  });
 
-useEffect(() => {
-  const details = listingQuery.data as any;
-  if (!details) return;
-  setData(details);
-}, [listingQuery.data]);
+  const listingImagesQuery = useQuery<ListingImage[], Error>({
+    queryKey: listingImagesKey,
+    enabled: !!id,
+    staleTime: 60_000,
+    gcTime: 30 * 60_000,
+    placeholderData: (prev) => {
+      if (Array.isArray(prev) && prev.length > 0) return prev;
+      const fb = fallbackImagesFromDetails(listingQuery.data as any);
+      return fb;
+    },
+    refetchOnWindowFocus: false,
+    refetchOnMount: 'always',
+    refetchOnReconnect: true,
+    retry: 2,
+    queryFn: async () => {
+      const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        credentials: 'include',
+      });
 
-useEffect(() => {
-  const next = Array.isArray(listingImagesQuery.data) ? listingImagesQuery.data : [];
+      if (!ri.ok) {
+        const t = await ri.text().catch(() => '');
+        throw new Error(t || `HTTP ${ri.status}`);
+      }
 
-  if (next.length > 0) {
-    lastNonEmptyImagesRef.current = next;
-    setImages(next);
-    setUiImages(next.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
-    setOrderDirty(false);
-    return;
-  }
+      const imgs = await ri.json().catch(() => []);
+      if (!Array.isArray(imgs)) return [];
 
-  if (lastNonEmptyImagesRef.current.length > 0) {
-    const prev = lastNonEmptyImagesRef.current;
-    setImages(prev);
-    setUiImages(prev.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
-    setOrderDirty(false);
-    return;
-  }
+      return imgs
+        .map((it: any, idx: number) => {
+          const src = toSrc(it);
+          if (!src) return null;
+          const iid = Number((it as any)?.id);
+          return { id: Number.isFinite(iid) ? iid : idx, src } as ListingImage;
+        })
+        .filter((x: ListingImage | null): x is ListingImage => Boolean(x));
+    },
+  });
 
-  setImages([]);
-  setUiImages([]);
-  setOrderDirty(false);
-}, [listingImagesQuery.data]);
- 
-const favoritesQuery = useQuery<number[], Error>({
-  queryKey: favoritesKey,
-  enabled: !!user,
-  staleTime: 20_000,
-  queryFn: async () => {
-    const res = await fetch(`${API_BASE}/api/listings/favorites`, {
-      credentials: 'include',
-      headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !Array.isArray(data)) return [];
-    return data.map((it: any) => Number(it.id)).filter((x: any) => Number.isFinite(x));
-  },
-});
-
-useEffect(() => {
-  if (!user || !id) {
-    setIsFavorite(false);
-    return;
-  }
-  const ids = favoritesQuery.data || [];
-  setIsFavorite(ids.some((x) => String(x) === String(id)));
-}, [favoritesQuery.data, user, id]);
-
-const toggleFavoriteMutation = useMutation<void, Error, { listingId: string; isCurrentlyFavorite: boolean }>({
-  mutationFn: async ({ listingId, isCurrentlyFavorite }) => {
-    if (!user) throw new Error('Brak sesji');
-    const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
-    const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
-      method,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-    });
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(t || 'Błąd zmiany ulubionych');
+  useEffect(() => {
+    if (listingQuery.isError && (listingQuery.error as any)?.message === 'NOT_FOUND') {
+      navigate('/listings');
     }
-  },
-  onMutate: async ({ listingId, isCurrentlyFavorite }) => {
-    await queryClient.cancelQueries({ queryKey: favoritesKey });
-    const prev = queryClient.getQueryData<number[]>(favoritesKey) || [];
-    const lid = Number(listingId);
-    const next = isCurrentlyFavorite ? prev.filter((x) => x !== lid) : [...prev, lid];
-    queryClient.setQueryData<number[]>(favoritesKey, next);
-    return { prev } as any;
-  },
-  onError: (_err, _vars, ctx: any) => {
-    if (ctx?.prev) queryClient.setQueryData<number[]>(favoritesKey, ctx.prev);
-  },
-  onSettled: () => {
-    queryClient.invalidateQueries({ queryKey: favoritesKey });
-  },
-});
+  }, [listingQuery.isError, listingQuery.error, navigate]);
 
-  const isSold = data?.status_id === 3;   
+  useEffect(() => {
+    const details = listingQuery.data as any;
+    if (!details) return;
+    setData(details);
+  }, [listingQuery.data]);
+
+  useEffect(() => {
+    const next = Array.isArray(listingImagesQuery.data) ? listingImagesQuery.data : [];
+
+    if (next.length > 0) {
+      lastNonEmptyImagesRef.current = next;
+      setImages(next);
+      setUiImages(next.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+      setOrderDirty(false);
+      return;
+    }
+
+    if (lastNonEmptyImagesRef.current.length > 0) {
+      const prev = lastNonEmptyImagesRef.current;
+      setImages(prev);
+      setUiImages(prev.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+      setOrderDirty(false);
+      return;
+    }
+
+    setImages([]);
+    setUiImages([]);
+    setOrderDirty(false);
+  }, [listingImagesQuery.data]);
+
+  const favoritesQuery = useQuery<number[], Error>({
+    queryKey: favoritesKey,
+    enabled: !!user,
+    staleTime: 20_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/listings/favorites`, {
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data)) return [];
+      return data.map((it: any) => Number(it.id)).filter((x: any) => Number.isFinite(x));
+    },
+  });
+
+  useEffect(() => {
+    if (!user || !id) {
+      setIsFavorite(false);
+      return;
+    }
+    const ids = favoritesQuery.data || [];
+    setIsFavorite(ids.some((x) => String(x) === String(id)));
+  }, [favoritesQuery.data, user, id]);
+
+  const toggleFavoriteMutation = useMutation<void, Error, { listingId: string; isCurrentlyFavorite: boolean }>({
+    mutationFn: async ({ listingId, isCurrentlyFavorite }) => {
+      if (!user) throw new Error('Brak sesji');
+      const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
+      const res = await fetch(`${API_BASE}/api/listings/favorites/${listingId}`, {
+        method,
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+      });
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(t || 'Błąd zmiany ulubionych');
+      }
+    },
+    onMutate: async ({ listingId, isCurrentlyFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: favoritesKey });
+      const prev = queryClient.getQueryData<number[]>(favoritesKey) || [];
+      const lid = Number(listingId);
+      const next = isCurrentlyFavorite ? prev.filter((x) => x !== lid) : [...prev, lid];
+      queryClient.setQueryData<number[]>(favoritesKey, next);
+      return { prev } as any;
+    },
+    onError: (_err, _vars, ctx: any) => {
+      if (ctx?.prev) queryClient.setQueryData<number[]>(favoritesKey, ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: favoritesKey });
+    },
+  });
+
+  const isSold = data?.status_id === 3;
   const isOwnListing = user && data && user.id === data.user_id;
-  const canEdit =
-    !!user && !!data && user.id === data.user_id && !isSold;  
+  const canEdit = !!user && !!data && user.id === data.user_id && !isSold;
 
   const isSale = data?.type_id === 1;
   const isHelp = data?.type_id === 2;
@@ -648,84 +645,74 @@ const toggleFavoriteMutation = useMutation<void, Error, { listingId: string; isC
 
   const directLabel = data?.help_type === 'need' ? 'Chcę pomóc' : 'Potrzebuję pomocy';
 
-const toggleInList = (arr: string[], v: string) =>
-  arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v];
+  const toggleInList = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-const openHelpApply = () => {
-  setActionError('');
-  setActionSent(false);
-  setHelpChoice('direct');
-  setHelpAvailability([]);
-  setHelpContactPref([]);
-  setHelpContactPhone('');
-  setHelpContactEmail('');
-  setHelpExchangeNote('');
-  setHelpApplyOpen(true);
-};
+  const openHelpApply = () => {
+    setActionError('');
+    setActionSent(false);
+    setHelpChoice('direct');
+    setHelpAvailability([]);
+    setHelpContactPref([]);
+    setHelpContactPhone('');
+    setHelpContactEmail('');
+    setHelpExchangeNote('');
+    setHelpApplyOpen(true);
+  };
 
-const closeHelpApply = () => setHelpApplyOpen(false);
+  const closeHelpApply = () => setHelpApplyOpen(false);
 
-const buildHelpTemplate = () => {
-  const choiceLabel =
-    helpChoice === 'exchange'
-      ? 'Pomoc za pomoc'
-      : data?.help_type === 'need'
-      ? 'Chcę pomóc'
-      : 'Potrzebuję pomocy';
+  const buildHelpTemplate = () => {
+    const choiceLabel =
+      helpChoice === 'exchange'
+        ? 'Pomoc za pomoc'
+        : data?.help_type === 'need'
+        ? 'Chcę pomóc'
+        : 'Potrzebuję pomocy';
 
-  const avail = helpAvailability.length ? `Dostępność: ${helpAvailability.join(', ')}` : '';
-  const contact = helpContactPref.length ? `Preferowany kontakt: ${helpContactPref.join(', ')}` : '';
+    const avail = helpAvailability.length ? `Dostępność: ${helpAvailability.join(', ')}` : '';
+    const contact = helpContactPref.length ? `Preferowany kontakt: ${helpContactPref.join(', ')}` : '';
 
-  const phoneLine =
-    helpContactPref.includes('Telefon') && helpContactPhone.trim()
-      ? `Telefon: ${helpContactPhone.trim()}`
-      : '';
+    const phoneLine =
+      helpContactPref.includes('Telefon') && helpContactPhone.trim() ? `Telefon: ${helpContactPhone.trim()}` : '';
 
-  const emailLine =
-    helpContactPref.includes('E-mail') && helpContactEmail.trim()
-      ? `E-mail: ${helpContactEmail.trim()}`
-      : '';
+    const emailLine =
+      helpContactPref.includes('E-mail') && helpContactEmail.trim() ? `E-mail: ${helpContactEmail.trim()}` : '';
 
-  const exchangeLine =
-    helpChoice === 'exchange' && helpExchangeNote.trim()
-      ? `Czego potrzebuję: ${helpExchangeNote.trim()}`
-      : '';
+    const exchangeLine = helpChoice === 'exchange' && helpExchangeNote.trim() ? `Czego potrzebuję: ${helpExchangeNote.trim()}` : '';
 
-  return [
-    `Zgłoszenie do ogłoszenia: "${data?.title ?? ''}"`,
-    `• ${choiceLabel}`,
-    avail ? `• ${avail}` : '',
-    contact ? `• ${contact}` : '',
-    phoneLine ? `• ${phoneLine}` : '',
-    emailLine ? `• ${emailLine}` : '',
-    exchangeLine ? `• ${exchangeLine}` : '',
-    '',
-    helpChoice === 'exchange'
-      ? 'Jeśli pasuje Ci pomoc za pomoc, opisz proszę w czym potrzebujesz wsparcia 🙂'
-      : 'Napisz proszę szczegóły – przejdźmy na czat 🙂',
-  ]
-    .filter(Boolean)
-    .join('\n');
-};
-  
+    return [
+      `Zgłoszenie do ogłoszenia: "${data?.title ?? ''}"`,
+      `• ${choiceLabel}`,
+      avail ? `• ${avail}` : '',
+      contact ? `• ${contact}` : '',
+      phoneLine ? `• ${phoneLine}` : '',
+      emailLine ? `• ${emailLine}` : '',
+      exchangeLine ? `• ${exchangeLine}` : '',
+      '',
+      helpChoice === 'exchange'
+        ? 'Jeśli pasuje Ci pomoc za pomoc, opisz proszę w czym potrzebujesz wsparcia 🙂'
+        : 'Napisz proszę szczegóły – przejdźmy na czat 🙂',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
   const infoPairs = collectPairs(data);
   const infoPairsWithoutPrice = infoPairs.filter(
-  (p) =>
-    p.key !== 'price' &&
-    p.key !== 'title' &&
-    p.key !== 'category_name' &&
-    p.key !== 'subcategory_name' &&
-    p.key !== 'description' &&
-    p.key !== 'negotiable' &&
-    p.key !== 'requirements'
-);
+    (p) =>
+      p.key !== 'price' &&
+      p.key !== 'title' &&
+      p.key !== 'category_name' &&
+      p.key !== 'subcategory_name' &&
+      p.key !== 'description' &&
+      p.key !== 'negotiable' &&
+      p.key !== 'requirements',
+  );
 
   const pricePair = infoPairs.find((p) => p.key === 'price');
   const negotiablePair = infoPairs.find((p) => p.key === 'negotiable');
   const isNegotiable =
-    negotiablePair && typeof negotiablePair.value === 'string'
-      ? negotiablePair.value.toLowerCase().startsWith('t')
-      : false;
+    negotiablePair && typeof negotiablePair.value === 'string' ? negotiablePair.value.toLowerCase().startsWith('t') : false;
   const requirementsPair = infoPairs.find((p) => p.key === 'requirements');
 
   useEffect(() => {
@@ -734,14 +721,13 @@ const buildHelpTemplate = () => {
       setEditDescription(data.description || '');
       setEditLocation(data.location || '');
       setEditHelpType((data.help_type as any) ?? '');
-      setEditCondition(
-        String((data as any)?.item_condition ?? (data as any)?.condition ?? '')
-      );
-      const isSale = (data as any)?.type_id === 1;
-      if (isSale) {
+      setEditCondition(String((data as any)?.item_condition ?? (data as any)?.condition ?? ''));
+
+      const isSaleLocal = (data as any)?.type_id === 1;
+      if (isSaleLocal) {
         const rawIsFree = Boolean((data as any)?.is_free);
         const rawPrice = (data as any)?.price;
-        setEditPrice(rawIsFree ? '' : (rawPrice === null || typeof rawPrice === 'undefined' ? '' : String(rawPrice)));
+        setEditPrice(rawIsFree ? '' : rawPrice === null || typeof rawPrice === 'undefined' ? '' : String(rawPrice));
         setEditIsFree(rawIsFree);
         setEditNegotiable(Boolean((data as any)?.negotiable));
       } else {
@@ -749,16 +735,12 @@ const buildHelpTemplate = () => {
         setEditIsFree(false);
         setEditNegotiable(false);
       }
-      // --- PRACA (work) fields initialization ---
-      const isWork = (data as any)?.type_id === 3;
-      if (isWork) {
+
+      const isWorkLocal = (data as any)?.type_id === 3;
+      if (isWorkLocal) {
         const rawSalary = (data as any)?.salary;
-        setEditSalary(
-          rawSalary === null || typeof rawSalary === 'undefined' ? '' : String(rawSalary),
-        );
-        setEditWorkMode(
-          String((data as any)?.work_mode ?? (data as any)?.jobMode ?? ''),
-        );
+        setEditSalary(rawSalary === null || typeof rawSalary === 'undefined' ? '' : String(rawSalary));
+        setEditWorkMode(String((data as any)?.work_mode ?? (data as any)?.jobMode ?? ''));
         setEditJobCategory(String((data as any)?.job_category ?? ''));
         setEditRequirements(String((data as any)?.requirements ?? ''));
       } else {
@@ -767,7 +749,7 @@ const buildHelpTemplate = () => {
         setEditJobCategory('');
         setEditRequirements('');
       }
-      // ---
+
       if (startInEdit) {
         setEditMode(true);
       }
@@ -797,8 +779,6 @@ const buildHelpTemplate = () => {
     });
 
     setOrderDirty(true);
-
-
     e.target.value = '';
   };
 
@@ -826,9 +806,7 @@ const buildHelpTemplate = () => {
 
   const removeNewImage = (tempId: string) => {
     setUiImages((prev) => prev.filter((it) => !(it.kind === 'new' && it.tempId === tempId)));
-    setNewImages((prev) => prev.filter((f) => {
-      return true;
-    }));
+    setNewImages((prev) => prev.filter((f) => true));
     setOrderDirty(true);
   };
 
@@ -843,182 +821,174 @@ const buildHelpTemplate = () => {
     setOrderDirty(true);
   };
 
-  
+  const handleSave = async () => {
+    if (!id) return;
 
-const handleSave = async () => {
-  if (!id) return;
+    const desiredExistingIds = uiImages
+      .filter((it): it is { kind: 'existing'; id: number; src: string } => it.kind === 'existing')
+      .map((it) => it.id);
 
-  const desiredExistingIds = uiImages
-    .filter((it): it is { kind: 'existing'; id: number; src: string } => it.kind === 'existing')
-    .map((it) => it.id);
+    const desiredNewFiles = uiImages
+      .filter((it): it is { kind: 'new'; tempId: string; src: string; file: File } => it.kind === 'new')
+      .map((it) => it.file);
 
-  const desiredNewFiles = uiImages
-    .filter((it): it is { kind: 'new'; tempId: string; src: string; file: File } => it.kind === 'new')
-    .map((it) => it.file);
+    const desiredSequence = uiImages.map((it) => (it.kind === 'existing' ? { kind: 'existing' as const, id: it.id } : { kind: 'new' as const }));
 
-  const desiredSequence = uiImages.map((it) =>
-    it.kind === 'existing'
-      ? ({ kind: 'existing' as const, id: it.id })
-      : ({ kind: 'new' as const })
-  );
+    try {
+      const res = await fetch(`${API_BASE}/api/listings/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          location: editLocation,
+          condition: editCondition,
+          help_type: (data as any)?.type_id === 2 ? (editHelpType || null) : undefined,
+          price:
+            (data as any)?.type_id === 1
+              ? editIsFree
+                ? 0
+                : editPrice.trim() === ''
+                ? null
+                : Number(editPrice.replace(',', '.'))
+              : undefined,
+          isFree: (data as any)?.type_id === 1 ? editIsFree : undefined,
+          negotiable: (data as any)?.type_id === 1 ? editNegotiable : undefined,
+          salary:
+            (data as any)?.type_id === 3
+              ? editSalary.trim() === ''
+                ? null
+                : Number(editSalary.replace(/[^0-9.,-]/g, '').replace(',', '.'))
+              : undefined,
+          work_mode: (data as any)?.type_id === 3 ? (editWorkMode || null) : undefined,
+          job_category: (data as any)?.type_id === 3 ? (editJobCategory || null) : undefined,
+          requirements: (data as any)?.type_id === 3 ? (editRequirements || '') : undefined,
+        }),
+      });
 
-  try {
-    const res = await fetch(`${API_BASE}/api/listings/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        title: editTitle,
-        description: editDescription,
-        location: editLocation,
-        condition: editCondition,
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        alert(`Błąd zapisu: ${err?.error || res.statusText}`);
+        return;
+      }
 
-        help_type: (data as any)?.type_id === 2 ? (editHelpType || null) : undefined,
+      const body = await res.json();
+      const updated = body.updated ?? body;
+      setData(updated);
 
-        // SPRZEDAŻ
-        price:
-          (data as any)?.type_id === 1
-            ? editIsFree
-              ? 0
-              : editPrice.trim() === ''
-              ? null
-              : Number(editPrice.replace(',', '.'))
-            : undefined,
-        isFree: (data as any)?.type_id === 1 ? editIsFree : undefined,
-        negotiable: (data as any)?.type_id === 1 ? editNegotiable : undefined,
+      if (isSale && desiredNewFiles.length > 0) {
+        const formData = new FormData();
+        desiredNewFiles.forEach((file) => formData.append('images', file));
 
-        // PRACA
-        salary:
-          (data as any)?.type_id === 3
-            ? editSalary.trim() === ''
-              ? null
-              : Number(editSalary.replace(/[^0-9.,-]/g, '').replace(',', '.'))
-            : undefined,
-        work_mode: (data as any)?.type_id === 3 ? (editWorkMode || null) : undefined,
-        job_category: (data as any)?.type_id === 3 ? (editJobCategory || null) : undefined,
-        requirements: (data as any)?.type_id === 3 ? (editRequirements || '') : undefined,
-      }),
-    });
+        const imgRes = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+          body: formData,
+        });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => null);
-      alert(`Błąd zapisu: ${err?.error || res.statusText}`);
+        if (!imgRes.ok) {
+          console.error('Błąd zapisu zdjęć:', await imgRes.text());
+        }
+      }
+
+      let normalized: ListingImage[] = [];
+      try {
+        const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
+          credentials: 'include',
+          headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+        });
+
+        if (ri.ok) {
+          const imgs = await ri.json();
+          normalized = Array.isArray(imgs)
+            ? imgs
+                .map((it: any) => {
+                  const src = toSrc(it);
+                  if (!src) return null;
+                  return { id: it.id, src };
+                })
+                .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
+            : [];
+        }
+      } catch (e) {
+        console.error('Błąd odświeżania zdjęć:', e);
+      }
+
+      const fetchedIds = normalized.map((x) => x.id);
+      const newFetchedIds = fetchedIds.filter((x) => !desiredExistingIds.includes(x));
+
+      const finalOrderedIds: number[] = [];
+      let newPtr = 0;
+
+      for (const item of desiredSequence) {
+        if (item.kind === 'existing') {
+          finalOrderedIds.push(item.id);
+        } else {
+          const idForNew = newFetchedIds[newPtr++];
+          if (typeof idForNew === 'number') finalOrderedIds.push(idForNew);
+        }
+      }
+
+      if (isSale && finalOrderedIds.length > 0) {
+        try {
+          const ro = await fetch(`${API_BASE}/api/listings/${id}/images/reorder`, {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+            },
+            body: JSON.stringify({ orderedImageIds: finalOrderedIds }),
+          });
+
+          if (!ro.ok) {
+            console.warn('Nie udało się zapisać kolejności zdjęć:', await ro.text());
+          }
+        } catch (e) {
+          console.error('Błąd zapisu kolejności zdjęć:', e);
+        }
+      }
+
+      setImages(normalized);
+      setUiImages(normalized.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+      setOrderDirty(false);
+      setNewImages([]);
+      queryClient.invalidateQueries({ queryKey: listingKey });
+      queryClient.invalidateQueries({ queryKey: listingImagesKey });
+      queryClient.invalidateQueries({ queryKey: favoritesKey });
+      setEditMode(false);
+      setEditCondition(((updated as any)?.condition ?? editCondition) as string);
+    } catch (e) {
+      console.error('Błąd podczas zapisu ogłoszenia', e);
+      alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!user || !id) {
+      navigate('/auth');
       return;
     }
 
-    const body = await res.json();
-    const updated = body.updated ?? body;
-    setData(updated);
-
-    if (isSale && desiredNewFiles.length > 0) {
-      const formData = new FormData();
-      desiredNewFiles.forEach((file) => formData.append('images', file));
-
-      const imgRes = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-        body: formData,
-      });
-
-      if (!imgRes.ok) {
-        console.error('Błąd zapisu zdjęć:', await imgRes.text());
-      }
+    if (!toggleFavoriteMutation.isPending) {
+      toggleFavoriteMutation.mutate({ listingId: String(id), isCurrentlyFavorite: isFavorite });
     }
+  };
 
-
-    let normalized: ListingImage[] = [];
-    try {
-      const ri = await fetch(`${API_BASE}/api/listings/${id}/images`, {
-        credentials: 'include',
-        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
-      });
-
-      if (ri.ok) {
-        const imgs = await ri.json();
-        normalized = Array.isArray(imgs)
-          ? imgs
-              .map((it: any) => {
-                const src = toSrc(it);
-                if (!src) return null;
-                return { id: it.id, src };
-              })
-              .filter((x: ListingImage | null): x is ListingImage => Boolean(x))
-          : [];
-      }
-    } catch (e) {
-      console.error('Błąd odświeżania zdjęć:', e);
-    }
-
-    const fetchedIds = normalized.map((x) => x.id);
-    const newFetchedIds = fetchedIds.filter((x) => !desiredExistingIds.includes(x));
-
-    const finalOrderedIds: number[] = [];
-    let newPtr = 0;
-
-    for (const item of desiredSequence) {
-      if (item.kind === 'existing') {
-        finalOrderedIds.push(item.id);
-      } else {
-        const idForNew = newFetchedIds[newPtr++];
-        if (typeof idForNew === 'number') finalOrderedIds.push(idForNew);
-      }
-    }
-
-
-    if (isSale && finalOrderedIds.length > 0) {
-      try {
-        const ro = await fetch(`${API_BASE}/api/listings/${id}/images/reorder`, {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-          },
-          body: JSON.stringify({ orderedImageIds: finalOrderedIds }),
-        });
-
-        if (!ro.ok) {
-          console.warn('Nie udało się zapisać kolejności zdjęć:', await ro.text());
-        }
-      } catch (e) {
-        console.error('Błąd zapisu kolejności zdjęć:', e);
-      }
-    }
-
-    setImages(normalized);
-    setUiImages(normalized.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
-    setOrderDirty(false);
-    setNewImages([]);
-    queryClient.invalidateQueries({ queryKey: listingKey });
-    queryClient.invalidateQueries({ queryKey: listingImagesKey });
-    queryClient.invalidateQueries({ queryKey: favoritesKey });
-    setEditMode(false);
-    setEditCondition(((updated as any)?.condition ?? editCondition) as string);
-  } catch (e) {
-    console.error('Błąd podczas zapisu ogłoszenia', e);
-    alert('Wystąpił błąd podczas zapisywania ogłoszenia.');
-  }
-};
-
-  const handleToggleFavorite = async () => {
-  if (!user || !id) {
-    navigate('/auth');
-    return;
-  }
-
-  if (!toggleFavoriteMutation.isPending) {
-    toggleFavoriteMutation.mutate({ listingId: String(id), isCurrentlyFavorite: isFavorite });
-  }
-};
-
+  const resetPaymentModal = () => {
+    setPaymentStep(1);
+    setShippingError('');
+    setBlikError('');
+    setBlikCode('');
+  };
 
   const handleBuyNowClick = () => {
     if (!user) {
-      // niezalogowany kupujący – przekieruj do logowania
       navigate('/auth');
       return;
     }
@@ -1027,9 +997,28 @@ const handleSave = async () => {
       return;
     }
     setShowPayment(true);
+    resetPaymentModal();
+
+    try {
+      const cached = localStorage.getItem('gg_shipping_v1');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') {
+          setShipping((prev) => ({
+            ...prev,
+            fullName: String(parsed.fullName ?? prev.fullName),
+            phone: String(parsed.phone ?? prev.phone),
+            email: String(parsed.email ?? prev.email),
+            street: String(parsed.street ?? prev.street),
+            zip: String(parsed.zip ?? prev.zip),
+            city: String(parsed.city ?? prev.city),
+          }));
+        }
+      }
+    } catch {
+      // ignore
+    }
   };
-
-
 
   const handleOfferPriceClick = () => {
     if (!user) {
@@ -1044,119 +1033,155 @@ const handleSave = async () => {
     setOfferPrice('');
     setShowOfferPrice(true);
   };
-  
-  
+
   const handleSendOfferPrice = async () => {
-  if (!data) return;
+    if (!data) return;
 
-  const val = Number(offerPrice.replace(',', '.'));
-  if (!Number.isFinite(val) || val <= 0) {
-    setOfferError('Wpisz poprawną kwotę.');
-    return;
-  }
-
-  try {
-    setOfferLoading(true);
-    setOfferError('');
-
-    const res = await fetch(`${API_BASE}/api/price-offers/start`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-      body: JSON.stringify({
-        listingId: data.id,
-        price: val,
-      }),
-    });
-
-    const payload = await res.json().catch(() => null);
-    if (!res.ok || !payload?.ok) {
-      setOfferError(payload?.error || 'Nie udało się wysłać propozycji.');
+    const val = Number(offerPrice.replace(',', '.'));
+    if (!Number.isFinite(val) || val <= 0) {
+      setOfferError('Wpisz poprawną kwotę.');
       return;
     }
 
-    setShowOfferPrice(false);
-    navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
-  } catch (e) {
-    console.error(e);
-    setOfferError('Wystąpił błąd podczas wysyłania propozycji.');
-  } finally {
-    setOfferLoading(false);
-  }
-};
-  
-  
-const handleApplyClick = async () => {
-  if (!data) return;
+    try {
+      setOfferLoading(true);
+      setOfferError('');
 
-  if (!user) {
-    navigate('/auth');
-    return;
-  }
+      const res = await fetch(`${API_BASE}/api/price-offers/start`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          listingId: data.id,
+          price: val,
+        }),
+      });
 
-  if (user.id === data.user_id) {
-    alert('Nie możesz zgłosić się do własnego ogłoszenia.');
-    return;
-  }
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.ok) {
+        setOfferError(payload?.error || 'Nie udało się wysłać propozycji.');
+        return;
+      }
 
-  if (data.type_id === 1) return;
+      setShowOfferPrice(false);
+      navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+    } catch (e) {
+      console.error(e);
+      setOfferError('Wystąpił błąd podczas wysyłania propozycji.');
+    } finally {
+      setOfferLoading(false);
+    }
+  };
 
-  if (data.type_id === 3) {
-    pickCvFile();
-    return;
-  }
+  const handleApplyClick = async () => {
+    if (!data) return;
 
-  if (data.type_id === 2) {
-    openHelpApply();
-    return;
-  }
-
-  setActionLoading(true);
-  setActionError('');
-
-  const content = `Jestem chętny(a) w sprawie ogłoszenia: "${data.title}".`;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/messages`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-      },
-      body: JSON.stringify({
-        listingId: data.id,
-        receiverId: data.user_id,
-        content,
-      }),
-    });
-
-    const payload = await res.json().catch(() => null);
-
-    if (!res.ok || !payload?.ok) {
-      setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
+    if (!user) {
+      navigate('/auth');
       return;
     }
 
-    setActionSent(true);
-    navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
-  } catch (e) {
-    console.error(e);
-    setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
-  } finally {
-    setActionLoading(false);
-  }
-};
-  
+    if (user.id === data.user_id) {
+      alert('Nie możesz zgłosić się do własnego ogłoszenia.');
+      return;
+    }
+
+    if (data.type_id === 1) return;
+
+    if (data.type_id === 3) {
+      pickCvFile();
+      return;
+    }
+
+    if (data.type_id === 2) {
+      openHelpApply();
+      return;
+    }
+
+    setActionLoading(true);
+    setActionError('');
+
+    const content = `Jestem chętny(a) w sprawie ogłoszenia: "${data.title}".`;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/messages`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify({
+          listingId: data.id,
+          receiverId: data.user_id,
+          content,
+        }),
+      });
+
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok || !payload?.ok) {
+        setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
+        return;
+      }
+
+      setActionSent(true);
+      navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+    } catch (e) {
+      console.error(e);
+      setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const validateShipping = (s: ShippingAddress) => {
+    const fullName = s.fullName.trim();
+    const street = s.street.trim();
+    const city = s.city.trim();
+    const zip = s.zip.trim();
+    const phone = s.phone.trim();
+    const email = s.email.trim();
+
+    if (fullName.length < 3) return 'Wpisz imię i nazwisko.';
+    if (street.length < 5) return 'Wpisz ulicę i numer.';
+    if (city.length < 2) return 'Wpisz miasto.';
+    if (!/^\d{2}-\d{3}$/.test(zip)) return 'Kod pocztowy ma format 00-000.';
+    if (phone.length < 9) return 'Wpisz poprawny numer telefonu.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Wpisz poprawny e-mail.';
+    return '';
+  };
+
+  const handleGoToBlikStep = () => {
+    const err = validateShipping(shipping);
+    if (err) {
+      setShippingError(err);
+      return;
+    }
+    setShippingError('');
+    try {
+      localStorage.setItem('gg_shipping_v1', JSON.stringify(shipping));
+    } catch {
+      // ignore
+    }
+    setPaymentStep(2);
+  };
 
   const handleConfirmBlik = async () => {
     if (!id) return;
 
     if (!/^\d{6}$/.test(blikCode)) {
       setBlikError('Kod BLIK musi mieć dokładnie 6 cyfr.');
+      return;
+    }
+
+    const shipErr = validateShipping(shipping);
+    if (shipErr) {
+      setPaymentStep(1);
+      setShippingError(shipErr);
       return;
     }
 
@@ -1200,17 +1225,17 @@ const handleApplyClick = async () => {
 
 
 
- const isSaleFromQuery = (listingQuery.data as any)?.type_id === 1;
- const imagesAreLoading = listingImagesQuery.isPending || listingImagesQuery.isFetching;
- const shouldShowImageSkeleton = isSaleFromQuery && uiImages.length === 0;
+   const isSaleFromQuery = (listingQuery.data as any)?.type_id === 1;
+  const imagesAreLoading = listingImagesQuery.isPending || listingImagesQuery.isFetching;
+  const shouldShowImageSkeleton = isSaleFromQuery && uiImages.length === 0;
 
- if (listingQuery.isPending) {
-   return (
-     <div className="listing-details-container">
-       <p>Ładowanie…</p>
-     </div>
-   );
- }
+  if (listingQuery.isPending) {
+    return (
+      <div className="listing-details-container">
+        <p>Ładowanie…</p>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -1220,16 +1245,15 @@ const handleApplyClick = async () => {
     );
   }
 
-    const helpTypeLabel =
+  const helpTypeLabel =
     data.help_type === 'offer'
       ? 'Oferuję pomoc'
       : data.help_type === 'need'
       ? 'Szukam pomocy'
       : null;
 
-    const authorAvatarSrc = data.author_avatar_url
-    ? data.author_avatar_url.startsWith('http') ||
-      data.author_avatar_url.startsWith('data:')
+  const authorAvatarSrc = data.author_avatar_url
+    ? data.author_avatar_url.startsWith('http') || data.author_avatar_url.startsWith('data:')
       ? data.author_avatar_url
       : `${API_BASE}${data.author_avatar_url}`
     : null;
@@ -1249,137 +1273,48 @@ const handleApplyClick = async () => {
             />
           )}
 
-        {user && !isSold && !isOwnListing && (
-          <button
-            className={`favorite-toggle favorite-toggle-details ${
-              isFavorite ? 'favorite-toggle--active' : ''
-            }`}
-            aria-label={isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
-            onClick={handleToggleFavorite}
-          >
-            <svg
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
-              />
-            </svg>
-          </button>
-        )}
-
-
-        </div>
-
-
-
-              <div className="listing-author-box">
-        <div className="listing-author-left">
-          <div className="listing-user-avatar">
-            {authorAvatarSrc ? (
-              <img
-                src={authorAvatarSrc}
-                alt={`Avatar użytkownika ${data.author_username ?? ''}`}
-                className="listing-user-avatar-img"
-              />
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="34"
-                height="34"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="7" r="4" />
-                <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
-              </svg>
-            )}
-          </div>
-
-          <div className="listing-author-info">
-            <div className="listing-author-label">OGŁOSZENIE DODAŁ(A)</div>
-            <div className="listing-author-name">{data.author_username}</div>
-          </div>
-        </div>
-
-          {user ? (
-            user.id === data.user_id ? (
-              <span className="message-info-self">
-                To jest Twoje ogłoszenie.
-              </span>
-            ) : (
-              <button
-                className="message-button-author"
-                type="button"
-                onClick={() =>
-                  navigate(`/messages/listing/${data.id}?peer=${data.user_id}`)
-                }
-              >
-                Napisz wiadomość
-              </button>
-            )
-          ) : (
+          {user && !isSold && !isOwnListing && (
             <button
-              className="message-button-author"
-              type="button"
-              onClick={() => navigate('/auth')}
+              className={`favorite-toggle favorite-toggle-details ${
+                isFavorite ? 'favorite-toggle--active' : ''
+              }`}
+              aria-label={isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+              onClick={handleToggleFavorite}
             >
-              Zaloguj się, aby napisać
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12.01 6.001C6.5 1 1 8 5.782 13.001L12.011 20l6.23-7C23 8 17.5 1 12.01 6.002Z"
+                />
+              </svg>
             </button>
           )}
-        <input
-          ref={cvInputRef}
-          type="file"
-          accept="application/pdf"
-          style={{ display: 'none' }}
-          onChange={(e) => {
-            const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-            const okFile = validateCv(f);
-            e.target.value = '';
-            if (!okFile || !data) return;
-
-            const content = `Aplikuję na Twoje ogłoszenie: "${data.title}".`;
-            navigate(`/messages/listing/${data.id}?peer=${data.user_id}`, {
-              state: {
-                prefillText: content,
-                prefillAttachment: okFile,
-              },
-            });
-          }}
-        />
         </div>
 
-        <p className="listing-details-meta">
-          Dodano: {new Date(data.created_at).toLocaleString()}
-        </p>
-      </div>
-
-      <div className="listing-details-card">
-        {canEdit && (
-        <div className="inline-edit-toolbar">
-          {!editMode ? (
-            <button
-              type="button"
-              className="edit-button inline-edit-button"
-              onClick={() => setEditMode(true)}
-            >
-              <span className="inline-edit-icon" aria-hidden="true">
+        <div className="listing-author-box">
+          <div className="listing-author-left">
+            <div className="listing-user-avatar">
+              {authorAvatarSrc ? (
+                <img
+                  src={authorAvatarSrc}
+                  alt={`Avatar użytkownika ${data.author_username ?? ''}`}
+                  className="listing-user-avatar-img"
+                />
+              ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
+                  width="34"
+                  height="34"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -1387,257 +1322,327 @@ const handleApplyClick = async () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                  <circle cx="12" cy="7" r="4" />
+                  <path d="M5.5 21a6.5 6.5 0 0 1 13 0" />
                 </svg>
-              </span>
-              <span className="inline-edit-text">Edytuj</span>
-            </button>
-          ) : (
-            <div className="inline-edit-actions">
-              <button
-                type="button"
-                className="action-button save-button"
-                onClick={handleSave}
-              >
-                Zapisz zmiany
-              </button>
-
-              <button
-                type="button"
-                className="action-button cancel-button"
-                onClick={() => {
-                  setEditMode(false);
-                  if (data) {
-                    setEditTitle(data.title || '');
-                    setEditDescription(data.description || '');
-                    setEditLocation(data.location || '');
-                    setEditCondition(((data as any).condition ?? '') as string);
-
-                    // reset PRACA fields
-                    const rawSalary = (data as any)?.salary;
-                    setEditSalary(
-                      rawSalary === null || typeof rawSalary === 'undefined'
-                        ? ''
-                        : String(rawSalary),
-                    );
-                    setEditWorkMode(
-                      String((data as any)?.work_mode ?? (data as any)?.jobMode ?? ''),
-                    );
-                    setEditJobCategory(String((data as any)?.job_category ?? ''));
-                    setEditRequirements(String((data as any)?.requirements ?? ''));
-                  }
-                  setUiImages(images.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
-                  setOrderDirty(false);
-                  setNewImages([]);
-                }}
-              >
-                Anuluj
-              </button>
+              )}
             </div>
+
+            <div className="listing-author-info">
+              <div className="listing-author-label">OGŁOSZENIE DODAŁ(A)</div>
+              <div className="listing-author-name">{data.author_username}</div>
+            </div>
+          </div>
+
+          {user ? (
+            user.id === data.user_id ? (
+              <span className="message-info-self">To jest Twoje ogłoszenie.</span>
+            ) : (
+              <button
+                className="message-button-author"
+                type="button"
+                onClick={() => navigate(`/messages/listing/${data.id}?peer=${data.user_id}`)}
+              >
+                Napisz wiadomość
+              </button>
+            )
+          ) : (
+            <button className="message-button-author" type="button" onClick={() => navigate('/auth')}>
+              Zaloguj się, aby napisać
+            </button>
           )}
+
+          <input
+            ref={cvInputRef}
+            type="file"
+            accept="application/pdf"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+              const okFile = validateCv(f);
+              e.target.value = '';
+              if (!okFile || !data) return;
+
+              const content = `Aplikuję na Twoje ogłoszenie: "${data.title}".`;
+              navigate(`/messages/listing/${data.id}?peer=${data.user_id}`, {
+                state: { prefillText: content, prefillAttachment: okFile },
+              });
+            }}
+          />
         </div>
-      )}
-      {isSale && (
-      <div className="listing-details-gallery">
-          {isSale && canEdit && editMode && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImagesChange}
-                className="inline-file-input"
-              />
+
+        <p className="listing-details-meta">Dodano: {new Date(data.created_at).toLocaleString()}</p>
+      </div>
+
+      <div className="listing-details-card">
+        {canEdit && (
+          <div className="inline-edit-toolbar">
+            {!editMode ? (
               <button
                 type="button"
-                className="add-photo-tile"
-                onClick={() => fileInputRef.current?.click()}
-                title="Dodaj zdjęcia"
+                className="edit-button inline-edit-button"
+                onClick={() => setEditMode(true)}
               >
-                <span className="add-photo-plus">＋</span>
-                <span className="add-photo-text">Dodaj zdjęcia</span>
-              </button>
-            </>
-          )}
-          {shouldShowImageSkeleton && (
-            <>
-              {[0, 1, 2].map((k) => (
-                <div key={`sk-${k}`} className="listing-details-thumb">
-                  <div
-                    className="listing-details-image"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '100%',
-                      height: '100%',
-                      opacity: 0.8,
-                    }}
+                <span className="inline-edit-icon" aria-hidden="true">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    Ładowanie zdjęć…
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-          {uiImages.map((img, i) => {
-            const key = img.kind === 'existing' ? `ex-${img.id}` : `new-${img.tempId}`;
-            const src = img.src;
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                  </svg>
+                </span>
+                <span className="inline-edit-text">Edytuj</span>
+              </button>
+            ) : (
+              <div className="inline-edit-actions">
+                <button type="button" className="action-button save-button" onClick={handleSave}>
+                  Zapisz zmiany
+                </button>
 
-            return (
-              <div key={key} className="listing-details-thumb">
-                <img
-                  src={src}
-                  alt={`Zdjęcie ${i + 1}`}
-                  className="listing-details-image"
-                  loading="eager"
-                  decoding="async"
-                  onError={(e) => {
-                    const imgEl = e.currentTarget;
-                    if (!imgEl.dataset.retried) {
-                      imgEl.dataset.retried = '1';
-                      imgEl.src = withCacheBust(src);
-                      return;
-                    }
-                    imgEl.style.display = 'none';
-                  }}
+                <button
+                  type="button"
+                  className="action-button cancel-button"
                   onClick={() => {
-                    setLightboxIndex(i);
-                    setLightboxImage(src);
-                    setLightboxOpen(true);
+                    setEditMode(false);
+                    if (data) {
+                      setEditTitle(data.title || '');
+                      setEditDescription(data.description || '');
+                      setEditLocation(data.location || '');
+                      setEditCondition(((data as any).condition ?? '') as string);
+
+                      const rawSalary = (data as any)?.salary;
+                      setEditSalary(
+                        rawSalary === null || typeof rawSalary === 'undefined'
+                          ? ''
+                          : String(rawSalary),
+                      );
+                      setEditWorkMode(String((data as any)?.work_mode ?? (data as any)?.jobMode ?? ''));
+                      setEditJobCategory(String((data as any)?.job_category ?? ''));
+                      setEditRequirements(String((data as any)?.requirements ?? ''));
+                    }
+                    setUiImages(images.map((img) => ({ kind: 'existing', id: img.id, src: img.src })));
+                    setOrderDirty(false);
+                    setNewImages([]);
                   }}
-                  style={{ cursor: 'pointer' }}
-                />
-
-                {canEdit && editMode && (
-                  <>
-                    <button
-                      type="button"
-                      className="image-delete-x"
-                      onClick={() =>
-                        img.kind === 'existing'
-                          ? handleDeleteImage(img.id)
-                          : removeNewImage(img.tempId)
-                      }
-                      aria-label="Usuń zdjęcie"
-                      title="Usuń zdjęcie"
-                    >
-                      ✕
-                    </button>
-
-                    <div className="image-actions">
-                      <button
-                        type="button"
-                        className="image-move-btn"
-                        onClick={() => moveUiImage(i, i - 1)}
-                        disabled={i === 0}
-                        title="Przesuń w lewo"
-                      >
-                        ◀
-                      </button>
-                      <button
-                        type="button"
-                        className="image-move-btn"
-                        onClick={() => moveUiImage(i, i + 1)}
-                        disabled={i === uiImages.length - 1}
-                        title="Przesuń w prawo"
-                      >
-                        ▶
-                      </button>
-                    </div>
-                  </>
-                )}
+                >
+                  Anuluj
+                </button>
               </div>
-            );
-          })}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+
+        {isSale && (
+          <div className="listing-details-gallery">
+            {isSale && canEdit && editMode && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImagesChange}
+                  className="inline-file-input"
+                />
+                <button
+                  type="button"
+                  className="add-photo-tile"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Dodaj zdjęcia"
+                >
+                  <span className="add-photo-plus">＋</span>
+                  <span className="add-photo-text">Dodaj zdjęcia</span>
+                </button>
+              </>
+            )}
+
+            {shouldShowImageSkeleton && (
+              <>
+                {[0, 1, 2].map((k) => (
+                  <div key={`sk-${k}`} className="listing-details-thumb">
+                    <div
+                      className="listing-details-image"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        opacity: 0.8,
+                      }}
+                    >
+                      Ładowanie zdjęć…
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {uiImages.map((img, i) => {
+              const key = img.kind === 'existing' ? `ex-${img.id}` : `new-${img.tempId}`;
+              const src = img.src;
+
+              return (
+                <div key={key} className="listing-details-thumb">
+                  <img
+                    src={src}
+                    alt={`Zdjęcie ${i + 1}`}
+                    className="listing-details-image"
+                    loading="eager"
+                    decoding="async"
+                    onError={(e) => {
+                      const imgEl = e.currentTarget;
+                      if (!imgEl.dataset.retried) {
+                        imgEl.dataset.retried = '1';
+                        imgEl.src = withCacheBust(src);
+                        return;
+                      }
+                      imgEl.style.display = 'none';
+                    }}
+                    onClick={() => {
+                      setLightboxIndex(i);
+                      setLightboxImage(src);
+                      setLightboxOpen(true);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+
+                  {canEdit && editMode && (
+                    <>
+                      <button
+                        type="button"
+                        className="image-delete-x"
+                        onClick={() =>
+                          img.kind === 'existing'
+                            ? handleDeleteImage(img.id)
+                            : removeNewImage(img.tempId)
+                        }
+                        aria-label="Usuń zdjęcie"
+                        title="Usuń zdjęcie"
+                      >
+                        ✕
+                      </button>
+
+                      <div className="image-actions">
+                        <button
+                          type="button"
+                          className="image-move-btn"
+                          onClick={() => moveUiImage(i, i - 1)}
+                          disabled={i === 0}
+                          title="Przesuń w lewo"
+                        >
+                          ◀
+                        </button>
+                        <button
+                          type="button"
+                          className="image-move-btn"
+                          onClick={() => moveUiImage(i, i + 1)}
+                          disabled={i === uiImages.length - 1}
+                          title="Przesuń w prawo"
+                        >
+                          ▶
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <section className="listing-section">
-  <h3 className="listing-section-title">Szczegóły ogłoszenia</h3>
-  <div className="listing-attributes">
-   {infoPairsWithoutPrice.map(({ key, label, value }) => (
-  <div key={key} className="listing-attribute">
-    <span className="listing-attribute-label">{label}</span>
+          <h3 className="listing-section-title">Szczegóły ogłoszenia</h3>
+          <div className="listing-attributes">
+            {infoPairsWithoutPrice.map(({ key, label, value }) => (
+              <div key={key} className="listing-attribute">
+                <span className="listing-attribute-label">{label}</span>
 
-    {editMode && canEdit && key === 'location' ? (
-      <input
-        className="inline-edit-input"
-        type="text"
-        value={editLocation}
-        onChange={(e) => setEditLocation(e.target.value)}
-        placeholder="Wpisz lokalizację"
-      />
-    ) : editMode && canEdit && key === 'condition' ? (
-      <input
-        className="inline-edit-input"
-        type="text"
-        value={editCondition}
-        onChange={(e) => setEditCondition(e.target.value)}
-        placeholder="Np. Nowy / Bardzo dobry"
-      />
-    ) : editMode && canEdit && key === 'help_type' && isHelp ? (
-  <div className="select-wrap">
-    <select
-      className="inline-edit-input"
-      value={editHelpType}
-      onChange={(e) => setEditHelpType(e.target.value as any)}
-    >
-      <option value="">— wybierz —</option>
-      <option value="offer">Oferuję pomoc</option>
-      <option value="need">Szukam pomocy</option>
-    </select>
-  </div>
-    ) : editMode && canEdit && key === 'salary' && isWork ? (
-      <input
-        className="inline-edit-input"
-        type="text"
-        inputMode="decimal"
-        value={editSalary}
-        onChange={(e) => setEditSalary(e.target.value)}
-        placeholder="Np. 4500"
-      />
-    ) : editMode && canEdit && key === 'work_mode' && isWork ? (
-      <input
-        className="inline-edit-input"
-        type="text"
-        value={editWorkMode}
-        onChange={(e) => setEditWorkMode(e.target.value)}
-        placeholder="Np. stacjonarna / zdalna / hybrydowa"
-      />
-    ) : editMode && canEdit && key === 'job_category' && isWork ? (
-      <input
-        className="inline-edit-input"
-        type="text"
-        value={editJobCategory}
-        onChange={(e) => setEditJobCategory(e.target.value)}
-        placeholder="Np. pracownik / budowlanka / IT"
-      />
-    ) : (
-      <span className="listing-attribute-value">{value}</span>
-    )}
-  </div>
-))}
-  </div>
-</section>
+                {editMode && canEdit && key === 'location' ? (
+                  <input
+                    className="inline-edit-input"
+                    type="text"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="Wpisz lokalizację"
+                  />
+                ) : editMode && canEdit && key === 'condition' ? (
+                  <input
+                    className="inline-edit-input"
+                    type="text"
+                    value={editCondition}
+                    onChange={(e) => setEditCondition(e.target.value)}
+                    placeholder="Np. Nowy / Bardzo dobry"
+                  />
+                ) : editMode && canEdit && key === 'help_type' && isHelp ? (
+                  <div className="select-wrap">
+                    <select
+                      className="inline-edit-input"
+                      value={editHelpType}
+                      onChange={(e) => setEditHelpType(e.target.value as any)}
+                    >
+                      <option value="">— wybierz —</option>
+                      <option value="offer">Oferuję pomoc</option>
+                      <option value="need">Szukam pomocy</option>
+                    </select>
+                  </div>
+                ) : editMode && canEdit && key === 'salary' && isWork ? (
+                  <input
+                    className="inline-edit-input"
+                    type="text"
+                    inputMode="decimal"
+                    value={editSalary}
+                    onChange={(e) => setEditSalary(e.target.value)}
+                    placeholder="Np. 4500"
+                  />
+                ) : editMode && canEdit && key === 'work_mode' && isWork ? (
+                  <input
+                    className="inline-edit-input"
+                    type="text"
+                    value={editWorkMode}
+                    onChange={(e) => setEditWorkMode(e.target.value)}
+                    placeholder="Np. stacjonarna / zdalna / hybrydowa"
+                  />
+                ) : editMode && canEdit && key === 'job_category' && isWork ? (
+                  <input
+                    className="inline-edit-input"
+                    type="text"
+                    value={editJobCategory}
+                    onChange={(e) => setEditJobCategory(e.target.value)}
+                    placeholder="Np. pracownik / budowlanka / IT"
+                  />
+                ) : (
+                  <span className="listing-attribute-value">{value}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
 
         {(data.description || (canEdit && editMode)) && (
-  <section className="listing-section listing-section-description">
-    <h3 className="listing-section-title">Opis ogłoszenia</h3>
-    {!editMode ? (
-      <p className="listing-description-text">{data.description}</p>
-    ) : (
-      <textarea
-        className="inline-edit-textarea"
-        value={editDescription}
-        onChange={(e) => setEditDescription(e.target.value)}
-        rows={8}
-      />
-    )}
-  </section>
-)}
+          <section className="listing-section listing-section-description">
+            <h3 className="listing-section-title">Opis ogłoszenia</h3>
+            {!editMode ? (
+              <p className="listing-description-text">{data.description}</p>
+            ) : (
+              <textarea
+                className="inline-edit-textarea"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={8}
+              />
+            )}
+          </section>
+        )}
+
         {(requirementsPair || (isWork && canEdit && editMode)) && (
           <section className="listing-section listing-section-description">
             <h3 className="listing-section-title">Wymagania</h3>
@@ -1668,11 +1673,7 @@ const handleApplyClick = async () => {
       {data.type_id === 1 && (
         <div className="listing-price-highlight listing-price-highlight--bottom">
           <span className="listing-price-label">
-            {data.is_free
-              ? 'Za darmo'
-              : isNegotiable
-              ? 'Cena do negocjacji'
-              : 'Cena'}
+            {data.is_free ? 'Za darmo' : isNegotiable ? 'Cena do negocjacji' : 'Cena'}
           </span>
 
           {editMode && canEdit ? (
@@ -1682,9 +1683,7 @@ const handleApplyClick = async () => {
                 type="text"
                 inputMode="decimal"
                 value={editIsFree ? '' : editPrice}
-                onChange={(e) =>
-                  setEditPrice(e.target.value.replace(/[^0-9.,-]/g, ''))
-                }
+                onChange={(e) => setEditPrice(e.target.value.replace(/[^0-9.,-]/g, ''))}
                 placeholder={editIsFree ? 'Darmowe' : 'Wpisz cenę'}
                 disabled={editIsFree}
               />
@@ -1709,29 +1708,24 @@ const handleApplyClick = async () => {
               </label>
             </div>
           ) : (
-            <span className="listing-price-value">
-              {data.is_free ? formatVal('price', 0) : pricePair?.value ?? '—'}
-            </span>
+            <span className="listing-price-value">{data.is_free ? formatVal('price', 0) : pricePair?.value ?? '—'}</span>
           )}
 
           {!isSold && !isPurchased && data.type_id === 1 && !data.is_free && !isOwnListing && (
-          <div className="listing-actions-row">
-            <button className="buy-now-button" type="button" onClick={handleBuyNowClick}>
-              <span>Kup teraz</span>
-            </button>
-
-            {isNegotiable && (
-              <button className="offer-price-button" type="button" onClick={handleOfferPriceClick}>
-                Zaproponuj cenę
+            <div className="listing-actions-row">
+              <button className="buy-now-button" type="button" onClick={handleBuyNowClick}>
+                <span>Kup teraz</span>
               </button>
-            )}
-          </div>
-        )}
 
-
-          {(isSold || isPurchased) && (
-            <span className="listing-purchased-label">SPRZEDANO</span>
+              {isNegotiable && (
+                <button className="offer-price-button" type="button" onClick={handleOfferPriceClick}>
+                  Zaproponuj cenę
+                </button>
+              )}
+            </div>
           )}
+
+          {(isSold || isPurchased) && <span className="listing-purchased-label">SPRZEDANO</span>}
         </div>
       )}
 
@@ -1742,244 +1736,296 @@ const handleApplyClick = async () => {
           </span>
 
           {!isOwnListing && (
-            <button
-              className="buy-now-button" 
-              type="button"
-              onClick={handleApplyClick}
-              disabled={actionLoading}
-            >
+            <button className="buy-now-button" type="button" onClick={handleApplyClick} disabled={actionLoading}>
               <span>{actionLoading ? 'Wysyłanie…' : actionLabel}</span>
             </button>
           )}
 
-          {actionError && (
-            <div style={{ marginTop: 8, color: 'crimson', fontSize: 14 }}>
-              {actionError}
-            </div>
-          )}
-
-          {actionSent && !actionError && (
-            <div style={{ marginTop: 8, color: 'green', fontSize: 14 }}>
-              Wysłano!
-            </div>
-          )}
+          {actionError && <div style={{ marginTop: 8, color: 'crimson', fontSize: 14 }}>{actionError}</div>}
+          {actionSent && !actionError && <div style={{ marginTop: 8, color: 'green', fontSize: 14 }}>Wysłano!</div>}
         </div>
       )}
 
-
-{helpApplyOpen && isHelp && !isOwnListing && (
-  <div className="help-apply-backdrop" onClick={closeHelpApply}>
-    <div className="help-apply-modal" onClick={(e) => e.stopPropagation()}>
-      <div className="help-apply-head">
-        <div className="help-apply-title">Zgłoszenie</div>
-        <button type="button" className="help-apply-close" onClick={closeHelpApply} aria-label="Zamknij">
-          ✕
-        </button>
-      </div>
-
-      <div className="help-apply-section">
-        <div className="help-apply-label">Co chcesz zrobić?</div>
-        <div className="help-apply-seg">
-          <button
-            type="button"
-            className={`help-apply-seg-btn ${helpChoice === 'direct' ? 'is-active' : ''}`}
-            onClick={() => setHelpChoice('direct')}
-          >
-            {directLabel}
-          </button>
-          <button
-            type="button"
-            className={`help-apply-seg-btn ${helpChoice === 'exchange' ? 'is-active' : ''}`}
-            onClick={() => setHelpChoice('exchange')}
-          >
-            Pomoc za pomoc
-          </button>
-        </div>
-      </div>
-
-      <div className="help-apply-grid">
-        <div className="help-apply-section">
-          <div className="help-apply-label">Dostępność (opcjonalnie)</div>
-          <div className="help-apply-chips">
-            {['Rano', 'Po południu', 'Wieczorem', 'Weekend'].map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`help-apply-chip ${helpAvailability.includes(v) ? 'is-active' : ''}`}
-                onClick={() => setHelpAvailability((prev) => toggleInList(prev, v))}
-              >
-                {v}
+      {helpApplyOpen && isHelp && !isOwnListing && (
+        <div className="help-apply-backdrop" onClick={closeHelpApply}>
+          <div className="help-apply-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="help-apply-head">
+              <div className="help-apply-title">Zgłoszenie</div>
+              <button type="button" className="help-apply-close" onClick={closeHelpApply} aria-label="Zamknij">
+                ✕
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="help-apply-section">
-          <div className="help-apply-label">Preferowany kontakt (opcjonalnie)</div>
-          <div className="help-apply-chips">
-            {['Czat', 'Telefon', 'E-mail'].map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`help-apply-chip ${helpContactPref.includes(v) ? 'is-active' : ''}`}
-                onClick={() => setHelpContactPref((prev) => toggleInList(prev, v))}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          <div className="help-apply-contact-extra">
-            {helpContactPref.includes('Telefon') && (
-              <div className="help-apply-field">
-                <label className="help-apply-field-label">Numer telefonu</label>
-                <input
-                  className="help-apply-input"
-                  type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={helpContactPhone}
-                  onChange={(e) =>
-                    setHelpContactPhone(e.target.value.replace(/[^0-9]/g, ''))
-                  }
-                  placeholder="np. 500600700"
+            <div className="help-apply-section">
+              <div className="help-apply-label">Co chcesz zrobić?</div>
+              <div className="help-apply-seg">
+                <button
+                  type="button"
+                  className={`help-apply-seg-btn ${helpChoice === 'direct' ? 'is-active' : ''}`}
+                  onClick={() => setHelpChoice('direct')}
+                >
+                  {directLabel}
+                </button>
+                <button
+                  type="button"
+                  className={`help-apply-seg-btn ${helpChoice === 'exchange' ? 'is-active' : ''}`}
+                  onClick={() => setHelpChoice('exchange')}
+                >
+                  Pomoc za pomoc
+                </button>
+              </div>
+            </div>
+
+            <div className="help-apply-grid">
+              <div className="help-apply-section">
+                <div className="help-apply-label">Dostępność (opcjonalnie)</div>
+                <div className="help-apply-chips">
+                  {['Rano', 'Po południu', 'Wieczorem', 'Weekend'].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className={`help-apply-chip ${helpAvailability.includes(v) ? 'is-active' : ''}`}
+                      onClick={() => setHelpAvailability((prev) => toggleInList(prev, v))}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="help-apply-section">
+                <div className="help-apply-label">Preferowany kontakt (opcjonalnie)</div>
+                <div className="help-apply-chips">
+                  {['Czat', 'Telefon', 'E-mail'].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className={`help-apply-chip ${helpContactPref.includes(v) ? 'is-active' : ''}`}
+                      onClick={() => setHelpContactPref((prev) => toggleInList(prev, v))}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="help-apply-contact-extra">
+                  {helpContactPref.includes('Telefon') && (
+                    <div className="help-apply-field">
+                      <label className="help-apply-field-label">Numer telefonu</label>
+                      <input
+                        className="help-apply-input"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={helpContactPhone}
+                        onChange={(e) => setHelpContactPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="np. 500600700"
+                      />
+                    </div>
+                  )}
+
+                  {helpContactPref.includes('E-mail') && (
+                    <div className="help-apply-field">
+                      <label className="help-apply-field-label">Adres e-mail</label>
+                      <input
+                        className="help-apply-input"
+                        type="email"
+                        inputMode="email"
+                        value={helpContactEmail}
+                        onChange={(e) => setHelpContactEmail(e.target.value)}
+                        placeholder="np. imie@gmail.com"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {helpChoice === 'exchange' && (
+              <div className="help-apply-section">
+                <div className="help-apply-label">W czym potrzebujesz pomocy? (krótko)</div>
+                <textarea
+                  className="help-apply-textarea"
+                  value={helpExchangeNote}
+                  onChange={(e) => setHelpExchangeNote(e.target.value)}
+                  rows={3}
+                  placeholder="Np. potrzebuję pomocy z wniesieniem szafy, a w zamian mogę pomóc w zakupach"
                 />
               </div>
             )}
 
-            {helpContactPref.includes('E-mail') && (
-              <div className="help-apply-field">
-                <label className="help-apply-field-label">Adres e-mail</label>
-                <input
-                  className="help-apply-input"
-                  type="email"
-                  inputMode="email"
-                  value={helpContactEmail}
-                  onChange={(e) => setHelpContactEmail(e.target.value)}
-                  placeholder="np. imie@gmail.com"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+            {actionError && <div className="help-apply-error">{actionError}</div>}
 
-      {helpChoice === 'exchange' && (
-        <div className="help-apply-section">
-          <div className="help-apply-label">W czym potrzebujesz pomocy? (krótko)</div>
-          <textarea
-            className="help-apply-textarea"
-            value={helpExchangeNote}
-            onChange={(e) => setHelpExchangeNote(e.target.value)}
-            rows={3}
-            placeholder="Np. potrzebuję pomocy z wniesieniem szafy, a w zamian mogę pomóc w zakupach"
-          />
-        </div>
-      )}
-
-      {actionError && <div className="help-apply-error">{actionError}</div>}
-
-      <div className="help-apply-actions">
-        <button type="button" className="help-apply-secondary" onClick={closeHelpApply}>
-          Anuluj
-        </button>
-        <button
-          type="button"
-          className="help-apply-primary"
-          disabled={
-            actionLoading ||
-            !helpChoice ||
-            (helpChoice === 'exchange' && !helpExchangeNote.trim())
-          }
-          onClick={async () => {
-            if (!data) return;
-            setActionLoading(true);
-            setActionError('');
-
-            try {
-              const content = buildHelpTemplate();
-              const res = await fetch(`${API_BASE}/api/listings/${data.id}/help-apply`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-                },
-                body: JSON.stringify({
-                  content,
-                }),
-              });
-
-              const payload = await res.json().catch(() => null);
-              if (!res.ok || !payload?.ok) {
-                setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
-                return;
-              }
-
-              setHelpApplyOpen(false);
-              setActionSent(true);
-              navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
-            } catch (e) {
-              console.error(e);
-              setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
-            } finally {
-              setActionLoading(false);
-            }
-          }}
-        >
-          {actionLoading ? 'Wysyłanie…' : 'Wyślij zgłoszenie'}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-{showPayment && (
-        <div
-          className="blik-modal-backdrop"
-          onClick={() => setShowPayment(false)}
-        >
-          <div
-            className="blik-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2>Płatność BLIK</h2>
-            <p>Wpisz 6-cyfrowy kod BLIK, aby zakupić towar.</p>
-
-            <input
-              type="text"
-              maxLength={6}
-              value={blikCode}
-              onChange={(e) =>
-                setBlikCode(e.target.value.replace(/\D/g, ''))
-              }
-              className="blik-input"
-              placeholder="••••••"
-            />
-
-            {blikError && (
-              <div className="blik-error">{blikError}</div>
-            )}
-
-            <div className="blik-actions">
-              <button
-                type="button"
-                onClick={() => setShowPayment(false)}
-              >
+            <div className="help-apply-actions">
+              <button type="button" className="help-apply-secondary" onClick={closeHelpApply}>
                 Anuluj
               </button>
               <button
                 type="button"
-                onClick={handleConfirmBlik}
-                disabled={purchaseLoading}
+                className="help-apply-primary"
+                disabled={actionLoading || !helpChoice || (helpChoice === 'exchange' && !helpExchangeNote.trim())}
+                onClick={async () => {
+                  if (!data) return;
+                  setActionLoading(true);
+                  setActionError('');
+
+                  try {
+                    const content = buildHelpTemplate();
+                    const res = await fetch(`${API_BASE}/api/listings/${data.id}/help-apply`, {
+                      method: 'POST',
+                      credentials: 'include',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+                      },
+                      body: JSON.stringify({ content }),
+                    });
+
+                    const payload = await res.json().catch(() => null);
+                    if (!res.ok || !payload?.ok) {
+                      setActionError(payload?.error || 'Nie udało się wysłać zgłoszenia.');
+                      return;
+                    }
+
+                    setHelpApplyOpen(false);
+                    setActionSent(true);
+                    navigate(`/messages/listing/${data.id}?peer=${data.user_id}`);
+                  } catch (e) {
+                    console.error(e);
+                    setActionError('Wystąpił błąd podczas wysyłania zgłoszenia.');
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
               >
-                {purchaseLoading ? 'Przetwarzanie…' : 'Zapłać BLIK'}
+                {actionLoading ? 'Wysyłanie…' : 'Wyślij zgłoszenie'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {showPayment && (
+        <div className="blik-modal-backdrop" onClick={() => setShowPayment(false)}>
+          <div className="blik-modal" onClick={(e) => e.stopPropagation()}>
+            {paymentStep === 1 ? (
+              <>
+                <h2>Dane do wysyłki</h2>
+                <p>Uzupełnij dane, aby przejść do płatności BLIK.</p>
 
+                {shippingError && <div className="blik-error">{shippingError}</div>}
+
+                <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                  <input
+                    type="text"
+                    value={shipping.fullName}
+                    onChange={(e) => setShipping((p) => ({ ...p, fullName: e.target.value }))}
+                    className="blik-input"
+                    placeholder="Imię i nazwisko"
+                  />
+
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={shipping.phone}
+                    onChange={(e) =>
+                      setShipping((p) => ({ ...p, phone: e.target.value.replace(/[^0-9]/g, '') }))
+                    }
+                    className="blik-input"
+                    placeholder="Telefon (np. 500600700)"
+                  />
+
+                  <input
+                    type="email"
+                    value={shipping.email}
+                    onChange={(e) => setShipping((p) => ({ ...p, email: e.target.value }))}
+                    className="blik-input"
+                    placeholder="E-mail"
+                  />
+
+                  <input
+                    type="text"
+                    value={shipping.street}
+                    onChange={(e) => setShipping((p) => ({ ...p, street: e.target.value }))}
+                    className="blik-input"
+                    placeholder="Ulica i numer"
+                  />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <input
+                      type="text"
+                      value={shipping.zip}
+                      onChange={(e) =>
+                        setShipping((p) => ({ ...p, zip: e.target.value.replace(/[^0-9-]/g, '') }))
+                      }
+                      className="blik-input"
+                      placeholder="Kod (00-000)"
+                    />
+                    <input
+                      type="text"
+                      value={shipping.city}
+                      onChange={(e) => setShipping((p) => ({ ...p, city: e.target.value }))}
+                      className="blik-input"
+                      placeholder="Miasto"
+                    />
+                  </div>
+                </div>
+
+                <div className="blik-actions" style={{ marginTop: 14 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPayment(false);
+                      resetPaymentModal();
+                    }}
+                  >
+                    Anuluj
+                  </button>
+                  <button type="button" onClick={handleGoToBlikStep}>
+                    Dalej
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>Płatność BLIK</h2>
+                <p>Wpisz 6-cyfrowy kod BLIK, aby zakupić towar.</p>
+
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={blikCode}
+                  onChange={(e) => setBlikCode(e.target.value.replace(/\D/g, ''))}
+                  className="blik-input"
+                  placeholder="••••••"
+                />
+
+                {blikError && <div className="blik-error">{blikError}</div>}
+
+                <div className="blik-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentStep(1);
+                      setBlikError('');
+                    }}
+                    disabled={purchaseLoading}
+                  >
+                    Wstecz
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmBlik}
+                    disabled={purchaseLoading}
+                  >
+                    {purchaseLoading ? 'Przetwarzanie…' : 'Zapłać BLIK'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {showOfferPrice && (
         <div className="blik-modal-backdrop" onClick={() => setShowOfferPrice(false)}>
@@ -2009,15 +2055,8 @@ const handleApplyClick = async () => {
         </div>
       )}
 
-
-
-
-
       {lightboxOpen && lightboxImage && (
-        <div
-          className="lightbox-overlay"
-          onClick={() => setLightboxOpen(false)}
-        >
+        <div className="lightbox-overlay" onClick={() => setLightboxOpen(false)}>
           {uiImages.length > 1 && (
             <button
               className="lightbox-arrow lightbox-arrow-left"

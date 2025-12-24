@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import './MessagesPage.css';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -88,7 +88,6 @@ const getTypeIconSrc = (typeId?: number | null): string | null => {
 const MessagesPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const queryClient = useQueryClient();
   const socketRef = useRef<any>(null);
@@ -99,13 +98,54 @@ const MessagesPage: React.FC = () => {
     if (!user) navigate('/auth');
   }, [user, navigate]);
 
-  const { data: threads = [], isPending: loading, error } = useQuery<ThreadItem[], Error>({
+  useEffect(() => {
+    if (!user) return;
+    queryClient.prefetchQuery({
+      queryKey: inboxQueryKey,
+      queryFn: async ({ signal }) => {
+        const res = await fetch(`${API_BASE}/api/messages/inbox`, {
+          method: 'GET',
+          credentials: 'include',
+          signal,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok || !data?.ok) return [] as ThreadItem[];
+        return (data.threads || data.messages || []) as ThreadItem[];
+      },
+      staleTime: 60_000,
+    });
+  }, [user, queryClient, inboxQueryKey]);
+
+  const {
+    data: threads = [],
+    isPending: loading,
+    isFetching,
+    error,
+  } = useQuery<ThreadItem[], Error>({
     queryKey: inboxQueryKey,
     enabled: !!user,
-    staleTime: 15_000, 
-    queryFn: async () => {
+
+    placeholderData: () => {
+      const cached = queryClient.getQueryData(inboxQueryKey) as ThreadItem[] | undefined;
+      return cached;
+    },
+
+
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+
+    refetchOnWindowFocus: false,
+    retry: 1,
+
+    queryFn: async ({ signal }) => {
       const res = await fetch(`${API_BASE}/api/messages/inbox`, {
+        method: 'GET',
         credentials: 'include',
+        signal,
         headers: {
           'Content-Type': 'application/json',
           ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
@@ -118,8 +158,7 @@ const MessagesPage: React.FC = () => {
         throw new Error(msg);
       }
 
-      const list = (data.threads || data.messages || []) as ThreadItem[];
-      return list;
+      return (data.threads || data.messages || []) as ThreadItem[];
     },
   });
 
@@ -175,9 +214,14 @@ const MessagesPage: React.FC = () => {
         <p className="messages-subtitle">
           Tu zobaczysz wszystkie wiadomości wysłane i otrzymane, wraz z ogłoszeniem, którego dotyczą.
         </p>
+        {isFetching && threads.length > 0 ? (
+          <p className="messages-info" style={{ marginTop: 6 }}>
+            Odświeżam…
+          </p>
+        ) : null}
       </div>
 
-      {loading ? (
+      {loading && threads.length === 0 ? (
         <p className="messages-info">Ładowanie wiadomości...</p>
       ) : error ? (
         <p className="messages-error">{error.message}</p>
