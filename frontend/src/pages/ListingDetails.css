@@ -1241,3 +1241,53 @@ body:not(.dark-mode) .help-apply-textarea::placeholder {
   resize: vertical;
   min-height: 78px;
 }
+/* przyciski w modalu zaproponuj cenę */
+.blik-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* wspólny styl */
+.blik-actions button {
+  appearance: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
+}
+
+.blik-actions button:active {
+  transform: translateY(1px);
+}
+
+.blik-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ANULUJ */
+.blik-actions button:first-child {
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+}
+
+.blik-actions button:first-child:hover {
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+/* WYŚLIJ PROPOZYCJĘ */
+.blik-actions button:last-child {
+  background: #0f172a;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.blik-actions button:last-child:hover:not(:disabled) {
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+}
