@@ -875,6 +875,7 @@ export default function ListingDetails() {
         alert(`Błąd zapisu: ${err?.error || res.statusText}`);
         return;
       }
+      
 
       const body = await res.json();
       const updated = body.updated ?? body;
