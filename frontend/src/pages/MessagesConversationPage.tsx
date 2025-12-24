@@ -336,8 +336,16 @@ const MessagesConversationPage: React.FC = () => {
       .then((data) => {
         if (data?.ok) {
           queryClient.invalidateQueries({ queryKey: inboxQueryKey });
+      
+          // powiadom Header, że coś zostało przeczytane
+          if (socketRef.current && user) {
+            socketRef.current.emit('chat:read', {
+              listingId,
+              byUserId: user.id,
+            });
+          }
         }
-      })
+      })      
       .catch(() => {});
   }, [user, listingId, resolvedPeerId, queryClient, inboxQueryKey]);
 

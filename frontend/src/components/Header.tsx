@@ -4,6 +4,8 @@ import MobileSidebar from './MobileSidebar';
 import './MobileSidebar.css';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { io } from 'socket.io-client';
+
 
 const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:5050').replace(/\/$/, '');
 const API_KEY = process.env.REACT_APP_API_KEY;
@@ -70,7 +72,9 @@ const Header: React.FC = () => {
       setUnreadCount(0);
       return;
     }
-
+  
+    let alive = true;
+  
     const fetchUnread = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/messages/unread-count`, {
@@ -80,9 +84,10 @@ const Header: React.FC = () => {
             ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
           },
         });
-
+  
         const data = await res.json().catch(() => null);
-
+  
+        if (!alive) return;
         if (res.ok && data?.ok && typeof data.count === 'number') {
           setUnreadCount(data.count);
         }
@@ -90,9 +95,57 @@ const Header: React.FC = () => {
         console.error('Błąd pobierania liczby nieprzeczytanych wiadomości:', err);
       }
     };
-
+  
     fetchUnread();
+  
+    const interval = window.setInterval(fetchUnread, 15000);
+  
+    return () => {
+      alive = false;
+      window.clearInterval(interval);
+    };
   }, [user]);
+  
+  useEffect(() => {
+    if (!user) return;
+  
+    const socket = io(API_BASE, {
+      withCredentials: true,
+      transports: ['websocket'],
+      upgrade: false,
+      timeout: 10000,
+      reconnectionAttempts: 5,
+    });
+  
+    socket.on('connect', () => {
+      socket.emit('auth:join', user.id);
+    });
+  
+    const refreshUnread = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/messages/unread-count`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+          },
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.ok && typeof data.count === 'number') {
+          setUnreadCount(data.count);
+        }
+      } catch {}
+    };
+  
+    socket.on('chat:new-message', refreshUnread);
+    socket.on('chat:read', refreshUnread);
+    socket.on('chat:unread-bump', refreshUnread);
+  
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
+  
 
   const submitSearch = (value: string) => {
     const trimmed = value.trim();
