@@ -359,3 +359,9 @@ body.dark-mode .bg-heart {
   z-index: 0;
   pointer-events: none;
 }
+
+.favorites-page {
+  position: relative; 
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
