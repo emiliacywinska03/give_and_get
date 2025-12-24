@@ -135,9 +135,12 @@ const Header: React.FC = () => {
     localStorage.setItem('theme', newTheme);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
     await logout();
-    navigate('/');
+    navigate('/auth', { replace: true });
   };
 
   return (
@@ -312,9 +315,16 @@ const Header: React.FC = () => {
 
                       <div className="menu-divider" />
 
-                      <button className="logout" onClick={handleLogout}>
-                        Wyloguj
-                      </button>
+                      <button
+                    type="button"
+                    className="dropdown-item logout"
+                    onClick={async () => {
+                      await logout();
+                      navigate('/auth', { replace: true });
+                    }}
+                  >
+                    Wyloguj
+                  </button>
                     </div>
                   </div>
                 )

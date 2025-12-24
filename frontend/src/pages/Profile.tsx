@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import './Profile.css';
+
 
 
 interface Listing {
@@ -32,6 +33,7 @@ const normalizeImgUrl = (raw?: string | null): string | null => {
   if (raw.startsWith('/')) return `${API_BASE}${raw}`;
   return raw;
 };
+
 
 
 const firstImageCache = new Map<number, string | null>();
@@ -85,6 +87,7 @@ const Profile: React.FC = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  
 
   const [form, setForm] = useState({
     username: '',
@@ -110,6 +113,7 @@ const Profile: React.FC = () => {
       email: (user as any).email ?? '',
     });
   }, [user, isEditing]);
+  
   
 
   const changePassword = async () => {
@@ -560,7 +564,7 @@ const Profile: React.FC = () => {
   
 
   if (loading) return <p>Ładowanie danych użytkownika...</p>;
-  if (!user) return <p>Nie jesteś zalogowany.</p>;
+  if (!user) return <Navigate to="/auth" replace />;
   const FEATURE_COST_POINTS = 5;
   const RESUME_COST_POINTS = 5;
 
@@ -713,7 +717,7 @@ const Profile: React.FC = () => {
                 className="profile-avatar-upload profile-avatar-upload--logout"
                 onClick={async () => {
                   await logout();
-                  navigate('/');
+                  navigate('/', { replace: true });
                 }}
               >
                 Wyloguj
