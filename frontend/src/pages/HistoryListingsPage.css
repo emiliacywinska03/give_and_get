@@ -520,3 +520,46 @@ body.dark-mode .listing-card--sold .listing-thumb-icon {
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   z-index: 2;
 }
+
+body.dark-mode .shipping-modal,
+body.dark-mode .shipping-modal h2,
+body.dark-mode .shipping-modal h3,
+body.dark-mode .shipping-modal p,
+body.dark-mode .shipping-modal span,
+body.dark-mode .shipping-modal div {
+  color: #f9fafb;
+}
+
+body.dark-mode .shipping-modal strong {
+  color: #ffffff;
+}
+
+body.dark-mode .shipping-modal {
+  background: linear-gradient(180deg, #0b1220, #020617);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+body.dark-mode .shipping-modal button {
+  color: #0f172a;
+}
+
+body.dark-mode .shipping-modal * {
+  color: #ffffff !important;
+}
+
+body.dark-mode .shipping-modal label,
+body.dark-mode .shipping-modal .label,
+body.dark-mode .shipping-modal .field-label {
+  color: #e5e7eb !important;
+}
+
+body.dark-mode .shipping-modal .value,
+body.dark-mode .shipping-modal .field-value,
+body.dark-mode .shipping-modal strong {
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+body.dark-mode .shipping-modal {
+  background: linear-gradient(180deg, #020617, #020617) !important;
+}

@@ -19,6 +19,20 @@ interface Listing {
   purchased_at?: string;
 }
 
+interface ShippingDetails {
+  id: number;
+  listing_id: number;
+  buyer_id: number;
+  seller_id: number;
+  full_name: string;
+  phone: string;
+  email: string;
+  street: string;
+  zip: string;
+  city: string;
+  created_at?: string;
+}
+
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5050';
 const API_KEY = process.env.REACT_APP_API_KEY;
 
@@ -145,6 +159,59 @@ const HistoryListingsPage: React.FC = () => {
   const [loadingPurchases, setLoadingPurchases] = useState(true);
   const [shippingStatus, setShippingStatus] = useState<Record<string, ShipState>>(() => loadShippingFromLS());
   const getShippingStatus = (id: number) => shippingStatus[String(id)] ?? 'none';
+
+  const [shipModalOpen, setShipModalOpen] = useState(false);
+  const [shipModalLoading, setShipModalLoading] = useState(false);
+  const [shipModalError, setShipModalError] = useState('');
+  const [shipModalData, setShipModalData] = useState<ShippingDetails | null>(null);
+  const [shipModalListing, setShipModalListing] = useState<Listing | null>(null);
+  const closeShippingDetails = () => {
+    setShipModalOpen(false);
+    setShipModalLoading(false);
+    setShipModalError('');
+    setShipModalData(null);
+    setShipModalListing(null);
+  };
+
+  const openShippingDetails = async (listing: Listing) => {
+    setShipModalOpen(true);
+    setShipModalListing(listing);
+    setShipModalLoading(true);
+    setShipModalError('');
+    setShipModalData(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/shipping/details/${listing.id}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { ...(API_KEY ? { 'x-api-key': API_KEY } : {}) },
+      });
+
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setShipModalError(payload?.error || 'Nie udało się pobrać danych do wysyłki.');
+        return;
+      }
+
+      if (!payload || typeof payload !== 'object') {
+        setShipModalError('Niepoprawna odpowiedź serwera.');
+        return;
+      }
+
+      if (!payload.ok || !payload.shipping) {
+        setShipModalError((payload as any)?.error || 'Nie udało się pobrać danych do wysyłki.');
+        return;
+      }
+
+      setShipModalData((payload as any).shipping as ShippingDetails);
+    } catch (e) {
+      console.error(e);
+      setShipModalError('Wystąpił błąd podczas pobierania danych.');
+    } finally {
+      setShipModalLoading(false);
+    }
+  };
 
   useEffect(() => {
     saveShippingToLS(shippingStatus);
@@ -401,6 +468,31 @@ const HistoryListingsPage: React.FC = () => {
 
   return (
     <div className="profile-page history-layout">
+      <style>{`
+        body { 
+          --shipModalBg: #ffffff;
+          --shipModalBorder: rgba(15, 23, 42, 0.12);
+          --shipModalTitle: #0f172a;
+          --shipModalText: #0f172a;
+          --shipModalMuted: #64748b;
+          --shipModalErrorText: #991b1b;
+          --shipModalCloseBg: #ffffff;
+          --shipModalCloseText: #0f172a;
+          --shipModalCloseBorder: rgba(15, 23, 42, 0.14);
+        }
+
+        body.dark-mode { 
+          --shipModalBg: #0b1220;
+          --shipModalBorder: rgba(255,255,255,0.12);
+          --shipModalTitle: #ffffff;
+          --shipModalText: #ffffff;
+          --shipModalMuted: rgba(255,255,255,0.72);
+          --shipModalErrorText: #fecaca;
+          --shipModalCloseBg: rgba(255,255,255,0.10);
+          --shipModalCloseText: #ffffff;
+          --shipModalCloseBorder: rgba(255,255,255,0.18);
+        }
+      `}</style>
       <div className="history-main">
         <div className="profile-card">
 
@@ -496,66 +588,72 @@ const HistoryListingsPage: React.FC = () => {
                   <p>Nie masz sprzedanych ogłoszeń.</p>
                 ) : (
                   <div className="listing-grid">
-                    {soldListings.map((l) => (
-                      <div key={l.id} className="listing-card listing-card--sold">
-                      <div
-                        className="listing-main"
-                        onClick={() => navigate(`/listing/${l.id}`)}
-                        style={{ cursor: 'pointer', position: 'relative' }}
-                      >
-                        <span className="sold-badge-corner">SPRZEDANO</span>
+                {soldListings.map((l) => (
+                  <div key={l.id} className="listing-card listing-card--sold">
+                  <div
+                    className="listing-main"
+                    onClick={() => navigate(`/listing/${l.id}`)}
+                    style={{ cursor: 'pointer', position: 'relative' }}
+                  >
+                    <span className="sold-badge-corner">SPRZEDANO</span>
 
-                        {getShippingStatus(l.id) !== 'sent' && (
-                          <span className="ship-alert-corner">
-                            Wyślij paczkę!
-                          </span>
-                        )}
+                    {getShippingStatus(l.id) !== 'sent' && (
+                      <span className="ship-alert-corner">
+                        Wyślij paczkę!
+                      </span>
+                    )}
 
-                        {renderThumb(l)}
-                    
-                        <div className="listing-content">
-                          <h4 className="listing-title">{l.title}</h4>
-                          <p className="listing-desc">{l.description}</p>
-                          <small className="listing-date">
-                            Dodano: {new Date(l.created_at).toLocaleDateString()}
-                          </small>
-                        </div>
-                      </div>
-                    
-                      {/* PRAWA KOLUMNA */}
-                      <div className="listing-actions listing-actions--right">
-                        <div className="shipping-actions shipping-actions--right">
-                    
-                          <button
-                            className={`ship-btn ${getShippingStatus(l.id) === 'sent' ? 'ship-btn--done' : 'ship-btn--primary'}`}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              const ok = window.confirm('Czy chcesz oznaczyć jako wysłane?');
-                              if (!ok) return;
-                            
-                              try {
-                                await updateShipping(l.id, 'sent');
-                                setShippingStatus(prev => ({ ...prev, [String(l.id)]: 'sent' }));
-                                setSoldListings(prev => prev.filter(x => x.id !== l.id));
-                                setEndedListings(prev => [{ ...l }, ...prev]);
-                                setActiveTab('ended');
-                              } catch (err: any) {
-                                alert(err?.message || 'Błąd');
-                              }
-                            }}
-                            
-                            
-                            disabled={getShippingStatus(l.id) === 'sent'}
-                            title={getShippingStatus(l.id) === 'sent' ? 'Już oznaczone jako wysłane' : ''}
-
-                          >
-                            <TruckIcon />
-                            <span>Oznacz jako wysłane</span>
-                          </button>
-                        </div>
-                      </div>
+                    {renderThumb(l)}
+                
+                    <div className="listing-content">
+                      <h4 className="listing-title">{l.title}</h4>
+                      <p className="listing-desc">{l.description}</p>
+                      <small className="listing-date">
+                        Dodano: {new Date(l.created_at).toLocaleDateString()}
+                      </small>
                     </div>
-                    ))}
+                  </div>
+                
+                  {/* PRAWA KOLUMNA */}
+                  <div className="listing-actions listing-actions--right">
+                    <div className="shipping-actions shipping-actions--right">
+                          <button
+                            className="ship-btn ship-btn--secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openShippingDetails(l);
+                            }}
+                          >
+                            <PackageIcon />
+                            <span>Dane do wysyłki</span>
+                          </button>
+                      <button
+                        className={`ship-btn ${getShippingStatus(l.id) === 'sent' ? 'ship-btn--done' : 'ship-btn--primary'}`}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const ok = window.confirm('Czy chcesz oznaczyć jako wysłane?');
+                          if (!ok) return;
+                        
+                          try {
+                            await updateShipping(l.id, 'sent');
+                            setShippingStatus(prev => ({ ...prev, [String(l.id)]: 'sent' }));
+                            setSoldListings(prev => prev.filter(x => x.id !== l.id));
+                            setEndedListings(prev => [{ ...l }, ...prev]);
+                            setActiveTab('ended');
+                          } catch (err: any) {
+                            alert(err?.message || 'Błąd');
+                          }
+                        }}
+                        disabled={getShippingStatus(l.id) === 'sent'}
+                        title={getShippingStatus(l.id) === 'sent' ? 'Już oznaczone jako wysłane' : ''}
+                      >
+                        <TruckIcon />
+                        <span>Oznacz jako wysłane</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                ))}
                   </div>
                 )}
               </>
@@ -606,6 +704,107 @@ const HistoryListingsPage: React.FC = () => {
 
           </>
         )}
+      {/* MODAL: Dane do wysyłki */}
+      {shipModalOpen && (
+        <div
+          onClick={closeShippingDetails}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(2, 6, 23, 0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 1000,
+          }}
+        >
+          <div
+            className="shipping-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              background: 'var(--shipModalBg, #ffffff)',
+              borderRadius: 16,
+              border: '1px solid var(--shipModalBorder)',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
+              padding: 18,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--shipModalTitle)' }}>Dane do wysyłki</h2>
+              <button
+                type="button"
+                onClick={closeShippingDetails}
+                style={{
+                  border: '1px solid var(--shipModalCloseBorder)',
+                  background: 'var(--shipModalCloseBg)',
+                  color: 'var(--shipModalCloseText)',
+                  borderRadius: 999,
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
+              >
+                Zamknij
+              </button>
+            </div>
+
+            {shipModalListing && (
+              <p style={{ margin: '10px 0 0', color: 'var(--shipModalMuted)', fontSize: 13 }}>
+                Ogłoszenie: <b style={{ color: 'var(--shipModalText)' }}>{shipModalListing.title}</b>
+              </p>
+            )}
+
+            {shipModalLoading ? (
+              <p style={{ marginTop: 14 }}>Ładowanie…</p>
+            ) : shipModalError ? (
+              <div
+                style={{
+                  marginTop: 14,
+                  background: 'rgba(239, 68, 68, 0.10)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: 12,
+                  padding: 12,
+                  color: 'var(--shipModalErrorText)',
+                  fontWeight: 700,
+                }}
+              >
+                {shipModalError}
+              </div>
+            ) : shipModalData ? (
+              <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--shipModalMuted)', fontWeight: 700 }}>Imię i nazwisko</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--shipModalText)' }}>{shipModalData.full_name}</div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <div style={{ fontSize: 12, color: 'var(--shipModalMuted)', fontWeight: 700 }}>Telefon</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--shipModalText)' }}>{shipModalData.phone}</div>
+                  </div>
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <div style={{ fontSize: 12, color: 'var(--shipModalMuted)', fontWeight: 700 }}>E-mail</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--shipModalText)', wordBreak: 'break-word' }}>{shipModalData.email}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--shipModalMuted)', fontWeight: 700 }}>Adres</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--shipModalText)' }}>{shipModalData.street}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--shipModalText)' }}>
+                    {shipModalData.zip} {shipModalData.city}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p style={{ marginTop: 14 }}>Brak danych do wysyłki.</p>
+            )}
+          </div>
+        </div>
+      )}
       </div>
       </div>
     </div>

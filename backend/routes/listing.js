@@ -13,7 +13,59 @@ try {
   console.warn('[listing.js] Multer not available yet. Image upload route will be disabled until installed.');
 }
 
+
 const SOLD_STATUS_ID = 3;
+
+let _shippingSchemaEnsured = false;
+let _shippingSchemaEnsuring = null;
+
+async function ensureShippingDetailsSchema() {
+  if (_shippingSchemaEnsured) return;
+  if (_shippingSchemaEnsuring) return _shippingSchemaEnsuring;
+
+  _shippingSchemaEnsuring = (async () => {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS shipping_details (
+        id         SERIAL PRIMARY KEY,
+        listing_id INTEGER NOT NULL UNIQUE,
+        buyer_id   INTEGER NOT NULL,
+        seller_id  INTEGER NOT NULL,
+        full_name  TEXT    NOT NULL,
+        phone      TEXT    NOT NULL,
+        email      TEXT    NOT NULL,
+        street     TEXT    NOT NULL,
+        zip        TEXT    NOT NULL,
+        city       TEXT    NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    try {
+      await pool.query(`ALTER TABLE shipping_details
+        ADD CONSTRAINT fk_shipping_details_listing
+        FOREIGN KEY (listing_id) REFERENCES listing(id) ON DELETE CASCADE`);
+    } catch (_) {}
+
+    try {
+      await pool.query(`ALTER TABLE shipping_details
+        ADD CONSTRAINT fk_shipping_details_buyer
+        FOREIGN KEY (buyer_id) REFERENCES "user"(id) ON DELETE CASCADE`);
+    } catch (_) {}
+
+    try {
+      await pool.query(`ALTER TABLE shipping_details
+        ADD CONSTRAINT fk_shipping_details_seller
+        FOREIGN KEY (seller_id) REFERENCES "user"(id) ON DELETE CASCADE`);
+    } catch (_) {}
+
+    try { await pool.query('CREATE INDEX IF NOT EXISTS idx_shipping_details_buyer_id ON shipping_details(buyer_id)'); } catch (_) {}
+    try { await pool.query('CREATE INDEX IF NOT EXISTS idx_shipping_details_seller_id ON shipping_details(seller_id)'); } catch (_) {}
+
+    _shippingSchemaEnsured = true;
+  })();
+
+  return _shippingSchemaEnsuring;
+}
 
 function authRequired(req, res, next) {
   try {
@@ -1073,7 +1125,16 @@ router.put('/:id', authRequired, async (req, res) => {
 
 router.post('/:id/purchase', authRequired, async (req, res) => {
   const listingId = Number(req.params.id);
-  const { blikCode } = req.body || {};
+  const body = req.body || {};
+  const { blikCode } = body;
+  const shipping = body.shipping || body.shippingDetails || body.address || {};
+
+  const fullName = String(shipping.fullName ?? shipping.full_name ?? body.fullName ?? body.full_name ?? '').trim();
+  const phone = String(shipping.phone ?? body.phone ?? '').trim();
+  const email = String(shipping.email ?? body.email ?? '').trim();
+  const street = String(shipping.street ?? body.street ?? '').trim();
+  const zip = String(shipping.zip ?? body.zip ?? '').trim();
+  const city = String(shipping.city ?? body.city ?? '').trim();
 
   if (Number.isNaN(listingId)) {
     return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
@@ -1083,7 +1144,20 @@ router.post('/:id/purchase', authRequired, async (req, res) => {
     return res.status(400).json({ error: 'Kod BLIK musi mieć dokładnie 6 cyfr' });
   }
 
+  if (!fullName || !phone || !email || !street || !zip || !city) {
+    return res.status(400).json({
+      error: 'Brak danych do wysyłki. Uzupełnij: imię i nazwisko, telefon, e-mail, ulica i numer, kod, miasto.'
+    });
+  }
+
+  const phoneClean = phone.replace(/[^0-9]/g, '');
+  if (phoneClean.length < 7) {
+    return res.status(400).json({ error: 'Nieprawidłowy numer telefonu' });
+  }
+  const zipClean = zip.replace(/[^0-9-]/g, '');
+
   const client = await pool.connect();
+  await ensureShippingDetailsSchema();
   try {
     await client.query('BEGIN');
 
@@ -1138,6 +1212,15 @@ router.post('/:id/purchase', authRequired, async (req, res) => {
     }
 
     await client.query(
+      `
+      INSERT INTO shipping_details (listing_id, buyer_id, seller_id, full_name, phone, email, street, zip, city)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      ON CONFLICT (listing_id) DO NOTHING
+      `,
+      [listingId, req.user.id, sellerId, fullName, phoneClean, email, street, zipClean, city]
+    );
+
+    await client.query(
       'UPDATE listing SET status_id = $1 WHERE id = $2',
       [SOLD_STATUS_ID, listingId]
     );
@@ -1168,6 +1251,7 @@ router.post('/:id/purchase', authRequired, async (req, res) => {
     return res.json({
       ok: true,
       message: 'Zakup udany',
+      shipping_saved: true,
     });
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
@@ -1175,6 +1259,53 @@ router.post('/:id/purchase', authRequired, async (req, res) => {
     return res.status(500).json({ error: 'Błąd serwera podczas zakupu' });
   } finally {
     client.release();
+  }
+});
+
+router.get('/:id/shipping', authRequired, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) {
+    return res.status(400).json({ error: 'Nieprawidłowe ID ogłoszenia' });
+  }
+
+  try {
+    await ensureShippingDetailsSchema();
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        sd.listing_id,
+        sd.buyer_id,
+        sd.seller_id,
+        sd.full_name,
+        sd.phone,
+        sd.email,
+        sd.street,
+        sd.zip,
+        sd.city,
+        sd.created_at
+      FROM shipping_details sd
+      WHERE sd.listing_id = $1
+      LIMIT 1
+      `,
+      [listingId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Brak danych do wysyłki dla tego ogłoszenia' });
+    }
+
+    const sd = rows[0];
+
+
+    if (Number(sd.seller_id) !== Number(req.user.id)) {
+      return res.status(403).json({ error: 'Brak dostępu' });
+    }
+
+    return res.json({ ok: true, shipping: sd });
+  } catch (err) {
+    console.error('Błąd pobierania danych wysyłki:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
   }
 });
 

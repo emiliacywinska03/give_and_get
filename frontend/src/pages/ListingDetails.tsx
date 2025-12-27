@@ -1156,19 +1156,49 @@ export default function ListingDetails() {
     return '';
   };
 
-  const handleGoToBlikStep = () => {
+  const handleGoToBlikStep = async () => {
+    if (!id) return;
+
     const err = validateShipping(shipping);
     if (err) {
       setShippingError(err);
       return;
     }
+
     setShippingError('');
+
     try {
       localStorage.setItem('gg_shipping_v1', JSON.stringify(shipping));
     } catch {
       // ignore
     }
-    setPaymentStep(2);
+
+    try {
+      setPurchaseLoading(true);
+
+      const res = await fetch(`${API_BASE}/api/shipping/details/${id}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+        },
+        body: JSON.stringify(shipping),
+      });
+
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.ok) {
+        setShippingError(payload?.error || 'Nie udało się zapisać danych do wysyłki.');
+        return;
+      }
+
+      setPaymentStep(2);
+    } catch (e) {
+      console.error(e);
+      setShippingError('Nie udało się zapisać danych do wysyłki.');
+    } finally {
+      setPurchaseLoading(false);
+    }
   };
 
   const handleConfirmBlik = async () => {
@@ -1179,10 +1209,12 @@ export default function ListingDetails() {
       return;
     }
 
+    // Bezpiecznik UX: jeśli ktoś somehow trafił na krok 2 bez poprawnych danych
     const shipErr = validateShipping(shipping);
     if (shipErr) {
       setPaymentStep(1);
       setShippingError(shipErr);
+      setBlikError('Najpierw uzupełnij dane do wysyłki.');
       return;
     }
 
@@ -1197,27 +1229,33 @@ export default function ListingDetails() {
           'Content-Type': 'application/json',
           ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
         },
-        body: JSON.stringify({ blikCode }),
+        body: JSON.stringify({
+          blikCode,
+          shipping: {
+            fullName: shipping.fullName,
+            phone: shipping.phone,
+            email: shipping.email,
+            street: shipping.street,
+            zip: shipping.zip,
+            city: shipping.city,
+          },
+        }),
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        setBlikError(err?.error || 'Błąd podczas symulacji płatności.');
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.ok) {
+        setBlikError(payload?.error || 'Błąd podczas płatności.');
         return;
       }
 
-      // ustawiamy lokalnie status na "sprzedane" 
-      setData((prev) =>
-        prev ? { ...prev, status_id: 3 } : prev
-      );
       setIsPurchased(true);
       setShowPayment(false);
       setBlikCode('');
-      alert('Zakup udany');
+
       queryClient.invalidateQueries({ queryKey: listingKey });
-      
+      queryClient.invalidateQueries({ queryKey: listingImagesKey });
     } catch (e) {
-      console.error('Błąd płatności:', e);
+      console.error(e);
       setBlikError('Wystąpił błąd podczas płatności.');
     } finally {
       setPurchaseLoading(false);
@@ -1979,10 +2017,11 @@ export default function ListingDetails() {
                       setShowPayment(false);
                       resetPaymentModal();
                     }}
+                    disabled={purchaseLoading}
                   >
                     Anuluj
                   </button>
-                  <button type="button" onClick={handleGoToBlikStep}>
+                  <button type="button" onClick={handleGoToBlikStep} disabled={purchaseLoading}>
                     Dalej
                   </button>
                 </div>
