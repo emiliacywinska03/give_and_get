@@ -225,7 +225,8 @@ router.get('/image/:imageId', async (req, res) => {
     if (img.data) {
       const mime = img.mime || 'image/jpeg';
       res.setHeader('Content-Type', mime);
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Pragma', 'no-cache');
       return res.status(200).send(img.data);
     }
 
@@ -233,7 +234,8 @@ router.get('/image/:imageId', async (req, res) => {
     if (img.path) {
       const filePath = path.join(process.cwd(), 'backend', img.path);
       if (fs && fs.existsSync && fs.existsSync(filePath)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('Pragma', 'no-cache');
         return res.sendFile(filePath);
       }
     }

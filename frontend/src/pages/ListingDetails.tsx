@@ -1404,7 +1404,12 @@ export default function ListingDetails() {
 
               const content = `Aplikuję na Twoje ogłoszenie: "${data.title}".`;
               navigate(`/messages/listing/${data.id}?peer=${data.user_id}`, {
-                state: { prefillText: content, prefillAttachment: okFile },
+                state: {
+                  prefillText: content,
+                  prefillAttachment: okFile,
+                  prefillListingId: data.id,
+                  prefillListingType: (data as any)?.type_id ?? 3,
+                },
               });
             }}
           />
