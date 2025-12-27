@@ -241,6 +241,18 @@ const MessagesConversationPage: React.FC = () => {
   const [offerSending, setOfferSending] = useState(false);
 
   const [showPayment, setShowPayment] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
+
+  const [shipping, setShipping] = useState({
+    fullName: '',
+    phone: '',
+    email: '',
+    street: '',
+    zip: '',
+    city: '',
+  });
+  const [shippingError, setShippingError] = useState('');
+
   const [blikCode, setBlikCode] = useState('');
   const [blikError, setBlikError] = useState('');
   const [purchaseLoading, setPurchaseLoading] = useState(false);
@@ -1098,55 +1110,113 @@ const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
       return;
     }
     if (myRole !== 'buyer') return;
-  
     if (isPurchased) return;
-  
+
+    setShippingError('');
     setBlikError('');
     setBlikCode('');
+    setPaymentStep(1);
     setShowPayment(true);
   };
   
   
-  const handleConfirmBlik = async () => {
-    if (!/^\d{6}$/.test(blikCode)) {
-      setBlikError('Kod BLIK musi mieć dokładnie 6 cyfr.');
+const handleConfirmBlik = async () => {
+  if (!/^[0-9]{6}$/.test(blikCode)) {
+    setBlikError('Kod BLIK musi mieć dokładnie 6 cyfr.');
+    return;
+  }
+
+  try {
+    setPurchaseLoading(true);
+    setBlikError('');
+
+    const res = await fetch(`${API_BASE}/api/listings/${listingId}/purchase`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        blikCode,
+        shipping,
+      }),
+    });
+
+    const payload = await res.json().catch(() => null);
+    if (!res.ok) {
+      setBlikError(payload?.error || 'Błąd podczas płatności.');
       return;
     }
-  
-    try {
-      setPurchaseLoading(true);
-      setBlikError('');
-  
-      const res = await fetch(`${API_BASE}/api/listings/${listingId}/purchase`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(API_KEY ? { 'x-api-key': API_KEY } : {}),
-        },
-        body: JSON.stringify({ blikCode }),
-      });
-  
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        setBlikError(payload?.error || 'Błąd podczas płatności.');
-        return;
-      }
-  
-      setIsPurchased(true);
-      setShowPayment(false);
-      setBlikCode('');
-  
-      queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
-      queryClient.invalidateQueries({ queryKey: ['listing', 'preview', listingId] });
-  
-      sendMutation.mutate({ text: 'Zapłacone BLIK — kupione ' });
-    } catch (e) {
-      console.error(e);
-      setBlikError('Wystąpił błąd podczas płatności.');
-    } finally {
-      setPurchaseLoading(false);
+
+    setIsPurchased(true);
+    setShowPayment(false);
+    setPaymentStep(1);
+    setBlikCode('');
+    setShipping({ fullName: '', phone: '', email: '', street: '', zip: '', city: '' });
+    setShippingError('');
+
+    queryClient.invalidateQueries({ queryKey: negotiationQueryKey });
+    queryClient.invalidateQueries({ queryKey: ['listing', 'preview', listingId] });
+
+    sendMutation.mutate({ text: 'Zapłacone BLIK — kupione ' });
+  } catch (e) {
+    console.error(e);
+    setBlikError('Wystąpił błąd podczas płatności.');
+  } finally {
+    setPurchaseLoading(false);
+  }
+};
+
+
+  const resetPaymentModal = () => {
+    setPaymentStep(1);
+    setShipping({ fullName: '', phone: '', email: '', street: '', zip: '', city: '' });
+    setShippingError('');
+    setBlikCode('');
+    setBlikError('');
+  };
+
+  const handleGoToBlikStep = () => {
+    const fullName = (shipping.fullName || '').trim();
+    const street = (shipping.street || '').trim();
+    const city = (shipping.city || '').trim();
+    const email = (shipping.email || '').trim();
+    const phone = (shipping.phone || '').trim();
+    const zip = (shipping.zip || '').trim();
+
+    if (fullName.length < 3) {
+      setShippingError('Uzupełnij imię i nazwisko.');
+      return;
     }
+
+    if (!/^[0-9]{9}$/.test(phone)) {
+      setShippingError('Podaj poprawny numer telefonu (9 cyfr).');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setShippingError('Podaj poprawny adres e-mail.');
+      return;
+    }
+
+    if (street.length < 3) {
+      setShippingError('Uzupełnij ulicę i numer.');
+      return;
+    }
+
+    if (!/^\d{2}-\d{3}$/.test(zip)) {
+      setShippingError('Podaj poprawny kod pocztowy (00-000).');
+      return;
+    }
+
+    if (city.length < 2) {
+      setShippingError('Uzupełnij miasto.');
+      return;
+    }
+
+    setShippingError('');
+    setPaymentStep(2);
   };
   
 
@@ -1647,30 +1717,125 @@ const parseHelpApplyMessage = (content: string): HelpApplyCardData | null => {
       )}
 
       {showPayment && (
-        <div className="messages-conv-blik-backdrop" onClick={() => setShowPayment(false)}>
+        <div
+          className="messages-conv-blik-backdrop"
+          onClick={() => {
+            setShowPayment(false);
+            resetPaymentModal();
+          }}
+        >
           <div className="messages-conv-blik-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Płatność BLIK</h2>
-            <p>Wpisz 6-cyfrowy kod BLIK, aby kupić przedmiot.</p>
+            {paymentStep === 1 ? (
+              <>
+                <h2>Dane do wysyłki</h2>
+                <p>Uzupełnij dane, aby przejść do płatności BLIK.</p>
 
-            <input
-              type="text"
-              maxLength={6}
-              value={blikCode}
-              onChange={(e) => setBlikCode(e.target.value.replace(/\D/g, ''))}
-              className="messages-conv-blik-input"
-              placeholder="••••••"
-            />
+                {shippingError && <div className="messages-conv-blik-error">{shippingError}</div>}
 
-            {blikError && <div className="messages-conv-blik-error">{blikError}</div>}
+                <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+                  <input
+                    type="text"
+                    value={shipping.fullName}
+                    onChange={(e) => setShipping((p) => ({ ...p, fullName: e.target.value }))}
+                    className="messages-conv-blik-input"
+                    placeholder="Imię i nazwisko"
+                  />
 
-            <div className="messages-conv-blik-actions">
-              <button type="button" onClick={() => setShowPayment(false)}>
-                Anuluj
-              </button>
-              <button type="button" onClick={handleConfirmBlik} disabled={purchaseLoading}>
-                {purchaseLoading ? 'Przetwarzanie…' : 'Zapłać BLIK'}
-              </button>
-            </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={shipping.phone}
+                    onChange={(e) =>
+                      setShipping((p) => ({ ...p, phone: e.target.value.replace(/[^0-9]/g, '') }))
+                    }
+                    className="messages-conv-blik-input"
+                    placeholder="Telefon (np. 500600700)"
+                  />
+
+                  <input
+                    type="email"
+                    value={shipping.email}
+                    onChange={(e) => setShipping((p) => ({ ...p, email: e.target.value }))}
+                    className="messages-conv-blik-input"
+                    placeholder="E-mail"
+                  />
+
+                  <input
+                    type="text"
+                    value={shipping.street}
+                    onChange={(e) => setShipping((p) => ({ ...p, street: e.target.value }))}
+                    className="messages-conv-blik-input"
+                    placeholder="Ulica i numer"
+                  />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <input
+                      type="text"
+                      value={shipping.zip}
+                      onChange={(e) =>
+                        setShipping((p) => ({ ...p, zip: e.target.value.replace(/[^0-9-]/g, '') }))
+                      }
+                      className="messages-conv-blik-input"
+                      placeholder="Kod (00-000)"
+                    />
+                    <input
+                      type="text"
+                      value={shipping.city}
+                      onChange={(e) => setShipping((p) => ({ ...p, city: e.target.value }))}
+                      className="messages-conv-blik-input"
+                      placeholder="Miasto"
+                    />
+                  </div>
+                </div>
+
+                <div className="messages-conv-blik-actions" style={{ marginTop: 14 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPayment(false);
+                      resetPaymentModal();
+                    }}
+                  >
+                    Anuluj
+                  </button>
+                  <button type="button" onClick={handleGoToBlikStep}>
+                    Dalej
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2>Płatność BLIK</h2>
+                <p>Wpisz 6-cyfrowy kod BLIK, aby zakupić towar.</p>
+
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={blikCode}
+                  onChange={(e) => setBlikCode(e.target.value.replace(/\D/g, ''))}
+                  className="messages-conv-blik-input"
+                  placeholder="••••••"
+                />
+
+                {blikError && <div className="messages-conv-blik-error">{blikError}</div>}
+
+                <div className="messages-conv-blik-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentStep(1);
+                      setBlikError('');
+                    }}
+                    disabled={purchaseLoading}
+                  >
+                    Wstecz
+                  </button>
+                  <button type="button" onClick={handleConfirmBlik} disabled={purchaseLoading}>
+                    {purchaseLoading ? 'Przetwarzanie…' : 'Zapłać BLIK'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
