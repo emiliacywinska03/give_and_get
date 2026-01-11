@@ -202,7 +202,7 @@ const Profile: React.FC = () => {
     }
 
     // 2) PRACA – teczka
-    if (item.type_id === 2) {
+    if (item.type_id === 3) {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
@@ -215,7 +215,7 @@ const Profile: React.FC = () => {
     }
 
     // 3) POMOC – dłonie z sercem
-    if (item.type_id === 3) {
+    if (item.type_id === 2) {
       return (
         <div className="listing-thumb-space listing-thumb-space--icon">
           <img
