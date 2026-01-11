@@ -945,6 +945,7 @@ body.dark-mode .profile-page .favorite-toggle{
 }
 
 /* DARK MODE — Historia ogłoszeń */
+
 body.dark-mode .profile-history-button{
   background: #0b1120;       
   border-color: #1d4ed8;      
@@ -1144,3 +1145,58 @@ body.dark-mode .profile-history-button:focus-visible{
 }
 
 
+
+
+/* DARK MODE — panel edycji profilu (formularz danych + zmiana hasła) */
+body.dark-mode .profile-edit-button{
+  background: #0b1120;
+  border-color: #1d4ed8;
+  color: #e5e7eb;
+}
+
+body.dark-mode .profile-edit-button:hover{
+  background: #1e293b;
+  border-color: #3b82f6;
+}
+
+body.dark-mode .profile-edit-panel{
+  background: #0b1120;
+  border-color: #1f2937;
+  color: #e5e7eb;
+}
+
+body.dark-mode .profile-edit-title{
+  color: #f9fafb;
+}
+
+body.dark-mode .profile-edit-field span{
+  color: #cbd5e1;
+}
+
+body.dark-mode .profile-edit-field input{
+  background: #111827;
+  border-color: #2a2f3a;
+  color: #e5e7eb;
+}
+
+body.dark-mode .profile-edit-field input::placeholder{
+  color: #9ca3af;
+}
+
+body.dark-mode .profile-edit-sep{
+  border-top-color: #1f2937;
+}
+
+body.dark-mode .profile-save-button{
+  border-color: #3b82f6;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+body.dark-mode .profile-save-button:hover{
+  background: #1d4ed8;
+}
+
+body.dark-mode .profile-save-button:disabled{
+  opacity: 0.6;
+}

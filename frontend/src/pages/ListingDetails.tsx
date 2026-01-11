@@ -338,9 +338,73 @@ export default function ListingDetails() {
   const [pendingCvFile, setPendingCvFile] = useState<File | null>(null);
   const [pendingCvError, setPendingCvError] = useState('');
 
-  const pickCvFile = () => {
+  const [workApplyOpen, setWorkApplyOpen] = useState(false);
+  const [workApplyMessage, setWorkApplyMessage] = useState('');
+  const [workApplyError, setWorkApplyError] = useState('');
+
+  const openWorkApply = () => {
+    if (!data) return;
+    setActionError('');
+    setActionSent(false);
     setPendingCvError('');
-    setPendingCvFile(null);
+    setWorkApplyError('');
+
+    const defaultMsg = [
+      'Dzień dobry!',
+      `Aplikuję na ogłoszenie: "${data.title}".`,
+      'W załączniku przesyłam moje CV (PDF).',
+      'Chętnie odpowiem na dodatkowe pytania.',
+    ].join('\n');
+
+    setWorkApplyMessage(defaultMsg);
+    setWorkApplyOpen(true);
+  };
+
+  const closeWorkApply = () => {
+    setWorkApplyOpen(false);
+    setWorkApplyError('');
+  };
+
+  const triggerCvPicker = () => {
+    setPendingCvError('');
+    setWorkApplyError('');
+    cvInputRef.current?.click();
+  };
+
+  const sendWorkApplication = () => {
+    if (!data) return;
+
+    if (!pendingCvFile) {
+      setWorkApplyError('Załącz CV w formacie PDF, aby wysłać aplikację.');
+      return;
+    }
+
+    const text = (workApplyMessage || '').trim();
+    const finalText = text.length
+      ? text
+      : [
+          'Dzień dobry!',
+          `Aplikuję na ogłoszenie: "${data.title}".`,
+          'W załączniku przesyłam moje CV (PDF).',
+          'Chętnie odpowiem na dodatkowe pytania.',
+        ].join('\n');
+
+    setWorkApplyOpen(false);
+
+    navigate(`/messages/listing/${data.id}?peer=${data.user_id}`, {
+      state: {
+        prefillText: finalText,
+        prefillAttachment: pendingCvFile,
+        prefillListingId: data.id,
+        prefillListingType: (data as any)?.type_id ?? 3,
+        prefillListingTypeId: (data as any)?.type_id ?? 3,
+      },
+    });
+  };
+
+  const pickCvFile = () => {
+    // pozostawione dla kompatybilności; w aplikacji pracy używamy modala + triggerCvPicker
+    setPendingCvError('');
     cvInputRef.current?.click();
   };
 
@@ -1093,7 +1157,7 @@ export default function ListingDetails() {
     if (data.type_id === 1) return;
 
     if (data.type_id === 3) {
-      pickCvFile();
+      openWorkApply();
       return;
     }
 
@@ -1398,21 +1462,69 @@ export default function ListingDetails() {
             style={{ display: 'none' }}
             onChange={(e) => {
               const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-              const okFile = validateCv(f);
+              validateCv(f);
               e.target.value = '';
-              if (!okFile || !data) return;
-
-              const content = `Aplikuję na Twoje ogłoszenie: "${data.title}".`;
-              navigate(`/messages/listing/${data.id}?peer=${data.user_id}`, {
-                state: {
-                  prefillText: content,
-                  prefillAttachment: okFile,
-                  prefillListingId: data.id,
-                  prefillListingType: (data as any)?.type_id ?? 3,
-                },
-              });
             }}
           />
+      {workApplyOpen && isWork && !isOwnListing && (
+        <div className="help-apply-backdrop" onClick={closeWorkApply}>
+          <div className="help-apply-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="help-apply-head">
+              <div className="help-apply-title">Aplikuj na ogłoszenie</div>
+              <button type="button" className="help-apply-close" onClick={closeWorkApply} aria-label="Zamknij">
+                ✕
+              </button>
+            </div>
+
+            <div className="help-apply-section">
+              <div className="help-apply-label">CV (PDF)</div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button type="button" className="help-apply-secondary" onClick={triggerCvPicker}>
+                  {pendingCvFile ? 'Zmień plik CV' : 'Wybierz plik CV'}
+                </button>
+                <div style={{ fontSize: 14, opacity: 0.9 }}>
+                  {pendingCvFile ? pendingCvFile.name : 'Nie wybrano pliku'}
+                </div>
+              </div>
+              {pendingCvError && <div className="help-apply-error" style={{ marginTop: 8 }}>{pendingCvError}</div>}
+            </div>
+
+            <div className="help-apply-section">
+              <div className="help-apply-label">Wiadomość do pracodawcy</div>
+              <textarea
+                className="help-apply-textarea"
+                value={workApplyMessage}
+                onChange={(e) => setWorkApplyMessage(e.target.value)}
+                rows={6}
+                placeholder="Napisz krótką wiadomość do pracodawcy"
+              />
+            </div>
+
+            {workApplyError && <div className="help-apply-error">{workApplyError}</div>}
+
+            <div className="help-apply-actions">
+              <button type="button" className="help-apply-secondary" onClick={closeWorkApply}>
+                Anuluj
+              </button>
+              <button
+                type="button"
+                className="help-apply-primary"
+                disabled={actionLoading}
+                onClick={() => {
+                  setActionLoading(true);
+                  try {
+                    sendWorkApplication();
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+              >
+                Wyślij aplikację
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
         </div>
 
         <p className="listing-details-meta">Dodano: {new Date(data.created_at).toLocaleString()}</p>

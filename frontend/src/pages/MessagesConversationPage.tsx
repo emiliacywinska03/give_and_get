@@ -263,6 +263,7 @@ const MessagesConversationPage: React.FC = () => {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentError, setAttachmentError] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [prefillListingTypeId, setPrefillListingTypeId] = useState<number | null>(null);
 
 
   const listingId = Number(id);
@@ -1220,20 +1221,28 @@ const handleConfirmBlik = async () => {
   };
   
 
-  const handlePickAttachment = (file: File | null) => {
+  const handlePickAttachment = (file: File | null, overrideTypeId?: number | null) => {
     setAttachmentError('');
+
     if (!file) {
       setAttachmentFile(null);
       return;
     }
 
-    const typeId = listingInfo?.typeId ?? null;
+    const typeId = typeof overrideTypeId === 'number' ? overrideTypeId : listingInfo?.typeId ?? null;
 
     const maxBytes = 10 * 1024 * 1024;
     if (file.size > maxBytes) {
       setAttachmentError('Plik jest za duży (max 10 MB).');
       setAttachmentFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Jeśli typ ogłoszenia jeszcze się nie wczytał, pozwól tymczasowo ustawić plik.
+    // Walidacja zostanie dopięta po załadowaniu listingInfo.
+    if (typeId === null) {
+      setAttachmentFile(file);
       return;
     }
 
@@ -1272,15 +1281,50 @@ const handleConfirmBlik = async () => {
 
     const t = typeof st.prefillText === 'string' ? st.prefillText : '';
     const f = st.prefillAttachment instanceof File ? st.prefillAttachment : null;
+    const prefillType = typeof st.prefillListingType === 'number' ? st.prefillListingType : null;
+
+    setPrefillListingTypeId(prefillType);
 
     if (t) setContent(t);
-    if (f) handlePickAttachment(f);
+    if (f) handlePickAttachment(f, prefillType);
 
     try {
       navigate(location.pathname + location.search, { replace: true, state: {} } as any);
     } catch {
     }
   }, []);
+
+  useEffect(() => {
+    if (!attachmentFile) return;
+    if (!listingInfo?.typeId) return;
+
+    // Po załadowaniu typu ogłoszenia dopnij walidację załącznika (ważne dla prefill z "Aplikuj").
+    const typeId = listingInfo.typeId;
+
+    if (typeId === 3) {
+      const isPdf = attachmentFile.type === 'application/pdf' || attachmentFile.name.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        setAttachmentError('W ogłoszeniach o pracę możesz dodać tylko CV w PDF.');
+        setAttachmentFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    if (typeId === 1 || typeId === 2) {
+      const isImage = String(attachmentFile.type || '').startsWith('image/');
+      if (!isImage) {
+        setAttachmentError('W tych ogłoszeniach możesz dodać tylko zdjęcie.');
+        setAttachmentFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    setAttachmentError('Załączniki są dostępne tylko dla ogłoszeń Praca/Pomoc/Sprzedaż.');
+    setAttachmentFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [listingInfo?.typeId]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1679,8 +1723,13 @@ const handleConfirmBlik = async () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={listingInfo?.typeId === 3 ? 'application/pdf' : 'image/*'}
-                onChange={(e) => handlePickAttachment(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                accept={(listingInfo?.typeId ?? prefillListingTypeId) === 3 ? 'application/pdf' : 'image/*'}
+                onChange={(e) =>
+                  handlePickAttachment(
+                    e.target.files && e.target.files[0] ? e.target.files[0] : null,
+                    listingInfo?.typeId ?? prefillListingTypeId
+                  )
+                }
                 disabled={sending}
               />
               {attachmentFile ? (
