@@ -295,7 +295,7 @@
   opacity: 0.7;
 }
 
-.body.dark-mode .history-title {
+body.dark-mode .history-title {
   color: #e5e7eb;
 }
 
@@ -563,3 +563,79 @@ body.dark-mode .shipping-modal strong {
 body.dark-mode .shipping-modal {
   background: linear-gradient(180deg, #020617, #020617) !important;
 }
+
+body.dark-mode .history-title {
+  color: #e5e7eb !important;
+}
+
+body.dark-mode .profile-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow: 0 18px 46px rgba(0,0,0,0.55) !important;
+}
+
+body.dark-mode .history-points-panel,
+body.dark-mode .points-card {
+  background: rgba(2, 6, 23, 0.75) !important;
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55) !important;
+}
+
+body.dark-mode .points-label,
+body.dark-mode .points-hint {
+  color: #9ca3af !important;
+}
+
+body.dark-mode .points-value {
+  color: #93c5fd !important;
+}
+
+body.dark-mode .history-page .listing-card {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.10) !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.55) !important;
+}
+
+body.dark-mode .history-page .listing-title {
+  color: #e5e7eb !important;
+}
+
+body.dark-mode .history-page .listing-desc,
+body.dark-mode .history-page .listing-date,
+body.dark-mode .history-page p,
+body.dark-mode .history-page small {
+  color: #9ca3af !important;
+}
+
+body.dark-mode .history-tab {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+  color: #e5e7eb !important;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35) !important;
+}
+
+body.dark-mode .history-tab:hover {
+  border-color: rgba(59,130,246,0.55) !important;
+  box-shadow: 0 10px 22px rgba(37,99,235,0.22) !important;
+}
+
+body.dark-mode .history-tab.is-active {
+  background: linear-gradient(135deg, #2563eb, #60a5fa) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 10px 22px rgba(37,99,235,0.35) !important;
+}
+
+body.dark-mode .resume-button {
+  background: rgba(59,130,246,0.12) !important;
+  color: #93c5fd !important;
+  border-color: rgba(59,130,246,0.55) !important;
+}
+
+body.dark-mode .resume-button:hover {
+  background: rgba(59,130,246,0.20) !important;
+  box-shadow: 0 10px 24px rgba(37,99,235,0.30) !important;
+}
+
+
+   
