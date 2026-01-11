@@ -670,20 +670,49 @@ socket.on('chat:read', (payload: any) => {
 
   const typeIcon = getTypeIconSrc(listingInfo?.typeId);
 
-  const formatDate = (value: string) => {
-    try {
-      return new Date(value).toLocaleString('pl-PL', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return value;
+  const parseDateAssumingUTCWhenMissingTZ = (value: string) => {
+    if (!value) return null;
+  
+    let s = String(value).trim();
+  
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) {
+      s = s.replace(' ', 'T');
     }
+    const hasTZ = /([zZ]|[+-]\d{2}:\d{2})$/.test(s);
+  
+    const d = new Date(hasTZ ? s : `${s}Z`);
+  
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
   };
-
+  
+  const parseDateForceUTC = (value: string) => {
+    if (!value) return null;
+  
+    let s = String(value).trim();
+  
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(s)) {
+      s = s.replace(' ', 'T');
+    }
+  
+    s = s.replace(/([zZ]|[+-]\d{2}:\d{2})$/, '');
+  
+    const d = new Date(`${s}Z`); 
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  };
+  
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleString('pl-PL', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+  });
+  
+  
+  
   const renderShippingCard = (ship: ShippingCard) => {
     return (
       <div className="messages-conv-shipping" role="status" aria-label="Status wysyłki">
@@ -1600,11 +1629,15 @@ const handleConfirmBlik = async () => {
             {messages.length === 0 ? (
               <p className="messages-conv-info">Brak wiadomości w tej konwersacji – rozpocznij rozmowę poniżej.</p>
             ) : (
+              
               messages.map((m) => {
                 const mine = user && m.sender_id === user.id;
 
                 const avatarRaw = m.sender_avatar_url;
                 const avatarSrc = avatarRaw ? joinApiUrl(String(avatarRaw)) : null;
+ 
+                console.log('RAW created_at:', m.created_at);
+                console.log('Parsed ISO:', new Date(m.created_at).toISOString());
 
                 return (
                   <div key={m.id} className={`messages-conv-msg-row ${mine ? 'mine' : 'theirs'}`}>

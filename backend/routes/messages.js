@@ -591,7 +591,17 @@ router.get('/listing/:id', authRequired, async (req, res) => {
     }
 
     const ordered = rows.sort((a, b) => Number(a.id) - Number(b.id));
-    return res.json({ ok: true, messages: ordered, peer });
+
+    const messages = ordered.map((m) => ({
+      ...m,
+      created_at: m.created_at ? new Date(m.created_at).toISOString() : null,
+    }));
+
+    return res.json({ ok: true, messages, peer });
+
+
+return res.json({ ok: true, messages, peer });
+
   } catch (err) {
     console.error('Błąd przy pobieraniu wiadomości (listing):', err);
     return res.status(500).json({ ok: false, error: 'Błąd serwera przy pobieraniu wiadomości.' });
